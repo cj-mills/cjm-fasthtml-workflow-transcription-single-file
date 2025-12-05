@@ -7,13 +7,15 @@ __all__ = ['MediaLibrary']
 
 # %% ../../nbs/media/library.ipynb 3
 from typing import List, Optional
+from fasthtml.common import APIRouter
 from fastcore.basics import patch
-from fasthtml.common import APIRouter 
 
 from .config import MediaConfig
 from .models import MediaFile
 from .scanner import MediaScanner
 from .mounter import MediaMounter
+from .pagination import create_media_pagination
+from .file_selection_pagination import create_file_selection_pagination
 
 # %% ../../nbs/media/library.ipynb 5
 class MediaLibrary:

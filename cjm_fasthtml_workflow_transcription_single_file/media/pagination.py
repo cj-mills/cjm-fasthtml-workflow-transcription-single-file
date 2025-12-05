@@ -6,17 +6,21 @@
 __all__ = ['create_media_pagination']
 
 # %% ../../nbs/media/pagination.ipynb 3
-from typing import Optional, Callable
+from typing import List, Any, Optional, Callable
 from fasthtml.common import *
 
-from cjm_fasthtml_interactions.patterns.pagination import Pagination, PaginationStyle
+from cjm_fasthtml_interactions.patterns.pagination import Pagination
+from cjm_fasthtml_daisyui.components.actions.button import btn, btn_colors
+from cjm_fasthtml_daisyui.utilities.semantic_colors import text_dui
+from cjm_fasthtml_tailwind.utilities.spacing import p
+from cjm_fasthtml_tailwind.utilities.typography import text_align
+from cjm_fasthtml_tailwind.core.base import combine_classes
 
-from .library import MediaLibrary
-from .mounter import MediaMounter
+from .models import MediaFile
+from .components import grid_view_content, list_view_content, empty_media_content
+
 from .scanner import MediaScanner
-from cjm_fasthtml_workflow_transcription_single_file.media.components import (
-    grid_view_content, list_view_content, media_browser_controls, empty_media_content
-)
+from .mounter import MediaMounter
 
 # %% ../../nbs/media/pagination.ipynb 5
 def create_media_pagination(
