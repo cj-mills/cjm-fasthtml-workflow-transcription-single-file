@@ -76,52 +76,52 @@ graph LR
     components_processor --> core_html_ids
     components_results --> core_config
     components_results --> core_html_ids
+    components_steps --> core_protocols
     components_steps --> core_config
     components_steps --> core_html_ids
-    components_steps --> core_protocols
     core_adapters --> core_protocols
-    core_config --> media_config
     core_config --> storage_config
     core_config --> core_html_ids
+    core_config --> media_config
     media_components --> media_models
     media_components --> media_mounter
     media_file_selection_pagination --> media_models
-    media_file_selection_pagination --> media_scanner
     media_file_selection_pagination --> media_library
-    media_library --> media_config
+    media_file_selection_pagination --> media_scanner
     media_library --> media_models
-    media_library --> media_scanner
     media_library --> media_mounter
+    media_library --> media_scanner
+    media_library --> media_config
     media_pagination --> media_components
-    media_pagination --> media_library
     media_pagination --> media_mounter
     media_pagination --> media_scanner
-    media_scanner --> media_config
-    media_scanner --> media_utils
+    media_pagination --> media_library
     media_scanner --> media_models
+    media_scanner --> media_utils
+    media_scanner --> media_config
     settings_components --> core_html_ids
+    settings_schemas --> storage_config
     settings_schemas --> media_config
     settings_schemas --> core_config
-    settings_schemas --> storage_config
     storage_file_storage --> storage_config
-    workflow_job_handler --> core_config
     workflow_job_handler --> components_results
     workflow_job_handler --> core_html_ids
-    workflow_job_handler --> components_processor
-    workflow_job_handler --> storage_file_storage
     workflow_job_handler --> core_protocols
-    workflow_routes --> workflow_workflow
-    workflow_routes --> components_steps
+    workflow_job_handler --> storage_file_storage
+    workflow_job_handler --> core_config
+    workflow_job_handler --> components_processor
     workflow_routes --> components_results
     workflow_routes --> workflow_job_handler
     workflow_routes --> core_html_ids
+    workflow_routes --> workflow_workflow
+    workflow_routes --> components_steps
     workflow_routes --> components_processor
-    workflow_workflow --> workflow_job_handler
-    workflow_workflow --> core_config
-    workflow_workflow --> core_html_ids
-    workflow_workflow --> components_steps
     workflow_workflow --> core_adapters
     workflow_workflow --> media_library
+    workflow_workflow --> core_config
+    workflow_workflow --> components_steps
+    workflow_workflow --> workflow_job_handler
+    workflow_workflow --> core_html_ids
     workflow_workflow --> storage_file_storage
 ```
 
@@ -332,75 +332,34 @@ from cjm_fasthtml_workflow_transcription_single_file.settings.components import 
 
 ``` python
 def settings_trigger_button(
-    modal_id: str,
-    label: str = "Settings",
-    button_cls: Optional[str] = None
-) -> FT
-    """
-    Create a button that opens the settings modal.
-    
-    Args:
-        modal_id: ID of the modal to trigger.
-        label: Button label text.
-        button_cls: Optional additional button classes.
-    
-    Returns:
-        Button element that triggers the modal.
-    """
+    modal_id:str,                  # ID of the modal to trigger
+    label:str="Settings",          # Button label text
+    button_cls:Optional[str]=None  # Optional additional button classes
+) -> FT:                           # Button element that triggers the modal
+    "Create a button that opens the settings modal."
 ```
 
 ``` python
 def simple_settings_form(
-    directories: list,
-    auto_save: bool,
-    results_directory: str,
-    save_url: str,
-    target_id: str,
-    modal_id: str
-) -> FT
-    """
-    Create a simple settings form without full schema generation.
-    
-    This is a fallback for when the full JSON schema form generator
-    is not needed.
-    
-    Args:
-        directories: List of media directories.
-        auto_save: Current auto-save setting.
-        results_directory: Current results directory.
-        save_url: URL to POST settings to.
-        target_id: Target element ID for HTMX response.
-        modal_id: Modal ID for close button.
-    
-    Returns:
-        Simple form element.
-    """
+    directories:list,        # List of media directories
+    auto_save:bool,          # Current auto-save setting
+    results_directory:str,   # Current results directory
+    save_url:str,            # URL to POST settings to
+    target_id:str,           # Target element ID for HTMX response
+    modal_id:str             # Modal ID for close button
+) -> FT:                     # Simple form element
+    "Create a simple settings form without full schema generation."
 ```
 
 ``` python
 def settings_modal(
-    modal_id: str,
-    schema: Dict[str, Any],
-    current_values: Dict[str, Any],
-    save_url: str,
-    target_id: str
-) -> FT
-    """
-    Create the settings modal with form.
-    
-    This is a simplified settings modal. For full schema-based form generation,
-    use the cjm_fasthtml_jsonschema library.
-    
-    Args:
-        modal_id: ID for the modal element.
-        schema: JSON schema for settings.
-        current_values: Current settings values.
-        save_url: URL to POST settings to.
-        target_id: Target element ID for HTMX response.
-    
-    Returns:
-        Modal dialog with settings form.
-    """
+    modal_id:str,                    # ID for the modal element
+    schema:Dict[str, Any],           # JSON schema for settings
+    current_values:Dict[str, Any],   # Current settings values
+    save_url:str,                    # URL to POST settings to
+    target_id:str                    # Target element ID for HTMX response
+) -> FT:                             # Modal dialog with settings form
+    "Create the settings modal with form."
 ```
 
 ### Configuration (`config.ipynb`)
@@ -1609,20 +1568,12 @@ from cjm_fasthtml_workflow_transcription_single_file.settings.schemas import (
 #### Functions
 
 ``` python
-def get_settings_from_config(media_config, 
-                             storage_config, 
-                             workflow_config=None) -> dict
-    """
-    Extract settings values from config objects.
-    
-    Args:
-        media_config: MediaConfig instance.
-        storage_config: StorageConfig instance.
-        workflow_config: Optional SingleFileWorkflowConfig instance for additional settings.
-    
-    Returns:
-        Dictionary of current settings values.
-    """
+def get_settings_from_config(
+    media_config,                            # MediaConfig instance with media scanning settings
+    storage_config,                          # StorageConfig instance with result storage settings
+    workflow_config=None                     # Optional SingleFileWorkflowConfig for additional settings
+) -> dict:                                   # Dictionary of current settings values
+    "Extract settings values from config objects."
 ```
 
 #### Variables

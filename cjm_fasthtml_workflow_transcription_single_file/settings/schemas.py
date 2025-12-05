@@ -88,19 +88,12 @@ WORKFLOW_SETTINGS_SCHEMA = {
 }
 
 # %% ../../nbs/settings/schemas.ipynb 7
-def get_settings_from_config(media_config, 
-                             storage_config, 
-                             workflow_config=None) -> dict:
-    """Extract settings values from config objects.
-
-    Args:
-        media_config: MediaConfig instance.
-        storage_config: StorageConfig instance.
-        workflow_config: Optional SingleFileWorkflowConfig instance for additional settings.
-
-    Returns:
-        Dictionary of current settings values.
-    """
+def get_settings_from_config(
+    media_config,                            # MediaConfig instance with media scanning settings
+    storage_config,                          # StorageConfig instance with result storage settings
+    workflow_config=None                     # Optional SingleFileWorkflowConfig for additional settings
+) -> dict:                                   # Dictionary of current settings values
+    """Extract settings values from config objects."""
     settings = {
         # Media settings
         "media_directories": media_config.directories,

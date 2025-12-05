@@ -22,20 +22,11 @@ from ..core.html_ids import SingleFileHtmlIds
 
 # %% ../../nbs/settings/components.ipynb 5
 def settings_trigger_button(
-    modal_id: str,
-    label: str = "Settings",
-    button_cls: Optional[str] = None
-) -> FT:
-    """Create a button that opens the settings modal.
-
-    Args:
-        modal_id: ID of the modal to trigger.
-        label: Button label text.
-        button_cls: Optional additional button classes.
-
-    Returns:
-        Button element that triggers the modal.
-    """
+    modal_id:str,                  # ID of the modal to trigger
+    label:str="Settings",          # Button label text
+    button_cls:Optional[str]=None  # Optional additional button classes
+) -> FT:                           # Button element that triggers the modal
+    """Create a button that opens the settings modal."""
     cls = combine_classes(btn, btn_styles.ghost, btn_sizes.sm)
     if button_cls:
         cls = combine_classes(cls, button_cls)
@@ -48,29 +39,14 @@ def settings_trigger_button(
 
 # %% ../../nbs/settings/components.ipynb 7
 def simple_settings_form(
-    directories: list,
-    auto_save: bool,
-    results_directory: str,
-    save_url: str,
-    target_id: str,
-    modal_id: str
-) -> FT:
-    """Create a simple settings form without full schema generation.
-
-    This is a fallback for when the full JSON schema form generator
-    is not needed.
-
-    Args:
-        directories: List of media directories.
-        auto_save: Current auto-save setting.
-        results_directory: Current results directory.
-        save_url: URL to POST settings to.
-        target_id: Target element ID for HTMX response.
-        modal_id: Modal ID for close button.
-
-    Returns:
-        Simple form element.
-    """
+    directories:list,        # List of media directories
+    auto_save:bool,          # Current auto-save setting
+    results_directory:str,   # Current results directory
+    save_url:str,            # URL to POST settings to
+    target_id:str,           # Target element ID for HTMX response
+    modal_id:str             # Modal ID for close button
+) -> FT:                     # Simple form element
+    """Create a simple settings form without full schema generation."""
     from cjm_fasthtml_daisyui.components.data_input.checkbox import checkbox
     from cjm_fasthtml_daisyui.components.data_input.text_input import text_input
 
@@ -137,27 +113,13 @@ def simple_settings_form(
 
 # %% ../../nbs/settings/components.ipynb 9
 def settings_modal(
-    modal_id: str,
-    schema: Dict[str, Any],
-    current_values: Dict[str, Any],
-    save_url: str,
-    target_id: str
-) -> FT:
-    """Create the settings modal with form.
-
-    This is a simplified settings modal. For full schema-based form generation,
-    use the cjm_fasthtml_jsonschema library.
-
-    Args:
-        modal_id: ID for the modal element.
-        schema: JSON schema for settings.
-        current_values: Current settings values.
-        save_url: URL to POST settings to.
-        target_id: Target element ID for HTMX response.
-
-    Returns:
-        Modal dialog with settings form.
-    """
+    modal_id:str,                    # ID for the modal element
+    schema:Dict[str, Any],           # JSON schema for settings
+    current_values:Dict[str, Any],   # Current settings values
+    save_url:str,                    # URL to POST settings to
+    target_id:str                    # Target element ID for HTMX response
+) -> FT:                             # Modal dialog with settings form
+    """Create the settings modal with form."""
     from cjm_fasthtml_jsonschema.generators.form import generate_form_ui
 
     # Generate form UI from schema
