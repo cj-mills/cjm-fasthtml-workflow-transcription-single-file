@@ -30,7 +30,11 @@ from ..core.protocols import PluginInfo, PluginRegistryProtocol
 from ..core.config import SingleFileWorkflowConfig
 
 # %% ../../nbs/components/steps.ipynb 5
-def _get_file_attr(file_path: str, media_files: list, attr: str) -> str:
+def _get_file_attr(
+    file_path: str, # Path to the file to look up
+    media_files: list, # List of MediaFile objects to search
+    attr: str, # Attribute name to retrieve from the file
+) -> str: # Attribute value or empty string if not found
     """Get an attribute from a file by path."""
     if not file_path:
         return ""
@@ -39,17 +43,11 @@ def _get_file_attr(file_path: str, media_files: list, attr: str) -> str:
 
 # %% ../../nbs/components/steps.ipynb 7
 def _render_plugin_details_content(
-    plugin_id: str,
-    plugins: List[PluginInfo],
-    plugin_registry: PluginRegistryProtocol,
-):
-    """Render details for selected plugin (info card only, no config collapse).
-
-    Args:
-        plugin_id: ID of the plugin to display details for.
-        plugins: List of available plugins.
-        plugin_registry: Plugin registry adapter for getting plugin config.
-    """
+    plugin_id: str, # ID of the plugin to display details for
+    plugins: List[PluginInfo], # List of available plugins
+    plugin_registry: PluginRegistryProtocol, # Plugin registry adapter for getting plugin config
+) -> Optional[FT]: # Plugin info card or None if plugin not found
+    """Render details for selected plugin (info card only, no config collapse)."""
     plugin = next((p for p in plugins if p.id == plugin_id), None)
     if not plugin:
         return None
@@ -78,26 +76,14 @@ def _render_plugin_details_content(
 
 # %% ../../nbs/components/steps.ipynb 9
 def _render_plugin_details_with_config(
-    plugin_id: str,
-    plugins: List[PluginInfo],
-    plugin_registry: PluginRegistryProtocol,
-    raw_plugin_registry,
-    save_url: str,
-    reset_url: str,
-):
-    """Render plugin details with configuration collapse.
-
-    This is used for initial render when returning to the plugin selection step
-    with a previously selected plugin.
-
-    Args:
-        plugin_id: ID of the plugin to display details for.
-        plugins: List of available plugins.
-        plugin_registry: Plugin registry adapter for getting plugin config.
-        raw_plugin_registry: UnifiedPluginRegistry for config_schema access.
-        save_url: URL for saving plugin configuration.
-        reset_url: URL for resetting plugin configuration.
-    """
+    plugin_id: str, # ID of the plugin to display details for
+    plugins: List[PluginInfo], # List of available plugins
+    plugin_registry: PluginRegistryProtocol, # Plugin registry adapter for getting plugin config
+    raw_plugin_registry, # UnifiedPluginRegistry for config_schema access
+    save_url: str, # URL for saving plugin configuration
+    reset_url: str, # URL for resetting plugin configuration
+) -> Optional[FT]: # Plugin details with config collapse, or None if not found
+    """Render plugin details with configuration collapse for initial render."""
     plugin = next((p for p in plugins if p.id == plugin_id), None)
     if not plugin:
         return None
@@ -141,27 +127,13 @@ def _render_plugin_details_with_config(
 
 # %% ../../nbs/components/steps.ipynb 11
 def render_plugin_config_form(
-    plugin_id: str,
-    plugin_registry,  # UnifiedPluginRegistry - raw registry with config_schema access
-    save_url: str,
-    reset_url: str,
-    alert_message: Optional[Any] = None,
-) -> FT:
-    """Render the plugin configuration form for the collapse content.
-
-    This creates a settings form container using the plugin's config schema
-    and current configuration values.
-
-    Args:
-        plugin_id: ID of the plugin to render config for.
-        plugin_registry: UnifiedPluginRegistry with config_schema access.
-        save_url: URL for saving the configuration.
-        reset_url: URL for resetting to defaults.
-        alert_message: Optional alert to display above the form.
-
-    Returns:
-        Div containing the settings form with alert container.
-    """
+    plugin_id: str, # ID of the plugin to render config for
+    plugin_registry, # UnifiedPluginRegistry with config_schema access
+    save_url: str, # URL for saving the configuration
+    reset_url: str, # URL for resetting to defaults
+    alert_message: Optional[Any] = None, # Optional alert to display above the form
+) -> FT: # Div containing the settings form with alert container
+    """Render the plugin configuration form for the collapse content."""
     # Get plugin metadata to access schema
     plugin_meta = plugin_registry.get_plugin(plugin_id)
     if not plugin_meta or not plugin_meta.config_schema:
@@ -214,22 +186,12 @@ def render_plugin_config_form(
 
 # %% ../../nbs/components/steps.ipynb 13
 def _render_plugin_config_collapse(
-    plugin_id: str,
-    plugin_registry,  # UnifiedPluginRegistry - raw registry with config_schema access
-    save_url: str,
-    reset_url: str,
-) -> FT:
-    """Render a collapse component containing the plugin configuration form.
-
-    Args:
-        plugin_id: ID of the plugin to render config for.
-        plugin_registry: UnifiedPluginRegistry with config_schema access.
-        save_url: URL for saving the configuration.
-        reset_url: URL for resetting to defaults.
-
-    Returns:
-        Collapse component with plugin configuration form.
-    """
+    plugin_id: str, # ID of the plugin to render config for
+    plugin_registry, # UnifiedPluginRegistry with config_schema access
+    save_url: str, # URL for saving the configuration
+    reset_url: str, # URL for resetting to defaults
+) -> FT: # Collapse component with plugin configuration form
+    """Render a collapse component containing the plugin configuration form."""
     # Get plugin metadata to check if schema exists
     plugin_meta = plugin_registry.get_plugin(plugin_id)
     if not plugin_meta or not plugin_meta.config_schema:
@@ -262,24 +224,13 @@ def _render_plugin_config_collapse(
 
 # %% ../../nbs/components/steps.ipynb 15
 def render_plugin_details_route(
-    plugin_id: str,
-    plugin_registry: PluginRegistryProtocol,
-    raw_plugin_registry,  # UnifiedPluginRegistry for config_schema access
-    save_url: str,
-    reset_url: str,
-):
-    """Render plugin details for HTMX route.
-
-    This is called by the workflow router when the plugin dropdown changes.
-    Includes a collapse component with the plugin's configuration form.
-
-    Args:
-        plugin_id: ID of the plugin to display details for.
-        plugin_registry: Plugin registry adapter for getting plugins and config.
-        raw_plugin_registry: UnifiedPluginRegistry for config_schema access.
-        save_url: URL for saving plugin configuration.
-        reset_url: URL for resetting plugin configuration to defaults.
-    """
+    plugin_id: str, # ID of the plugin to display details for
+    plugin_registry: PluginRegistryProtocol, # Plugin registry adapter for getting plugins and config
+    raw_plugin_registry, # UnifiedPluginRegistry for config_schema access
+    save_url: str, # URL for saving plugin configuration
+    reset_url: str, # URL for resetting plugin configuration to defaults
+) -> FT: # Plugin details with info card and config collapse
+    """Render plugin details for HTMX route when plugin dropdown changes."""
     plugins = plugin_registry.get_all_plugins()
     plugin = next((p for p in plugins if p.id == plugin_id), None)
     if not plugin:
@@ -320,30 +271,16 @@ def render_plugin_details_route(
 
 # %% ../../nbs/components/steps.ipynb 18
 def render_plugin_selection(
-    ctx: InteractionContext,
-    config: SingleFileWorkflowConfig,
-    plugin_registry: PluginRegistryProtocol,
-    settings_modal_url: str,
-    plugin_details_url: str,
-    raw_plugin_registry=None,
-    save_plugin_config_url: str = "",
-    reset_plugin_config_url: str = "",
-):
-    """Render plugin selection step.
-
-    All discovered plugins are shown, not just those with saved configs.
-    Plugins can use their default configuration values from the schema.
-
-    Args:
-        ctx: Interaction context with state and data.
-        config: Workflow configuration.
-        plugin_registry: Plugin registry adapter for getting plugin config.
-        settings_modal_url: URL for the settings modal route.
-        plugin_details_url: URL for the plugin details route.
-        raw_plugin_registry: UnifiedPluginRegistry for config_schema access (optional).
-        save_plugin_config_url: URL for saving plugin configuration.
-        reset_plugin_config_url: URL for resetting plugin configuration.
-    """
+    ctx: InteractionContext, # Interaction context with state and data
+    config: SingleFileWorkflowConfig, # Workflow configuration
+    plugin_registry: PluginRegistryProtocol, # Plugin registry adapter for getting plugin config
+    settings_modal_url: str, # URL for the settings modal route
+    plugin_details_url: str, # URL for the plugin details route
+    raw_plugin_registry=None, # UnifiedPluginRegistry for config_schema access (optional)
+    save_plugin_config_url: str = "", # URL for saving plugin configuration
+    reset_plugin_config_url: str = "", # URL for resetting plugin configuration
+) -> FT: # Plugin selection step UI component
+    """Render plugin selection step showing all discovered plugins."""
     plugins: List[PluginInfo] = ctx.get_data("plugins", [])
     selected_plugin_id = ctx.get("plugin_id")
     plugin_count = len(plugins)
@@ -462,17 +399,11 @@ def render_plugin_selection(
 
 # %% ../../nbs/components/steps.ipynb 20
 def render_file_selection(
-    ctx: InteractionContext,
-    config: SingleFileWorkflowConfig,
-    file_selection_router: APIRouter,
-):
-    """Render file selection step with paginated table view and preview capability.
-
-    Args:
-        ctx: Interaction context with state and data.
-        config: Workflow configuration.
-        file_selection_router: Router for file selection pagination (or None).
-    """
+    ctx: InteractionContext, # Interaction context with state and data
+    config: SingleFileWorkflowConfig, # Workflow configuration
+    file_selection_router: APIRouter, # Router for file selection pagination (or None)
+) -> FT: # File selection step UI component with paginated table
+    """Render file selection step with paginated table view and preview capability."""
     # media_files are objects with path, name, media_type, size_str, modified_str attributes
     media_files = ctx.get_data("media_files", [])
     selected_file = ctx.get("file_path")
@@ -540,15 +471,10 @@ def render_file_selection(
 
 # %% ../../nbs/components/steps.ipynb 22
 def render_confirmation(
-    ctx: InteractionContext,
-    plugin_registry: PluginRegistryProtocol,
-):
-    """Render confirmation step showing selected plugin and file.
-
-    Args:
-        ctx: Interaction context with state and data.
-        plugin_registry: Plugin registry adapter for getting plugin info.
-    """
+    ctx: InteractionContext, # Interaction context with state and data
+    plugin_registry: PluginRegistryProtocol, # Plugin registry adapter for getting plugin info
+) -> FT: # Confirmation step UI component showing selected plugin and file
+    """Render confirmation step showing selected plugin and file."""
     # Get state from workflow session
     plugin_id = ctx.get("plugin_id")
     file_path = ctx.get("file_path")

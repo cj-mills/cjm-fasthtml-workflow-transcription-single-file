@@ -25,24 +25,13 @@ from ..core.config import SingleFileWorkflowConfig
 
 # %% ../../nbs/components/processor.ipynb 5
 def transcription_in_progress(
-    job_id: str,
-    plugin_info: Dict[str, Any],
-    file_info: Dict[str, Any],
-    config: SingleFileWorkflowConfig,
-    router: APIRouter,
-):
-    """Render transcription in-progress view with SSE updates.
-
-    Args:
-        job_id: Unique identifier for the transcription job.
-        plugin_info: Dictionary with plugin details (id, title, supports_streaming).
-        file_info: Dictionary with file details (name, path, type, size_str).
-        config: Workflow configuration.
-        router: Workflow router for generating route URLs.
-
-    Returns:
-        FastHTML component showing progress and SSE connection.
-    """
+    job_id: str, # Unique identifier for the transcription job
+    plugin_info: Dict[str, Any], # Dictionary with plugin details (id, title, supports_streaming)
+    file_info: Dict[str, Any], # Dictionary with file details (name, path, type, size_str)
+    config: SingleFileWorkflowConfig, # Workflow configuration
+    router: APIRouter, # Workflow router for generating route URLs
+) -> FT: # FastHTML component showing progress and SSE connection
+    """Render transcription in-progress view with SSE updates."""
     # Build URLs using router's .to() method for proper route generation
     sse_url = router.stream_job.to(job_id=job_id)
     cancel_url = router.cancel_job.to(job_id=job_id)

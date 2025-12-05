@@ -25,30 +25,16 @@ from ..core.config import SingleFileWorkflowConfig
 
 # %% ../../nbs/components/results.ipynb 5
 def transcription_results(
-    job_id: str,
-    transcription_text: str,
-    metadata: Dict[str, Any],
-    file_info: Dict[str, Any],
-    plugin_info: Dict[str, Any],
-    config: SingleFileWorkflowConfig,
-    router: APIRouter,
-    stepflow_router: APIRouter,
-):
-    """Render transcription results with export options.
-
-    Args:
-        job_id: Unique identifier for the transcription job.
-        transcription_text: The transcribed text.
-        metadata: Transcription metadata from the plugin.
-        file_info: Dictionary with file details (name, path, type, size_str).
-        plugin_info: Dictionary with plugin details (id, title, supports_streaming).
-        config: Workflow configuration.
-        router: Workflow router for generating route URLs.
-        stepflow_router: StepFlow router for generating stepflow URLs.
-
-    Returns:
-        FastHTML component showing results with export options.
-    """
+    job_id: str, # Unique identifier for the transcription job
+    transcription_text: str, # The transcribed text
+    metadata: Dict[str, Any], # Transcription metadata from the plugin
+    file_info: Dict[str, Any], # Dictionary with file details (name, path, type, size_str)
+    plugin_info: Dict[str, Any], # Dictionary with plugin details (id, title, supports_streaming)
+    config: SingleFileWorkflowConfig, # Workflow configuration
+    router: APIRouter, # Workflow router for generating route URLs
+    stepflow_router: APIRouter, # StepFlow router for generating stepflow URLs
+) -> FT: # FastHTML component showing results with export options
+    """Render transcription results with export options."""
     # Calculate word/character counts
     word_count = len(transcription_text.split())
     char_count = len(transcription_text)
@@ -151,22 +137,12 @@ def transcription_results(
 
 # %% ../../nbs/components/results.ipynb 7
 def transcription_error(
-    error_message: str,
-    file_info: Optional[Dict[str, Any]],
-    config: SingleFileWorkflowConfig,
-    stepflow_router: APIRouter,
-):
-    """Render transcription error message.
-
-    Args:
-        error_message: Description of the error that occurred.
-        file_info: Optional dictionary with file details.
-        config: Workflow configuration.
-        stepflow_router: StepFlow router for generating stepflow URLs.
-
-    Returns:
-        FastHTML component showing error with retry option.
-    """
+    error_message: str, # Description of the error that occurred
+    file_info: Optional[Dict[str, Any]], # Optional dictionary with file details
+    config: SingleFileWorkflowConfig, # Workflow configuration
+    stepflow_router: APIRouter, # StepFlow router for generating stepflow URLs
+) -> FT: # FastHTML component showing error with retry option
+    """Render transcription error message."""
     # Build URL using router's .to() method for proper route generation
     new_transcription_url = stepflow_router.start.to()
 

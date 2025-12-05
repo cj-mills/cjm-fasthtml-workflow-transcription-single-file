@@ -72,57 +72,57 @@ graph LR
     workflow_routes[workflow.routes<br/>Workflow Routes]
     workflow_workflow[workflow.workflow<br/>Single File Transcription Workflow]
 
-    components_processor --> core_html_ids
     components_processor --> core_config
-    components_results --> core_html_ids
+    components_processor --> core_html_ids
     components_results --> core_config
-    components_steps --> core_protocols
-    components_steps --> core_html_ids
+    components_results --> core_html_ids
     components_steps --> core_config
+    components_steps --> core_html_ids
+    components_steps --> core_protocols
     core_adapters --> core_protocols
-    core_config --> core_html_ids
     core_config --> media_config
     core_config --> storage_config
-    media_components --> media_mounter
+    core_config --> core_html_ids
     media_components --> media_models
+    media_components --> media_mounter
     media_file_selection_pagination --> media_models
-    media_file_selection_pagination --> media_library
     media_file_selection_pagination --> media_scanner
+    media_file_selection_pagination --> media_library
     media_library --> media_config
-    media_library --> media_scanner
     media_library --> media_models
+    media_library --> media_scanner
     media_library --> media_mounter
-    media_pagination --> media_library
-    media_pagination --> media_scanner
     media_pagination --> media_components
+    media_pagination --> media_library
     media_pagination --> media_mounter
+    media_pagination --> media_scanner
     media_scanner --> media_config
     media_scanner --> media_utils
     media_scanner --> media_models
     settings_components --> core_html_ids
-    settings_schemas --> storage_config
-    settings_schemas --> core_config
     settings_schemas --> media_config
+    settings_schemas --> core_config
+    settings_schemas --> storage_config
     storage_file_storage --> storage_config
-    workflow_job_handler --> core_protocols
-    workflow_job_handler --> core_html_ids
-    workflow_job_handler --> components_results
-    workflow_job_handler --> storage_file_storage
     workflow_job_handler --> core_config
+    workflow_job_handler --> components_results
+    workflow_job_handler --> core_html_ids
     workflow_job_handler --> components_processor
-    workflow_routes --> core_html_ids
-    workflow_routes --> components_results
+    workflow_job_handler --> storage_file_storage
+    workflow_job_handler --> core_protocols
     workflow_routes --> workflow_workflow
-    workflow_routes --> components_processor
     workflow_routes --> components_steps
+    workflow_routes --> components_results
     workflow_routes --> workflow_job_handler
-    workflow_workflow --> core_adapters
+    workflow_routes --> core_html_ids
+    workflow_routes --> components_processor
+    workflow_workflow --> workflow_job_handler
+    workflow_workflow --> core_config
     workflow_workflow --> core_html_ids
     workflow_workflow --> components_steps
-    workflow_workflow --> workflow_job_handler
-    workflow_workflow --> storage_file_storage
+    workflow_workflow --> core_adapters
     workflow_workflow --> media_library
-    workflow_workflow --> core_config
+    workflow_workflow --> storage_file_storage
 ```
 
 *51 cross-module dependencies detected*
@@ -1320,25 +1320,13 @@ from cjm_fasthtml_workflow_transcription_single_file.components.processor import
 
 ``` python
 def transcription_in_progress(
-    job_id: str,
-    plugin_info: Dict[str, Any],
-    file_info: Dict[str, Any],
-    config: SingleFileWorkflowConfig,
-    router: APIRouter,
-)
-    """
-    Render transcription in-progress view with SSE updates.
-    
-    Args:
-        job_id: Unique identifier for the transcription job.
-        plugin_info: Dictionary with plugin details (id, title, supports_streaming).
-        file_info: Dictionary with file details (name, path, type, size_str).
-        config: Workflow configuration.
-        router: Workflow router for generating route URLs.
-    
-    Returns:
-        FastHTML component showing progress and SSE connection.
-    """
+    job_id: str, # Unique identifier for the transcription job
+    plugin_info: Dict[str, Any], # Dictionary with plugin details (id, title, supports_streaming)
+    file_info: Dict[str, Any], # Dictionary with file details (name, path, type, size_str)
+    config: SingleFileWorkflowConfig, # Workflow configuration
+    router: APIRouter, # Workflow router for generating route URLs
+) -> FT: # FastHTML component showing progress and SSE connection
+    "Render transcription in-progress view with SSE updates."
 ```
 
 ### Protocols (`protocols.ipynb`)
@@ -1427,52 +1415,26 @@ from cjm_fasthtml_workflow_transcription_single_file.components.results import (
 
 ``` python
 def transcription_results(
-    job_id: str,
-    transcription_text: str,
-    metadata: Dict[str, Any],
-    file_info: Dict[str, Any],
-    plugin_info: Dict[str, Any],
-    config: SingleFileWorkflowConfig,
-    router: APIRouter,
-    stepflow_router: APIRouter,
-)
-    """
-    Render transcription results with export options.
-    
-    Args:
-        job_id: Unique identifier for the transcription job.
-        transcription_text: The transcribed text.
-        metadata: Transcription metadata from the plugin.
-        file_info: Dictionary with file details (name, path, type, size_str).
-        plugin_info: Dictionary with plugin details (id, title, supports_streaming).
-        config: Workflow configuration.
-        router: Workflow router for generating route URLs.
-        stepflow_router: StepFlow router for generating stepflow URLs.
-    
-    Returns:
-        FastHTML component showing results with export options.
-    """
+    job_id: str, # Unique identifier for the transcription job
+    transcription_text: str, # The transcribed text
+    metadata: Dict[str, Any], # Transcription metadata from the plugin
+    file_info: Dict[str, Any], # Dictionary with file details (name, path, type, size_str)
+    plugin_info: Dict[str, Any], # Dictionary with plugin details (id, title, supports_streaming)
+    config: SingleFileWorkflowConfig, # Workflow configuration
+    router: APIRouter, # Workflow router for generating route URLs
+    stepflow_router: APIRouter, # StepFlow router for generating stepflow URLs
+) -> FT: # FastHTML component showing results with export options
+    "Render transcription results with export options."
 ```
 
 ``` python
 def transcription_error(
-    error_message: str,
-    file_info: Optional[Dict[str, Any]],
-    config: SingleFileWorkflowConfig,
-    stepflow_router: APIRouter,
-)
-    """
-    Render transcription error message.
-    
-    Args:
-        error_message: Description of the error that occurred.
-        file_info: Optional dictionary with file details.
-        config: Workflow configuration.
-        stepflow_router: StepFlow router for generating stepflow URLs.
-    
-    Returns:
-        FastHTML component showing error with retry option.
-    """
+    error_message: str, # Description of the error that occurred
+    file_info: Optional[Dict[str, Any]], # Optional dictionary with file details
+    config: SingleFileWorkflowConfig, # Workflow configuration
+    stepflow_router: APIRouter, # StepFlow router for generating stepflow URLs
+) -> FT: # FastHTML component showing error with retry option
+    "Render transcription error message."
 ```
 
 ### Workflow Routes (`routes.ipynb`)
@@ -1689,180 +1651,96 @@ from cjm_fasthtml_workflow_transcription_single_file.components.steps import (
 #### Functions
 
 ``` python
-def _get_file_attr(file_path: str, media_files: list, attr: str) -> str:
-    """Get an attribute from a file by path."""
-    if not file_path
+def _get_file_attr(
+    file_path: str, # Path to the file to look up
+    media_files: list, # List of MediaFile objects to search
+    attr: str, # Attribute name to retrieve from the file
+) -> str: # Attribute value or empty string if not found
     "Get an attribute from a file by path."
 ```
 
 ``` python
 def _render_plugin_details_content(
-    plugin_id: str,
-    plugins: List[PluginInfo],
-    plugin_registry: PluginRegistryProtocol,
-)
-    """
-    Render details for selected plugin (info card only, no config collapse).
-    
-    Args:
-        plugin_id: ID of the plugin to display details for.
-        plugins: List of available plugins.
-        plugin_registry: Plugin registry adapter for getting plugin config.
-    """
+    plugin_id: str, # ID of the plugin to display details for
+    plugins: List[PluginInfo], # List of available plugins
+    plugin_registry: PluginRegistryProtocol, # Plugin registry adapter for getting plugin config
+) -> Optional[FT]: # Plugin info card or None if plugin not found
+    "Render details for selected plugin (info card only, no config collapse)."
 ```
 
 ``` python
 def _render_plugin_details_with_config(
-    plugin_id: str,
-    plugins: List[PluginInfo],
-    plugin_registry: PluginRegistryProtocol,
-    raw_plugin_registry,
-    save_url: str,
-    reset_url: str,
-)
-    """
-    Render plugin details with configuration collapse.
-    
-    This is used for initial render when returning to the plugin selection step
-    with a previously selected plugin.
-    
-    Args:
-        plugin_id: ID of the plugin to display details for.
-        plugins: List of available plugins.
-        plugin_registry: Plugin registry adapter for getting plugin config.
-        raw_plugin_registry: UnifiedPluginRegistry for config_schema access.
-        save_url: URL for saving plugin configuration.
-        reset_url: URL for resetting plugin configuration.
-    """
+    plugin_id: str, # ID of the plugin to display details for
+    plugins: List[PluginInfo], # List of available plugins
+    plugin_registry: PluginRegistryProtocol, # Plugin registry adapter for getting plugin config
+    raw_plugin_registry, # UnifiedPluginRegistry for config_schema access
+    save_url: str, # URL for saving plugin configuration
+    reset_url: str, # URL for resetting plugin configuration
+) -> Optional[FT]: # Plugin details with config collapse, or None if not found
+    "Render plugin details with configuration collapse for initial render."
 ```
 
 ``` python
 def render_plugin_config_form(
-    plugin_id: str,
-    plugin_registry,  # UnifiedPluginRegistry - raw registry with config_schema access
-    save_url: str,
-    reset_url: str,
-    alert_message: Optional[Any] = None,
-) -> FT
-    """
-    Render the plugin configuration form for the collapse content.
-    
-    This creates a settings form container using the plugin's config schema
-    and current configuration values.
-    
-    Args:
-        plugin_id: ID of the plugin to render config for.
-        plugin_registry: UnifiedPluginRegistry with config_schema access.
-        save_url: URL for saving the configuration.
-        reset_url: URL for resetting to defaults.
-        alert_message: Optional alert to display above the form.
-    
-    Returns:
-        Div containing the settings form with alert container.
-    """
+    plugin_id: str, # ID of the plugin to render config for
+    plugin_registry, # UnifiedPluginRegistry with config_schema access
+    save_url: str, # URL for saving the configuration
+    reset_url: str, # URL for resetting to defaults
+    alert_message: Optional[Any] = None, # Optional alert to display above the form
+) -> FT: # Div containing the settings form with alert container
+    "Render the plugin configuration form for the collapse content."
 ```
 
 ``` python
 def _render_plugin_config_collapse(
-    plugin_id: str,
-    plugin_registry,  # UnifiedPluginRegistry - raw registry with config_schema access
-    save_url: str,
-    reset_url: str,
-) -> FT
-    """
-    Render a collapse component containing the plugin configuration form.
-    
-    Args:
-        plugin_id: ID of the plugin to render config for.
-        plugin_registry: UnifiedPluginRegistry with config_schema access.
-        save_url: URL for saving the configuration.
-        reset_url: URL for resetting to defaults.
-    
-    Returns:
-        Collapse component with plugin configuration form.
-    """
+    plugin_id: str, # ID of the plugin to render config for
+    plugin_registry, # UnifiedPluginRegistry with config_schema access
+    save_url: str, # URL for saving the configuration
+    reset_url: str, # URL for resetting to defaults
+) -> FT: # Collapse component with plugin configuration form
+    "Render a collapse component containing the plugin configuration form."
 ```
 
 ``` python
 def render_plugin_details_route(
-    plugin_id: str,
-    plugin_registry: PluginRegistryProtocol,
-    raw_plugin_registry,  # UnifiedPluginRegistry for config_schema access
-    save_url: str,
-    reset_url: str,
-)
-    """
-    Render plugin details for HTMX route.
-    
-    This is called by the workflow router when the plugin dropdown changes.
-    Includes a collapse component with the plugin's configuration form.
-    
-    Args:
-        plugin_id: ID of the plugin to display details for.
-        plugin_registry: Plugin registry adapter for getting plugins and config.
-        raw_plugin_registry: UnifiedPluginRegistry for config_schema access.
-        save_url: URL for saving plugin configuration.
-        reset_url: URL for resetting plugin configuration to defaults.
-    """
+    plugin_id: str, # ID of the plugin to display details for
+    plugin_registry: PluginRegistryProtocol, # Plugin registry adapter for getting plugins and config
+    raw_plugin_registry, # UnifiedPluginRegistry for config_schema access
+    save_url: str, # URL for saving plugin configuration
+    reset_url: str, # URL for resetting plugin configuration to defaults
+) -> FT: # Plugin details with info card and config collapse
+    "Render plugin details for HTMX route when plugin dropdown changes."
 ```
 
 ``` python
 def render_plugin_selection(
-    ctx: InteractionContext,
-    config: SingleFileWorkflowConfig,
-    plugin_registry: PluginRegistryProtocol,
-    settings_modal_url: str,
-    plugin_details_url: str,
-    raw_plugin_registry=None,
-    save_plugin_config_url: str = "",
-    reset_plugin_config_url: str = "",
-)
-    """
-    Render plugin selection step.
-    
-    All discovered plugins are shown, not just those with saved configs.
-    Plugins can use their default configuration values from the schema.
-    
-    Args:
-        ctx: Interaction context with state and data.
-        config: Workflow configuration.
-        plugin_registry: Plugin registry adapter for getting plugin config.
-        settings_modal_url: URL for the settings modal route.
-        plugin_details_url: URL for the plugin details route.
-        raw_plugin_registry: UnifiedPluginRegistry for config_schema access (optional).
-        save_plugin_config_url: URL for saving plugin configuration.
-        reset_plugin_config_url: URL for resetting plugin configuration.
-    """
+    ctx: InteractionContext, # Interaction context with state and data
+    config: SingleFileWorkflowConfig, # Workflow configuration
+    plugin_registry: PluginRegistryProtocol, # Plugin registry adapter for getting plugin config
+    settings_modal_url: str, # URL for the settings modal route
+    plugin_details_url: str, # URL for the plugin details route
+    raw_plugin_registry=None, # UnifiedPluginRegistry for config_schema access (optional)
+    save_plugin_config_url: str = "", # URL for saving plugin configuration
+    reset_plugin_config_url: str = "", # URL for resetting plugin configuration
+) -> FT: # Plugin selection step UI component
+    "Render plugin selection step showing all discovered plugins."
 ```
 
 ``` python
 def render_file_selection(
-    ctx: InteractionContext,
-    config: SingleFileWorkflowConfig,
-    file_selection_router: APIRouter,
-)
-    """
-    Render file selection step with paginated table view and preview capability.
-    
-    Args:
-        ctx: Interaction context with state and data.
-        config: Workflow configuration.
-        file_selection_router: Router for file selection pagination (or None).
-    """
+    ctx: InteractionContext, # Interaction context with state and data
+    config: SingleFileWorkflowConfig, # Workflow configuration
+    file_selection_router: APIRouter, # Router for file selection pagination (or None)
+) -> FT: # File selection step UI component with paginated table
+    "Render file selection step with paginated table view and preview capability."
 ```
 
 ``` python
 def render_confirmation(
-    ctx: InteractionContext,
-    plugin_registry: PluginRegistryProtocol,
-)
-    """
-    Render confirmation step showing selected plugin and file.
-    
-    Args:
-        ctx: Interaction context with state and data.
-        plugin_registry: Plugin registry adapter for getting plugin info.
-    """
+    ctx: InteractionContext, # Interaction context with state and data
+    plugin_registry: PluginRegistryProtocol, # Plugin registry adapter for getting plugin info
+) -> FT: # Confirmation step UI component showing selected plugin and file
+    "Render confirmation step showing selected plugin and file."
 ```
 
 ### Media Utilities (`utils.ipynb`)
