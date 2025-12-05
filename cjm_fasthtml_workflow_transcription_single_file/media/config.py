@@ -12,44 +12,40 @@ from typing import List
 # %% ../../nbs/media/config.ipynb 5
 @dataclass
 class MediaConfig:
-    """Media scanning and display configuration.
-
-    This configuration controls how the workflow discovers and presents
-    media files for transcription.
-    """
+    """Configuration for media file discovery and browser display."""
     # Directories to scan
-    directories: List[str] = field(default_factory=list)
+    directories: List[str] = field(default_factory=list)  # Directories to scan for media files
 
     # File type filters (transcription-specific defaults)
-    scan_audio: bool = True
-    scan_video: bool = True
-    audio_extensions: List[str] = field(default_factory=lambda: [
+    scan_audio: bool = True  # Include audio files in scan results
+    scan_video: bool = True  # Include video files in scan results
+    audio_extensions: List[str] = field(default_factory=lambda: [  # File extensions recognized as audio
         "mp3", "wav", "flac", "m4a", "ogg", "wma", "aac"
     ])
-    video_extensions: List[str] = field(default_factory=lambda: [
+    video_extensions: List[str] = field(default_factory=lambda: [  # File extensions recognized as video
         "mp4", "mkv", "avi", "mov", "webm", "wmv"
     ])
 
     # Size limits
-    min_file_size_kb: int = 0
-    max_file_size_mb: int = 0  # 0 = unlimited
+    min_file_size_kb: int = 0  # Minimum file size in KB (0 = no minimum)
+    max_file_size_mb: int = 0  # Maximum file size in MB (0 = unlimited)
 
     # Scanning behavior
-    recursive_scan: bool = True
-    include_hidden: bool = False
-    follow_symlinks: bool = False
-    exclude_patterns: List[str] = field(default_factory=list)
+    recursive_scan: bool = True  # Scan subdirectories
+    include_hidden: bool = False  # Include files starting with a dot
+    follow_symlinks: bool = False  # Follow symbolic links when scanning
+    exclude_patterns: List[str] = field(default_factory=list)  # Glob patterns to exclude
 
     # Caching
-    cache_results: bool = True
-    cache_duration_minutes: int = 60
+    cache_results: bool = True  # Cache scan results for faster loading
+    cache_duration_minutes: int = 60  # How long to cache scan results
 
     # Display settings
-    max_results: int = 1000
-    items_per_page: int = 30
-    default_view: str = "list"  # Currently only "list" is implemented
-    sort_by: str = "name"  # name, size, modified
-    sort_descending: bool = False
+    max_results: int = 1000  # Maximum number of files to return
+    items_per_page: int = 30  # Number of files to show per page
+    default_view: str = "list"  # Default view mode ("grid" or "list")
+    sort_by: str = "name"  # Default sort field (name, size, modified)
+    sort_descending: bool = False  # Sort in descending order
 
 # %% ../../nbs/media/config.ipynb 7
 MEDIA_CONFIG_SCHEMA = {

@@ -11,11 +11,7 @@ from dataclasses import dataclass
 # %% ../../nbs/media/models.ipynb 5
 @dataclass
 class MediaFile:
-    """Represents a discovered media file.
-
-    This dataclass provides a standardized representation of media files
-    that the workflow can display and process.
-    """
+    """Represents a discovered media file for display and processing."""
     path: str  # Full path to the file
     name: str  # Display name of the file
     extension: str  # File extension (without dot)

@@ -34,16 +34,10 @@ from .models import MediaFile
 from .mounter import MediaMounter
 
 # %% ../../nbs/media/components.ipynb 5
-def get_media_icon(media_type: str  # "video" or "audio"
-                  ) -> FT:  # SVG element with icon
-    """Get an SVG icon for the media type.
-
-    Args:
-        media_type: Either "video" or "audio".
-
-    Returns:
-        SVG element with appropriate icon.
-    """
+def get_media_icon(
+    media_type: str  # "video" or "audio"
+) -> FT:  # SVG element with appropriate icon
+    """Get an SVG icon for the media type."""
     if media_type == "video":
         return Svg(
             SvgPath(d="M4 12V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.706.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2"),
@@ -85,22 +79,10 @@ def grid_view_content(
     mounter: MediaMounter,  # MediaMounter instance for URL generation
     start_idx: int = 0,  # Starting index for item numbering
     media_type: Optional[str] = None,  # Current filter type for maintaining state
-    preview_route_func=None,  # Function to generate preview route URL
+    preview_route_func = None,  # Function to generate preview route URL
     modal_id: str = "sf-media-preview"  # ID for the preview modal
 ) -> FT:  # Grid container with media cards
-    """Grid view of media files as cards.
-
-    Args:
-        media_files: List of media files to display.
-        mounter: MediaMounter instance for URL generation.
-        start_idx: Starting index for item numbering.
-        media_type: Current filter type for maintaining state.
-        preview_route_func: Function to generate preview route URL.
-        modal_id: ID for the preview modal.
-
-    Returns:
-        Grid container with media cards.
-    """
+    """Render media files as cards in a responsive grid layout."""
     return Div(
         *[
             Div(
@@ -177,22 +159,10 @@ def list_view_content(
     mounter: MediaMounter,  # MediaMounter instance for URL generation
     start_idx: int = 0,  # Starting index for item numbering
     media_type: Optional[str] = None,  # Current filter type for maintaining state
-    preview_route_func=None,  # Function to generate preview route URL
+    preview_route_func = None,  # Function to generate preview route URL
     modal_id: str = "sf-media-preview"  # ID for the preview modal
 ) -> FT:  # Table with media file rows
-    """List view of media files as table.
-
-    Args:
-        media_files: List of media files to display.
-        mounter: MediaMounter instance for URL generation.
-        start_idx: Starting index for item numbering.
-        media_type: Current filter type for maintaining state.
-        preview_route_func: Function to generate preview route URL.
-        modal_id: ID for the preview modal.
-
-    Returns:
-        Table with media file rows.
-    """
+    """Render media files as rows in a table."""
     return Div(
         Table(
             Thead(
@@ -260,16 +230,7 @@ def media_preview_modal(
     media_url: Optional[str],  # URL to the media file for playback
     modal_id: str = "sf-media-preview"  # ID for the modal element
 ) -> FT:  # Modal dialog with media preview
-    """Modal for viewing/previewing a media file.
-
-    Args:
-        media_file: MediaFile to preview.
-        media_url: URL to the media file for playback.
-        modal_id: ID for the modal element.
-
-    Returns:
-        Modal dialog with media preview.
-    """
+    """Create a modal dialog for previewing media files with video/audio player."""
     # Build modal content
     modal_content = Div(
         # Modal header
@@ -346,23 +307,7 @@ def empty_media_content(
     action_url: Optional[str] = None,  # Optional URL for action button
     action_text: str = "Configure Settings"  # Text for action button
 ) -> FT:  # Empty state container
-    # COPY FROM: fasthtml_transcription/transcription/workflows/single_file/media/components.py
-    # Lines 328-355: empty_media_content function
-    #
-    # Includes:
-    # - Docstring
-    # - Message display
-    # - Optional action button
-    """Empty state content when no media files are available.
-
-    Args:
-        message: Message to display.
-        action_url: Optional URL for action button.
-        action_text: Text for action button.
-
-    Returns:
-        Empty state container.
-    """
+    """Render empty state display when no media files are found."""
     content = [
         P(message, cls=combine_classes(text_align.center, p(8), text_dui.base_content.opacity(60)))
     ]
@@ -389,18 +334,7 @@ def media_browser_controls(
     change_filter_url_func,  # Function to generate URL for filter change
     content_target_id: str  # ID of content container to target
 ) -> FT:  # Controls bar element
-    """Controls bar for media browser (view mode, filters).
-
-    Args:
-        view_mode: Current view mode ("grid" or "list").
-        media_type_filter: Current media type filter.
-        change_view_url_func: Function to generate URL for view change.
-        change_filter_url_func: Function to generate URL for filter change.
-        content_target_id: ID of content container to target.
-
-    Returns:
-        Controls bar element.
-    """
+    """Render control bar for media browser with view mode toggle and media type filter."""
     return Div(
         # View mode selector
         Div(

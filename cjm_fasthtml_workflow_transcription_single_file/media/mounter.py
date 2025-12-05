@@ -15,14 +15,7 @@ from starlette.staticfiles import StaticFiles
 
 # %% ../../nbs/media/mounter.ipynb 5
 class MediaMounter:
-    """Mounts directories for static file serving with instance-level state.
-
-    Each workflow instance gets its own mounter with its own registry of
-    mounted directories, ensuring proper isolation between workflow instances.
-
-    The mounter uses a unique prefix pattern (sf_media_{hash}) to avoid
-    conflicts with other mounters or static file routes.
-    """
+    """Mounts directories for static file serving with instance-level state."""
 
     # Prefix pattern for this mounter's routes
     ROUTE_PREFIX_PATTERN = "sf_media_"
@@ -34,19 +27,12 @@ class MediaMounter:
 
 # %% ../../nbs/media/mounter.ipynb 6
 @patch
-def mount(self: MediaMounter,
-          app,  # FastHTML app instance
-          directories: List[str]  # Directory to mount
-         ) -> str:  # URL prefix for the mounted directory
-    """Mount directories to app for static file serving.
-
-    This method clears any existing mounts from this instance before
-    adding new ones, ensuring a clean state on each call.
-
-    Args:
-        app: FastHTML/Starlette application instance.
-        directories: List of directory paths to mount.
-    """
+def mount(
+    self: MediaMounter,
+    app,  # FastHTML/Starlette application instance
+    directories: List[str]  # List of directory paths to mount
+) -> None:
+    """Mount directories to app for static file serving."""
     self._app = app
     self._mounted.clear()
 
@@ -58,17 +44,11 @@ def mount(self: MediaMounter,
 
 # %% ../../nbs/media/mounter.ipynb 7
 @patch
-def get_url(self: MediaMounter,
-            file_path: str  # Full path to the media file
-           ) -> Optional[str]:  # URL to access the file or None
-    """Get URL for a file based on mounted directories.
-
-    Args:
-        file_path: Full path to the media file.
-
-    Returns:
-        URL path to access the file, or None if not in a mounted directory.
-    """
+def get_url(
+    self: MediaMounter,
+    file_path: str  # Full path to the media file
+) -> Optional[str]:  # URL to access the file, or None if not in a mounted directory
+    """Get URL for a file based on mounted directories."""
     file_path_resolved = Path(file_path).resolve()
 
     for directory, prefix in self._mounted.items():
@@ -84,32 +64,26 @@ def get_url(self: MediaMounter,
 
 # %% ../../nbs/media/mounter.ipynb 8
 @patch
-def is_mounted(self: MediaMounter,
-               directory: str  # Directory to check
-              ) -> bool:  # True if directory is mounted
-    """Check if a directory is currently mounted.
-
-    Args:
-        directory: Directory path to check.
-
-    Returns:
-        True if the directory is mounted.
-    """
+def is_mounted(
+    self: MediaMounter,
+    directory: str  # Directory path to check
+) -> bool:  # True if the directory is mounted
+    """Check if a directory is currently mounted."""
     return directory in self._mounted
 
 # %% ../../nbs/media/mounter.ipynb 9
 @patch
-def get_mounted_directories(self: MediaMounter) -> List[str]:
-    """Get list of currently mounted directories.
-
-    Returns:
-        List of mounted directory paths.
-    """
+def get_mounted_directories(
+    self: MediaMounter
+) -> List[str]:  # List of mounted directory paths
+    """Get list of currently mounted directories."""
     return list(self._mounted.keys())
 
 # %% ../../nbs/media/mounter.ipynb 10
 @patch
-def unmount_all(self: MediaMounter) -> None:
+def unmount_all(
+    self: MediaMounter
+) -> None:
     """Remove all mounts from this instance."""
     if self._app:
         self._remove_existing_mounts(self._app)
@@ -117,15 +91,12 @@ def unmount_all(self: MediaMounter) -> None:
 
 # %% ../../nbs/media/mounter.ipynb 11
 @patch
-def _mount_directory(self: MediaMounter, 
-                     app, 
-                     directory: str) -> None:
-    """Mount a single directory.
-
-    Args:
-        app: FastHTML/Starlette application instance.
-        directory: Directory path to mount.
-    """
+def _mount_directory(
+    self: MediaMounter, 
+    app,  # FastHTML/Starlette application instance
+    directory: str  # Directory path to mount
+) -> None:
+    """Mount a single directory."""
     dir_path = Path(directory)
 
     if not dir_path.exists():
@@ -156,33 +127,21 @@ def _mount_directory(self: MediaMounter,
 
 # %% ../../nbs/media/mounter.ipynb 12
 @patch
-def _generate_prefix(self: MediaMounter, 
-                     directory: str) -> str:
-    """Generate a unique route prefix for a directory.
-
-    Uses MD5 hash of the directory path to ensure uniqueness while
-    keeping the prefix reasonably short.
-
-    Args:
-        directory: Directory path.
-
-    Returns:
-        Route prefix string (e.g., "sf_media_abc12345").
-    """
+def _generate_prefix(
+    self: MediaMounter, 
+    directory: str  # Directory path
+) -> str:  # Route prefix string (e.g., "sf_media_abc12345")
+    """Generate a unique route prefix for a directory using MD5 hash."""
     dir_hash = hashlib.md5(directory.encode()).hexdigest()[:8]
     return f"{self.ROUTE_PREFIX_PATTERN}{dir_hash}"
 
 # %% ../../nbs/media/mounter.ipynb 13
 @patch
-def _remove_existing_mounts(self: MediaMounter, 
-                            app) -> None:
-    """Remove existing mounts from this instance.
-
-    Only removes mounts that match this mounter's prefix pattern.
-
-    Args:
-        app: FastHTML/Starlette application instance.
-    """
+def _remove_existing_mounts(
+    self: MediaMounter, 
+    app  # FastHTML/Starlette application instance
+) -> None:
+    """Remove existing mounts matching this mounter's prefix pattern."""
     # Filter out mounts with our prefix pattern
     app.routes[:] = [
         route for route in app.routes

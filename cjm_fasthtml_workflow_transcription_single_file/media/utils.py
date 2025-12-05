@@ -11,16 +11,10 @@ from pathlib import Path
 from typing import List
 
 # %% ../../nbs/media/utils.ipynb 5
-def format_file_size(size_bytes: int  # Size in bytes
-                    ) -> str:  # Human-readable size string
-    """Format file size in human-readable format.
-
-    Args:
-        size_bytes: Size in bytes.
-
-    Returns:
-        Human-readable size string (e.g., "15.2 MB").
-    """
+def format_file_size(
+    size_bytes: int  # Size in bytes
+) -> str:  # Human-readable size string (e.g., "15.2 MB")
+    """Format file size in human-readable format."""
     for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
         if size_bytes < 1024.0:
             if unit == 'B':
@@ -30,18 +24,10 @@ def format_file_size(size_bytes: int  # Size in bytes
     return f"{size_bytes:.1f} PB"
 
 # %% ../../nbs/media/utils.ipynb 7
-def format_timestamp(timestamp: float  # Unix timestamp
-                    ) -> str:  # Human-readable date string
-    """Format timestamp to human-readable date.
-
-    Uses relative time for recent files (e.g., "5 min ago", "yesterday").
-
-    Args:
-        timestamp: Unix timestamp.
-
-    Returns:
-        Human-readable date string.
-    """
+def format_timestamp(
+    timestamp: float  # Unix timestamp
+) -> str:  # Human-readable date string
+    """Format timestamp to human-readable date with relative time for recent files."""
     dt = datetime.fromtimestamp(timestamp)
     now = datetime.now()
     diff = now - dt
@@ -62,18 +48,11 @@ def format_timestamp(timestamp: float  # Unix timestamp
         return dt.strftime("%Y-%m-%d")
 
 # %% ../../nbs/media/utils.ipynb 9
-def matches_patterns(path: str,  # File path to check
-                     patterns: List[str]  # List of glob patterns to match against
-                    ) -> bool:  # True if path matches any pattern
-    """Check if path matches any of the exclude patterns.
-
-    Args:
-        path: File path to check.
-        patterns: List of glob patterns to match against.
-
-    Returns:
-        True if path matches any pattern.
-    """
+def matches_patterns(
+    path: str,  # File path to check
+    patterns: List[str]  # List of glob patterns to match against
+) -> bool:  # True if path matches any pattern
+    """Check if path matches any of the exclude patterns."""
     path_obj = Path(path)
     for pattern in patterns:
         if path_obj.match(pattern):

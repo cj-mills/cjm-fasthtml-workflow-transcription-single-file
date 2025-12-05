@@ -17,34 +17,13 @@ from .mounter import MediaMounter
 
 # %% ../../nbs/media/library.ipynb 5
 class MediaLibrary:
-    """Unified interface for media scanning, mounting, and browsing.
+    """Unified interface for media scanning, mounting, and browsing."""
 
-    This class provides a facade over the individual media components,
-    offering a simple API for workflow integration.
-
-    Example usage:
-        config = MediaConfig(directories=["/path/to/media"])
-        library = MediaLibrary(config)
-
-        # Mount directories to app
-        library.mount(app)
-
-        # Scan for files
-        files = library.scan()
-
-        # Get URL for a file
-        url = library.get_url(files[0].path)
-
-        # Create pagination for browsing
-        pagination = library.create_pagination("my_pagination", "content-id")
-    """
-
-    def __init__(self, config: MediaConfig):
-        """Initialize the media library.
-
-        Args:
-            config: Media configuration with directories and settings.
-        """
+    def __init__(
+        self,
+        config: MediaConfig  # Media configuration with directories and settings
+    ):
+        """Initialize the media library."""
         self.config = config
         self.scanner = MediaScanner(config)
         self.mounter = MediaMounter()
@@ -73,89 +52,66 @@ class MediaLibrary:
 
 # %% ../../nbs/media/library.ipynb 7
 @patch
-def mount(self: MediaLibrary, app) -> None:
-    """Mount media directories to app for static file serving.
-
-    This must be called after the FastHTML app is created.
-
-    Args:
-        app: FastHTML/Starlette application instance.
-    """
+def mount(
+    self: MediaLibrary,
+    app  # FastHTML/Starlette application instance
+) -> None:
+    """Mount media directories to app for static file serving."""
     self.mounter.mount(app, self.config.directories)
 
 # %% ../../nbs/media/library.ipynb 8
 @patch
-def scan(self: MediaLibrary, force_refresh: bool = False) -> List[MediaFile]:
-    """Scan for media files.
-
-    Args:
-        force_refresh: Force a fresh scan, ignoring cache.
-
-    Returns:
-        List of MediaFile objects.
-    """
+def scan(
+    self: MediaLibrary,
+    force_refresh: bool = False  # Force a fresh scan, ignoring cache
+) -> List[MediaFile]:  # List of MediaFile objects
+    """Scan for media files."""
     return self.scanner.scan(force_refresh)
 
 # %% ../../nbs/media/library.ipynb 9
 @patch
-def get_transcribable_files(self: MediaLibrary) -> List[MediaFile]:
-    """Get files suitable for transcription (audio and video only).
-
-    Returns:
-        List of MediaFile objects with media_type 'audio' or 'video'.
-    """
+def get_transcribable_files(
+    self: MediaLibrary
+) -> List[MediaFile]:  # List of MediaFile objects with media_type 'audio' or 'video'
+    """Get files suitable for transcription (audio and video only)."""
     files = self.scan()
     return [f for f in files if f.media_type in ["audio", "video"]]
 
 # %% ../../nbs/media/library.ipynb 10
 @patch
-def get_url(self: MediaLibrary, file_path: str) -> Optional[str]:
-    """Get URL for a media file.
-
-    Args:
-        file_path: Full path to the media file.
-
-    Returns:
-        URL path to access the file, or None if not in a mounted directory.
-    """
+def get_url(
+    self: MediaLibrary,
+    file_path: str  # Full path to the media file
+) -> Optional[str]:  # URL path to access the file, or None if not in a mounted directory
+    """Get URL for a media file."""
     return self.mounter.get_url(file_path)
 
 # %% ../../nbs/media/library.ipynb 11
 @patch
-def clear_cache(self: MediaLibrary) -> None:
+def clear_cache(
+    self: MediaLibrary
+) -> None:
     """Clear the scan cache."""
     self.scanner.clear_cache()
 
 # %% ../../nbs/media/library.ipynb 12
 @patch
-def get_summary(self: MediaLibrary) -> dict:
-    """Get summary statistics for scanned files.
-
-    Returns:
-        Dictionary with file counts, sizes, and breakdowns.
-    """
+def get_summary(
+    self: MediaLibrary
+) -> dict:  # Dictionary with file counts, sizes, and breakdowns
+    """Get summary statistics for scanned files."""
     return self.scanner.get_summary()
 
 # %% ../../nbs/media/library.ipynb 13
 @patch
 def create_pagination(
     self: MediaLibrary,
-    pagination_id: str,
-    content_id: str,
-    preview_route_func=None,
-    modal_id: str = "sf-media-preview"
-):
-    """Create a pagination instance for browsing media files.
-
-    Args:
-        pagination_id: Unique identifier for this pagination instance.
-        content_id: HTML ID for the content area.
-        preview_route_func: Optional function to generate preview route URL.
-        modal_id: ID for the preview modal.
-
-    Returns:
-        Configured Pagination instance.
-    """
+    pagination_id: str,  # Unique identifier for this pagination instance
+    content_id: str,  # HTML ID for the content area
+    preview_route_func = None,  # Optional function to generate preview route URL
+    modal_id: str = "sf-media-preview"  # ID for the preview modal
+):  # Configured Pagination instance
+    """Create a pagination instance for browsing media files."""
     self._pagination = create_media_pagination(
         pagination_id=pagination_id,
         scanner=self.scanner,
@@ -169,17 +125,11 @@ def create_pagination(
 
 # %% ../../nbs/media/library.ipynb 14
 @patch
-def get_pagination_router(self: MediaLibrary, prefix: str) -> Optional[APIRouter]:
-    """Get the pagination router for registration with the app.
-
-    Must be called after create_pagination().
-
-    Args:
-        prefix: URL prefix for pagination routes.
-
-    Returns:
-        APIRouter for pagination, or None if pagination not created.
-    """
+def get_pagination_router(
+    self: MediaLibrary,
+    prefix: str  # URL prefix for pagination routes
+) -> Optional[APIRouter]:  # APIRouter for pagination, or None if pagination not created
+    """Get the pagination router for registration with the app."""
     if self._pagination:
         self._pagination_router = self._pagination.create_router(prefix=prefix)
         return self._pagination_router
@@ -189,25 +139,12 @@ def get_pagination_router(self: MediaLibrary, prefix: str) -> Optional[APIRouter
 @patch
 def create_file_selection_pagination(
     self: MediaLibrary,
-    pagination_id: str,
-    content_id: str,
-    preview_url_func=None,
-    preview_target_id: str = None
-):
-    """Create a pagination instance for file selection table.
-
-    This pagination is specifically for the file selection step,
-    rendering a table with radio buttons for selection.
-
-    Args:
-        pagination_id: Unique identifier for this pagination instance.
-        content_id: HTML ID for the content area.
-        preview_url_func: Function that takes file index and returns preview URL.
-        preview_target_id: HTML ID to target for preview modal.
-
-    Returns:
-        Configured Pagination instance for file selection.
-    """
+    pagination_id: str,  # Unique identifier for this pagination instance
+    content_id: str,  # HTML ID for the content area
+    preview_url_func = None,  # Function that takes file index and returns preview URL
+    preview_target_id: str = None  # HTML ID to target for preview modal
+):  # Configured Pagination instance for file selection
+    """Create a pagination instance for file selection table with radio buttons."""
     self._file_selection_pagination = create_file_selection_pagination(
         pagination_id=pagination_id,
         scanner=self.scanner,
@@ -220,17 +157,11 @@ def create_file_selection_pagination(
 
 # %% ../../nbs/media/library.ipynb 16
 @patch
-def get_file_selection_router(self: MediaLibrary, prefix: str) -> Optional[APIRouter]:
-    """Get the file selection pagination router.
-
-    Must be called after create_file_selection_pagination().
-
-    Args:
-        prefix: URL prefix for pagination routes.
-
-    Returns:
-        APIRouter for file selection pagination, or None if not created.
-    """
+def get_file_selection_router(
+    self: MediaLibrary,
+    prefix: str  # URL prefix for pagination routes
+) -> Optional[APIRouter]:  # APIRouter for file selection pagination, or None if not created
+    """Get the file selection pagination router."""
     if self._file_selection_pagination:
         self._file_selection_router = self._file_selection_pagination.create_router(prefix=prefix)
         return self._file_selection_router

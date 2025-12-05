@@ -20,28 +20,15 @@ from cjm_fasthtml_workflow_transcription_single_file.media.components import (
 
 # %% ../../nbs/media/pagination.ipynb 5
 def create_media_pagination(
-    pagination_id: str,
-    scanner: MediaScanner,
-    mounter: MediaMounter,
-    items_per_page: int = 30,
-    content_id: Optional[str] = None,
-    preview_route_func=None,
-    modal_id: str = "sf-media-preview"
-) -> Pagination:
-    """Create a Pagination instance for media browsing.
-
-    Args:
-        pagination_id: Unique identifier for this pagination instance.
-        scanner: MediaScanner instance for loading files.
-        mounter: MediaMounter instance for URL generation.
-        items_per_page: Number of items per page.
-        content_id: HTML ID for content area.
-        preview_route_func: Function to generate preview route URL.
-        modal_id: ID for the preview modal.
-
-    Returns:
-        Configured Pagination instance.
-    """
+    pagination_id: str,  # Unique identifier for this pagination instance
+    scanner: MediaScanner,  # MediaScanner instance for loading files
+    mounter: MediaMounter,  # MediaMounter instance for URL generation
+    items_per_page: int = 30,  # Number of items per page
+    content_id: Optional[str] = None,  # HTML ID for content area
+    preview_route_func = None,  # Function to generate preview route URL
+    modal_id: str = "sf-media-preview"  # ID for the preview modal
+) -> Pagination:  # Configured Pagination instance
+    """Create a Pagination instance for media browsing."""
 
     def load_media_files(request) -> List[MediaFile]:
         """Load media files from scanner with optional filtering."""

@@ -18,30 +18,23 @@ from .utils import format_file_size, format_timestamp, matches_patterns
 
 # %% ../../nbs/media/scanner.ipynb 5
 class MediaScanner:
-    """Scans directories for media files with instance-level caching.
+    """Scans directories for media files with instance-level caching."""
 
-    Each workflow instance gets its own scanner with its own cache,
-    ensuring proper isolation between workflow instances.
-    """
-
-    def __init__(self, config: MediaConfig):
-        """Initialize the scanner.
-
-        Args:
-            config: Media configuration with directories and filters.
-        """
+    def __init__(
+        self,
+        config: MediaConfig  # Media configuration with directories and filters
+    ):
+        """Initialize the scanner."""
         self.config = config
         self._cache: Optional[List[MediaFile]] = None
         self._cache_timestamp: float = 0
 
 # %% ../../nbs/media/scanner.ipynb 6
 @patch
-def _is_cache_valid(self: MediaScanner) -> bool:  # True if cache is valid
-    """Check if cache is still valid.
-
-    Returns:
-        True if cache exists and hasn't expired.
-    """
+def _is_cache_valid(
+    self: MediaScanner
+) -> bool:  # True if cache exists and hasn't expired
+    """Check if cache is still valid."""
     if not self.config.cache_results or self._cache is None:
         return False
     cache_duration = self.config.cache_duration_minutes * 60
@@ -49,24 +42,28 @@ def _is_cache_valid(self: MediaScanner) -> bool:  # True if cache is valid
 
 # %% ../../nbs/media/scanner.ipynb 7
 @patch
-def clear_cache(self: MediaScanner) -> None:
+def clear_cache(
+    self: MediaScanner
+) -> None:
     """Clear the scan cache."""
     self._cache = None
     self._cache_timestamp = 0
 
 # %% ../../nbs/media/scanner.ipynb 8
 @patch
-def _update_cache(self: MediaScanner, 
-                  files: List[MediaFile] # List of scanned MediaFile objects.
-                 ) -> None:
+def _update_cache(
+    self: MediaScanner, 
+    files: List[MediaFile]  # List of scanned MediaFile objects
+) -> None:
     """Update cache with new scan results."""
     self._cache = files
     self._cache_timestamp = time.time()
 
 # %% ../../nbs/media/scanner.ipynb 10
 @patch
-def _scan_directories(self: MediaScanner,
-                     ) -> List[MediaFile]: # List of MediaFile objects matching the configuration.
+def _scan_directories(
+    self: MediaScanner
+) -> List[MediaFile]:  # List of MediaFile objects matching the configuration
     """Perform actual directory scan."""
     media_files = []
 
@@ -169,17 +166,11 @@ def _scan_directories(self: MediaScanner,
 
 # %% ../../nbs/media/scanner.ipynb 11
 @patch
-def _sort_files(self: MediaScanner,
-                files: List[MediaFile]  # Files to sort
-               ) -> List[MediaFile]:  # Sorted files
-    """Sort files according to configuration.
-
-    Args:
-        files: List of MediaFile objects to sort.
-
-    Returns:
-        Sorted list of MediaFile objects.
-    """
+def _sort_files(
+    self: MediaScanner,
+    files: List[MediaFile]  # Files to sort
+) -> List[MediaFile]:  # Sorted files
+    """Sort files according to configuration."""
     sort_by = self.config.sort_by
     reverse = self.config.sort_descending
 
@@ -194,17 +185,11 @@ def _sort_files(self: MediaScanner,
 
 # %% ../../nbs/media/scanner.ipynb 12
 @patch
-def scan(self: MediaScanner, 
-         force_refresh: bool = False
-        ) -> List[MediaFile]:
-    """Scan for media files, using cache if valid.
-
-    Args:
-        force_refresh: Force a fresh scan, ignoring cache.
-
-    Returns:
-        List of MediaFile objects.
-    """
+def scan(
+    self: MediaScanner, 
+    force_refresh: bool = False  # Force a fresh scan, ignoring cache
+) -> List[MediaFile]:  # List of MediaFile objects
+    """Scan for media files, using cache if valid."""
     if not force_refresh and self._is_cache_valid():
         return self._cache
 
@@ -214,8 +199,9 @@ def scan(self: MediaScanner,
 
 # %% ../../nbs/media/scanner.ipynb 13
 @patch
-def get_summary(self: MediaScanner,
-               ) -> Dict[str, Any]: # Dictionary with total count, size, and breakdowns by type/extension.
+def get_summary(
+    self: MediaScanner
+) -> Dict[str, Any]:  # Dictionary with total count, size, and breakdowns by type/extension
     """Get summary statistics for scanned files."""
     files = self.scan()
 

@@ -25,30 +25,21 @@ from .library import MediaLibrary
 from .scanner import MediaScanner
 
 # %% ../../nbs/media/file_selection_pagination.ipynb 6
-def _escape_js(s: str) -> str:
+def _escape_js(
+    s: str  # String to escape
+) -> str:  # Escaped string safe for JavaScript
     """Escape a string for use in JavaScript."""
     return s.replace("\\", "\\\\").replace("'", "\\'").replace('"', '\\"').replace("\n", "\\n")
 
 # %% ../../nbs/media/file_selection_pagination.ipynb 8
 def _render_file_row(
-    file: MediaFile,
-    idx: int,
-    selected_file: Optional[str],
-    preview_url_func: Optional[Callable[[int], str]],
-    preview_target_id: Optional[str]
-) -> FT:
-    """Render a single file row in the selection table.
-
-    Args:
-        file: MediaFile to render.
-        idx: Global index of this file (across all pages).
-        selected_file: Currently selected file path (if any).
-        preview_url_func: Function to generate preview URL.
-        preview_target_id: Target ID for preview modal.
-
-    Returns:
-        Table row element.
-    """
+    file: MediaFile,  # MediaFile to render
+    idx: int,  # Global index of this file (across all pages)
+    selected_file: Optional[str],  # Currently selected file path (if any)
+    preview_url_func: Optional[Callable[[int], str]],  # Function to generate preview URL
+    preview_target_id: Optional[str]  # Target ID for preview modal
+) -> FT:  # Table row element
+    """Render a single file row in the selection table."""
     is_selected = file.path == selected_file
 
     return Tr(
@@ -99,26 +90,14 @@ def _render_file_row(
 
 # %% ../../nbs/media/file_selection_pagination.ipynb 11
 def create_file_selection_pagination(
-    pagination_id: str,
-    scanner: MediaScanner,
-    items_per_page: int = 30,
-    content_id: Optional[str] = None,
-    preview_url_func: Optional[Callable[[int], str]] = None,
-    preview_target_id: Optional[str] = None,
-) -> Pagination:
-    """Create a Pagination instance for file selection.
-
-    Args:
-        pagination_id: Unique identifier for this pagination instance.
-        scanner: MediaScanner instance for loading files.
-        items_per_page: Number of items per page.
-        content_id: HTML ID for content area.
-        preview_url_func: Function that takes file index and returns preview URL.
-        preview_target_id: HTML ID to target for preview modal.
-
-    Returns:
-        Configured Pagination instance.
-    """
+    pagination_id: str,  # Unique identifier for this pagination instance
+    scanner: MediaScanner,  # MediaScanner instance for loading files
+    items_per_page: int = 30,  # Number of items per page
+    content_id: Optional[str] = None,  # HTML ID for content area
+    preview_url_func: Optional[Callable[[int], str]] = None,  # Function that takes file index and returns preview URL
+    preview_target_id: Optional[str] = None  # HTML ID to target for preview modal
+) -> Pagination:  # Configured Pagination instance for file selection
+    """Create a Pagination instance for file selection with radio buttons."""
 
     def load_media_files(request) -> List[MediaFile]:
         """Load transcribable media files from scanner."""
