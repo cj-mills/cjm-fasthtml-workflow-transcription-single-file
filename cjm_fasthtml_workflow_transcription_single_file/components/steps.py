@@ -7,27 +7,35 @@ __all__ = ['render_plugin_config_form', 'render_plugin_details_route', 'render_p
            'render_confirmation']
 
 # %% ../../nbs/components/steps.ipynb 3
-from typing import List, Optional, Callable, Any, Dict
+from typing import Dict, Any, List, Optional, TYPE_CHECKING
+from urllib.parse import quote
 from fasthtml.common import *
-
+from fasthtml.svg import Svg, Path as SvgPath, Circle
+from cjm_fasthtml_interactions.core.context import InteractionContext
 from cjm_fasthtml_daisyui.components.actions.button import btn, btn_colors, btn_sizes, btn_styles
-from cjm_fasthtml_daisyui.components.data_input.select import select, select_colors
-from cjm_fasthtml_daisyui.components.data_display.badge import badge, badge_colors
+from cjm_fasthtml_daisyui.components.data_display.card import card, card_body, card_title
+from cjm_fasthtml_daisyui.components.data_display.badge import badge, badge_colors, badge_sizes, badge_styles
 from cjm_fasthtml_daisyui.components.data_display.collapse import collapse, collapse_title, collapse_content, collapse_modifiers
-from cjm_fasthtml_daisyui.utilities.semantic_colors import bg_dui, text_dui, border_dui
+from cjm_fasthtml_daisyui.components.data_display.stat import stat, stat_title, stat_value, stat_desc, stats
+from cjm_fasthtml_daisyui.components.data_display.table import table, table_modifiers
+from cjm_fasthtml_daisyui.components.data_input.radio import radio
+from cjm_fasthtml_daisyui.components.data_input.select import select
+from cjm_fasthtml_daisyui.utilities.semantic_colors import bg_dui, text_dui, stroke_dui, border_dui
 from cjm_fasthtml_daisyui.utilities.border_radius import border_radius
-from cjm_fasthtml_tailwind.utilities.spacing import p, m
-from cjm_fasthtml_tailwind.utilities.sizing import w
-from cjm_fasthtml_tailwind.utilities.typography import font_size, font_weight, text_align
-from cjm_fasthtml_tailwind.utilities.flexbox_and_grid import flex_display, flex_direction, items, justify, gap
 from cjm_fasthtml_tailwind.utilities.borders import border
+from cjm_fasthtml_tailwind.utilities.spacing import p, m
+from cjm_fasthtml_tailwind.utilities.sizing import w, max_h, h
+from cjm_fasthtml_tailwind.utilities.typography import font_size, font_weight, text_align
+from cjm_fasthtml_tailwind.utilities.layout import overflow
+from cjm_fasthtml_tailwind.utilities.flexbox_and_grid import flex_display, justify, items
 from cjm_fasthtml_tailwind.core.base import combine_classes
 
-from cjm_fasthtml_interactions.core.context import InteractionContext
+from cjm_fasthtml_settings.components.forms import create_settings_form_container
+from cjm_fasthtml_settings.core.utils import get_default_values_from_schema
 
+from ..core.config import SingleFileWorkflowConfig
 from ..core.html_ids import SingleFileHtmlIds
 from ..core.protocols import PluginInfo, PluginRegistryProtocol
-from ..core.config import SingleFileWorkflowConfig
 
 # %% ../../nbs/components/steps.ipynb 5
 def _get_file_attr(

@@ -16,7 +16,7 @@ from cjm_fasthtml_daisyui.components.data_display.card import card, card_body, c
 from cjm_fasthtml_daisyui.components.data_display.table import table, table_modifiers
 from cjm_fasthtml_daisyui.components.data_display.badge import badge, badge_colors, badge_sizes
 from cjm_fasthtml_daisyui.components.navigation.pagination import join
-from cjm_fasthtml_daisyui.utilities.semantic_colors import bg_dui, text_dui, border_dui, stroke_dui
+from cjm_fasthtml_daisyui.utilities.semantic_colors import bg_dui, text_dui, border_dui
 from cjm_fasthtml_daisyui.utilities.border_radius import border_radius
 from cjm_fasthtml_tailwind.utilities.spacing import p, m
 from cjm_fasthtml_tailwind.utilities.sizing import w, h, max_w
@@ -31,9 +31,10 @@ from cjm_fasthtml_tailwind.core.base import combine_classes
 from cjm_fasthtml_interactions.patterns.modal_dialog import ModalDialog, ModalSize
 
 from .models import MediaFile
+
 from .mounter import MediaMounter
 
-# %% ../../nbs/media/components.ipynb 5
+# %% ../../nbs/media/components.ipynb 6
 def get_media_icon(
     media_type: str  # "video" or "audio"
 ) -> FT:  # SVG element with appropriate icon
@@ -73,7 +74,7 @@ def get_media_icon(
             cls=combine_classes(w(16), h(16), m.x.auto, stroke_dui.base_content)
         )
 
-# %% ../../nbs/media/components.ipynb 8
+# %% ../../nbs/media/components.ipynb 9
 def grid_view_content(
     media_files: List[MediaFile],  # List of media files to display
     mounter: MediaMounter,  # MediaMounter instance for URL generation
@@ -153,7 +154,7 @@ def grid_view_content(
         )
     )
 
-# %% ../../nbs/media/components.ipynb 10
+# %% ../../nbs/media/components.ipynb 11
 def list_view_content(
     media_files: List[MediaFile],  # List of media files to display
     mounter: MediaMounter,  # MediaMounter instance for URL generation
@@ -224,7 +225,7 @@ def list_view_content(
         )
     )
 
-# %% ../../nbs/media/components.ipynb 12
+# %% ../../nbs/media/components.ipynb 13
 def media_preview_modal(
     media_file: MediaFile,  # MediaFile to preview
     media_url: Optional[str],  # URL to the media file for playback
@@ -301,7 +302,7 @@ def media_preview_modal(
         close_on_backdrop=True
     )
 
-# %% ../../nbs/media/components.ipynb 14
+# %% ../../nbs/media/components.ipynb 15
 def empty_media_content(
     message: str = "No media files found.",  # Message to display
     action_url: Optional[str] = None,  # Optional URL for action button
@@ -326,7 +327,7 @@ def empty_media_content(
 
     return Div(*content)
 
-# %% ../../nbs/media/components.ipynb 16
+# %% ../../nbs/media/components.ipynb 17
 def media_browser_controls(
     view_mode: str,  # Current view mode ("grid" or "list")
     media_type_filter: Optional[str],  # Current media type filter

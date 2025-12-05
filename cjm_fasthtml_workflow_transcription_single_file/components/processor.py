@@ -6,22 +6,22 @@
 __all__ = ['transcription_in_progress']
 
 # %% ../../nbs/components/processor.ipynb 3
-from typing import Optional
+from typing import Dict, Any
 from fasthtml.common import *
 from fasthtml.common import APIRouter
 
-from cjm_fasthtml_daisyui.components.actions.button import btn, btn_colors, btn_styles
+from cjm_fasthtml_daisyui.components.actions.button import btn, btn_colors, btn_sizes
+from cjm_fasthtml_daisyui.components.data_display.card import card, card_body, card_title
+from cjm_fasthtml_daisyui.components.data_display.badge import badge, badge_colors
 from cjm_fasthtml_daisyui.components.feedback.loading import loading, loading_styles, loading_sizes
 from cjm_fasthtml_daisyui.utilities.semantic_colors import bg_dui, text_dui
-from cjm_fasthtml_daisyui.utilities.border_radius import border_radius
 from cjm_fasthtml_tailwind.utilities.spacing import p, m
-from cjm_fasthtml_tailwind.utilities.sizing import w, h
 from cjm_fasthtml_tailwind.utilities.typography import font_size, font_weight, text_align
-from cjm_fasthtml_tailwind.utilities.flexbox_and_grid import flex_display, flex_direction, items, justify, gap
+from cjm_fasthtml_tailwind.utilities.flexbox_and_grid import flex_display, items, justify
 from cjm_fasthtml_tailwind.core.base import combine_classes
 
-from ..core.html_ids import SingleFileHtmlIds
 from ..core.config import SingleFileWorkflowConfig
+from ..core.html_ids import SingleFileHtmlIds
 
 # %% ../../nbs/components/processor.ipynb 5
 def transcription_in_progress(
