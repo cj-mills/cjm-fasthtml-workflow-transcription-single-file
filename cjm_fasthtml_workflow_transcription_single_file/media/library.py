@@ -15,7 +15,7 @@ from .models import MediaFile
 from .scanner import MediaScanner
 from .mounter import MediaMounter
 from .pagination import create_media_pagination
-from .file_selection_pagination import create_file_selection_pagination
+from .file_selection_pagination import create_file_selection_pagination as create_fs_pagination
 
 # %% ../../nbs/media/library.ipynb 5
 class MediaLibrary:
@@ -147,7 +147,7 @@ def create_file_selection_pagination(
     preview_target_id: str = None  # HTML ID to target for preview modal
 ):  # Configured Pagination instance for file selection
     """Create a pagination instance for file selection table with radio buttons."""
-    self._file_selection_pagination = create_file_selection_pagination(
+    self._file_selection_pagination = create_fs_pagination(
         pagination_id=pagination_id,
         scanner=self.scanner,
         items_per_page=self.config.items_per_page,
