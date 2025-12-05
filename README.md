@@ -77,52 +77,52 @@ graph LR
     components_results --> core_html_ids
     components_results --> core_config
     components_steps --> core_html_ids
-    components_steps --> core_config
     components_steps --> core_protocols
+    components_steps --> core_config
     core_adapters --> core_protocols
-    core_config --> media_config
     core_config --> core_html_ids
     core_config --> storage_config
-    media_components --> media_mounter
+    core_config --> media_config
     media_components --> media_models
-    media_file_selection_pagination --> media_scanner
+    media_components --> media_mounter
     media_file_selection_pagination --> media_library
     media_file_selection_pagination --> media_models
-    media_library --> media_config
-    media_library --> media_mounter
+    media_file_selection_pagination --> media_scanner
     media_library --> media_models
     media_library --> media_scanner
-    media_pagination --> media_components
+    media_library --> media_config
+    media_library --> media_mounter
     media_pagination --> media_library
-    media_pagination --> media_mounter
+    media_pagination --> media_components
     media_pagination --> media_scanner
-    media_scanner --> media_config
+    media_pagination --> media_mounter
     media_scanner --> media_utils
     media_scanner --> media_models
+    media_scanner --> media_config
     settings_components --> core_html_ids
-    settings_schemas --> storage_config
-    settings_schemas --> media_config
     settings_schemas --> core_config
+    settings_schemas --> media_config
+    settings_schemas --> storage_config
     storage_file_storage --> storage_config
     workflow_job_handler --> components_results
     workflow_job_handler --> components_processor
     workflow_job_handler --> storage_file_storage
     workflow_job_handler --> core_html_ids
-    workflow_job_handler --> core_protocols
     workflow_job_handler --> core_config
+    workflow_job_handler --> core_protocols
+    workflow_routes --> workflow_workflow
     workflow_routes --> components_results
+    workflow_routes --> workflow_job_handler
     workflow_routes --> components_processor
     workflow_routes --> core_html_ids
-    workflow_routes --> workflow_workflow
-    workflow_routes --> workflow_job_handler
     workflow_routes --> components_steps
     workflow_workflow --> components_steps
-    workflow_workflow --> core_html_ids
-    workflow_workflow --> core_config
     workflow_workflow --> media_library
-    workflow_workflow --> core_adapters
-    workflow_workflow --> workflow_job_handler
     workflow_workflow --> storage_file_storage
+    workflow_workflow --> core_adapters
+    workflow_workflow --> core_config
+    workflow_workflow --> core_html_ids
+    workflow_workflow --> workflow_job_handler
 ```
 
 *51 cross-module dependencies detected*
@@ -152,47 +152,14 @@ from cjm_fasthtml_workflow_transcription_single_file.core.adapters import (
 
 ``` python
 class PluginRegistryAdapter:
-    def __init__(self, app_registry, category: str = "transcription"):
-        """Initialize the adapter.
-
-        Args:
-            app_registry: The app's UnifiedPluginRegistry instance.
-            category: Plugin category to filter by (default: "transcription").
-        """
-        self._registry = app_registry
-        self._category = category
-
-    def get_configured_plugins(self) -> List[PluginInfo]
-    """
-    Adapts app's UnifiedPluginRegistry to workflow's PluginRegistryProtocol.
+    def __init__(self,
+    "Adapts app's UnifiedPluginRegistry to workflow's PluginRegistryProtocol."
     
-    This adapter wraps the app's plugin registry and provides a simplified
-    interface for the workflow to access transcription plugins.
-    """
+    def __init__(self,
+        "Initialize the adapter."
     
-    def __init__(self, app_registry, category: str = "transcription"):
-            """Initialize the adapter.
-    
-            Args:
-                app_registry: The app's UnifiedPluginRegistry instance.
-                category: Plugin category to filter by (default: "transcription").
-            """
-            self._registry = app_registry
-            self._category = category
-    
-        def get_configured_plugins(self) -> List[PluginInfo]
-        "Initialize the adapter.
-
-Args:
-    app_registry: The app's UnifiedPluginRegistry instance.
-    category: Plugin category to filter by (default: "transcription")."
-    
-    def get_configured_plugins(self) -> List[PluginInfo]:
-            """Get all configured transcription plugins (those with saved config files).
-    
-            Returns:
-                List of PluginInfo for plugins that have saved configurations.
-            """
+    def get_configured_plugins(self) -> List[PluginInfo]:  # List of PluginInfo for configured plugins
+            """Get all configured transcription plugins (those with saved config files)."""
             plugins = self._registry.get_plugins_by_category(self._category)
             return [
                 PluginInfo(
@@ -205,116 +172,67 @@ Args:
                 for p in plugins if p.is_configured
             ]
     
-        def get_all_plugins(self) -> List[PluginInfo]
-        "Get all configured transcription plugins (those with saved config files).
-
-Returns:
-    List of PluginInfo for plugins that have saved configurations."
+        def get_all_plugins(self) -> List[PluginInfo]:  # List of PluginInfo for all discovered plugins
+        "Get all configured transcription plugins (those with saved config files)."
     
-    def get_all_plugins(self) -> List[PluginInfo]
-        "Get all discovered transcription plugins (configured or not).
-
-Plugins without saved config files can still be used with their
-default configuration values from the schema.
-
-Returns:
-    List of PluginInfo for all discovered plugins."
+    def get_all_plugins(self) -> List[PluginInfo]:  # List of PluginInfo for all discovered plugins
+            """Get all discovered transcription plugins (configured or not)."""
+            plugins = self._registry.get_plugins_by_category(self._category)
+            return [
+                PluginInfo(
+                    id=p.get_unique_id(),
+                    name=p.name,
+                    title=p.title,
+                    is_configured=p.is_configured,
+                    supports_streaming=self._check_streaming_support(p)
+                )
+                for p in plugins
+            ]
     
-    def get_plugin(self, plugin_id: str) -> Optional[PluginInfo]:
-            """Get a specific plugin by ID.
+        def get_plugin(self,
+                       plugin_id: str  # Unique plugin identifier
+                       ) -> Optional[PluginInfo]:  # PluginInfo if found, None otherwise
+        "Get all discovered transcription plugins (configured or not)."
     
-            Args:
-                plugin_id: Unique plugin identifier.
+    def get_plugin(self,
+                       plugin_id: str  # Unique plugin identifier
+                       ) -> Optional[PluginInfo]:  # PluginInfo if found, None otherwise
+        "Get a specific plugin by ID."
     
-            Returns:
-                PluginInfo if found, None otherwise.
-            """
-            plugin_meta = self._registry.get_plugin(plugin_id)
-            if not plugin_meta
-        "Get a specific plugin by ID.
-
-Args:
-    plugin_id: Unique plugin identifier.
-
-Returns:
-    PluginInfo if found, None otherwise."
-    
-    def get_plugin_config(self, plugin_id: str) -> Dict[str, Any]:
-            """Get the configuration for a plugin.
-    
-            Args:
-                plugin_id: Unique plugin identifier.
-    
-            Returns:
-                Configuration dictionary, empty dict if not configured.
-            """
-            return self._registry.load_plugin_config(plugin_id) or {}
-    
-        def _check_streaming_support(self, plugin_meta) -> bool
-        "Get the configuration for a plugin.
-
-Args:
-    plugin_id: Unique plugin identifier.
-
-Returns:
-    Configuration dictionary, empty dict if not configured."
+    def get_plugin_config(self,
+                              plugin_id: str  # Unique plugin identifier
+                              ) -> Dict[str, Any]:  # Configuration dictionary, empty dict if not configured
+        "Get the configuration for a plugin."
 ```
 
 ``` python
 class DefaultConfigPluginRegistryAdapter:
-    def __init__(self, registry: UnifiedPluginRegistry, category: str = "transcription"):
-        """Initialize adapter with registry instance."""
-        self._registry = registry
-        self._category = category
-
-    def get_plugins_by_category(self, category) -> list
-    """
-    Plugin registry adapter that provides default config values for unconfigured plugins.
+    def __init__(self,
+                 registry: UnifiedPluginRegistry,  # The UnifiedPluginRegistry instance to wrap
+                 category: str = "transcription"  # Plugin category to filter by
+                 )
+    "Plugin registry adapter that provides default config values for unconfigured plugins."
     
-    This adapter wraps a UnifiedPluginRegistry and ensures that `load_plugin_config`
-    returns default values from the plugin's schema when no saved config exists.
-    This allows plugins to be used immediately without requiring a saved .json config file.
-    """
-    
-    def __init__(self, registry: UnifiedPluginRegistry, category: str = "transcription"):
-            """Initialize adapter with registry instance."""
-            self._registry = registry
-            self._category = category
-    
-        def get_plugins_by_category(self, category) -> list
+    def __init__(self,
+                     registry: UnifiedPluginRegistry,  # The UnifiedPluginRegistry instance to wrap
+                     category: str = "transcription"  # Plugin category to filter by
+                     )
         "Initialize adapter with registry instance."
     
-    def get_plugins_by_category(self, category) -> list:
-            """Get all plugins in a specific category."""
-            return self._registry.get_plugins_by_category(category)
-    
-        def get_plugin(self, plugin_id: str)
+    def get_plugins_by_category(self,
+                                    category: str  # Plugin category to filter by
+                                    ) -> list:  # List of plugins in the category
         "Get all plugins in a specific category."
     
-    def get_plugin(self, plugin_id: str):
-            """Get a specific plugin by ID."""
-            return self._registry.get_plugin(plugin_id)
-    
-        def load_plugin_config(self, plugin_id: str) -> Dict[str, Any]
+    def get_plugin(self,
+                       plugin_id: str  # Unique plugin identifier
+                       ):  # Plugin metadata or None
         "Get a specific plugin by ID."
     
-    def load_plugin_config(self, plugin_id: str) -> Dict[str, Any]:
-            """Load configuration for a plugin, using defaults if no saved config exists.
-    
-            Returns:
-                Configuration dictionary. If no saved config exists, returns default
-                values extracted from the plugin's config schema.
-            """
-            # First try to load saved config
-            saved_config = self._registry.load_plugin_config(plugin_id)
-    
-            # If config exists and has values, return it
-            if saved_config
-        "Load configuration for a plugin, using defaults if no saved config exists.
-
-Returns:
-    Configuration dictionary. If no saved config exists, returns default
-    values extracted from the plugin's config schema."
+    def load_plugin_config(self,
+                               plugin_id: str  # Unique plugin identifier
+                               ) -> Dict[str, Any]:  # Configuration dictionary with defaults applied
+        "Load configuration for a plugin, using defaults if no saved config exists."
 ```
 
 ### Media Components (`components.ipynb`)
@@ -568,57 +486,36 @@ from cjm_fasthtml_workflow_transcription_single_file.core.config import (
 ``` python
 @dataclass
 class SingleFileWorkflowConfig:
-    """
-    Configuration for single-file transcription workflow.
+    "Configuration for single-file transcription workflow."
     
-    This configuration allows customization of the workflow behavior
-    without modifying the workflow code itself.
-    
-    The workflow is fully self-contained with internal subsystems:
-    - MediaLibrary (configured via media)
-    - ResultStorage (configured via storage)
-    - TranscriptionJobManager (created internally)
-    - SSEBroadcastManager (created internally)
-    """
-    
-    workflow_id: str = 'single_file_transcription'
-    worker_type: str = 'transcription:single_file'
-    route_prefix: str = '/single_file'
-    stepflow_prefix: str = '/flow'
-    media_prefix: str = '/media'
-    container_id: str = SingleFileHtmlIds.WORKFLOW_CONTAINER
+    workflow_id: str = 'single_file_transcription'  # Unique identifier for this workflow
+    worker_type: str = 'transcription:single_file'  # Worker process type identifier
+    route_prefix: str = '/single_file'  # Base URL prefix for workflow routes
+    stepflow_prefix: str = '/flow'  # Sub-prefix for StepFlow routes
+    media_prefix: str = '/media'  # Sub-prefix for media browser routes
+    container_id: str = SingleFileHtmlIds.WORKFLOW_CONTAINER  # HTML ID for main workflow container
     show_progress: bool = True  # Show step progress indicator
     max_files_displayed: int = 50  # Maximum files to show in simple file selector
-    export_formats: List[str] = field(...)
-    no_plugins_redirect: Optional[str]  # URL when no plugins configured
-    no_files_redirect: Optional[str]  # URL when no media files found
-    sse_poll_interval: float = 2.0
-    gpu_memory_threshold_percent: float = 45.0
-    config_dir: Path = field(...)
-    plugin_config_dir: Path = field(...)
-    plugin_category: str = 'transcription'
-    media: MediaConfig = field(...)
-    storage: StorageConfig = field(...)
+    export_formats: List[str] = field(...)  # Available export formats
+    no_plugins_redirect: Optional[str]  # URL to redirect when no plugins configured
+    no_files_redirect: Optional[str]  # URL to redirect when no media files found
+    sse_poll_interval: float = 2.0  # Seconds between SSE status checks
+    gpu_memory_threshold_percent: float = 45.0  # Max GPU memory % before blocking new jobs
+    config_dir: Path = field(...)  # Directory for workflow settings
+    plugin_config_dir: Path = field(...)  # Directory for plugin configs
+    plugin_category: str = 'transcription'  # Plugin category for this workflow
+    media: MediaConfig = field(...)  # Media scanning and display settings
+    storage: StorageConfig = field(...)  # Result storage settings
     
-    def get_full_stepflow_prefix(self) -> str:
-            """Get the full prefix for the StepFlow router.
-    
-            Returns:
-                Combined route_prefix + stepflow_prefix.
-            """
+    def get_full_stepflow_prefix(self) -> str:  # Combined route_prefix + stepflow_prefix
+            """Get the full prefix for the StepFlow router."""
             return f"{self.route_prefix}{self.stepflow_prefix}"
     
-        def get_full_media_prefix(self) -> str
-        "Get the full prefix for the StepFlow router.
-
-Returns:
-    Combined route_prefix + stepflow_prefix."
+        def get_full_media_prefix(self) -> str:  # Combined route_prefix + media_prefix
+        "Get the full prefix for the StepFlow router."
     
-    def get_full_media_prefix(self) -> str
-        "Get the full prefix for the media router.
-
-Returns:
-    Combined route_prefix + media_prefix."
+    def get_full_media_prefix(self) -> str:  # Combined route_prefix + media_prefix
+        "Get the full prefix for the media router."
 ```
 
 #### Variables
@@ -1045,17 +942,12 @@ from cjm_fasthtml_workflow_transcription_single_file.core.html_ids import (
 class SingleFileHtmlIds(InteractionHtmlIds):
     "HTML ID constants for single-file transcription workflow."
     
-    def plugin_radio(plugin_id: str) -> str:
-            """Generate HTML ID for a plugin radio button."""
-            # Sanitize plugin_id for use in HTML ID
-            safe_id = plugin_id.replace(":", "-").replace("_", "-")
-            return f"sf-plugin-radio-{safe_id}"
-    
-        @staticmethod
-        def file_radio(index: int) -> str
+    def plugin_radio(plugin_id: str  # Unique plugin identifier to generate ID for
+                         ) -> str:  # HTML ID for the plugin radio button
         "Generate HTML ID for a plugin radio button."
     
-    def file_radio(index: int) -> str
+    def file_radio(index: int  # File index in the selection list
+                       ) -> str:  # HTML ID for the file radio button
         "Generate HTML ID for a file radio button."
 ```
 
@@ -1754,12 +1646,7 @@ from cjm_fasthtml_workflow_transcription_single_file.core.protocols import (
 ``` python
 @dataclass
 class PluginInfo:
-    """
-    Information about a transcription plugin.
-    
-    This dataclass provides a standardized representation of plugins
-    that the workflow can display and use.
-    """
+    "Information about a transcription plugin."
     
     id: str  # Unique plugin identifier (e.g., "transcription:voxtral_hf")
     name: str  # Plugin name (e.g., "voxtral_hf")
@@ -1771,86 +1658,42 @@ class PluginInfo:
 ``` python
 @runtime_checkable
 class PluginRegistryProtocol(Protocol):
-    """
-    Protocol for plugin registry access.
+    "Protocol for plugin registry access."
     
-    The workflow receives an adapter to the app's UnifiedPluginRegistry
-    that implements this interface.
-    """
-    
-    def get_configured_plugins(self) -> List[PluginInfo]:
-            """Get all configured transcription plugins.
-    
-            Returns:
-                List of PluginInfo for plugins that have valid configurations.
-            """
+    def get_configured_plugins(self) -> List[PluginInfo]:  # List of PluginInfo for configured plugins
+            """Get all configured transcription plugins."""
             ...
     
-        def get_plugin(self, plugin_id: str) -> Optional[PluginInfo]
-        "Get all configured transcription plugins.
-
-Returns:
-    List of PluginInfo for plugins that have valid configurations."
+        def get_plugin(self,
+                       plugin_id: str  # Unique plugin identifier
+                       ) -> Optional[PluginInfo]:  # PluginInfo if found, None otherwise
+        "Get all configured transcription plugins."
     
-    def get_plugin(self, plugin_id: str) -> Optional[PluginInfo]:
-            """Get a specific plugin by ID.
+    def get_plugin(self,
+                       plugin_id: str  # Unique plugin identifier
+                       ) -> Optional[PluginInfo]:  # PluginInfo if found, None otherwise
+        "Get a specific plugin by ID."
     
-            Args:
-                plugin_id: Unique plugin identifier.
-    
-            Returns:
-                PluginInfo if found, None otherwise.
-            """
-            ...
-    
-        def get_plugin_config(self, plugin_id: str) -> Dict[str, Any]
-        "Get a specific plugin by ID.
-
-Args:
-    plugin_id: Unique plugin identifier.
-
-Returns:
-    PluginInfo if found, None otherwise."
-    
-    def get_plugin_config(self, plugin_id: str) -> Dict[str, Any]
-        "Get the configuration for a plugin.
-
-Args:
-    plugin_id: Unique plugin identifier.
-
-Returns:
-    Configuration dictionary, empty dict if not configured."
+    def get_plugin_config(self,
+                              plugin_id: str  # Unique plugin identifier
+                              ) -> Dict[str, Any]:  # Configuration dictionary, empty dict if not configured
+        "Get the configuration for a plugin."
 ```
 
 ``` python
 @runtime_checkable
 class ResourceManagerProtocol(Protocol):
-    """
-    Protocol for resource availability checks.
+    "Protocol for resource availability checks."
     
-    The workflow can use this to check if GPU/CPU resources are available
-    before starting transcription jobs.
-    """
-    
-    def check_gpu_available(self) -> bool:
-            """Check if GPU is available for processing.
-    
-            Returns:
-                True if GPU is available and has sufficient memory.
-            """
+    def check_gpu_available(self) -> bool:  # True if GPU is available and has sufficient memory
+            """Check if GPU is available for processing."""
             ...
     
-        def get_gpu_memory_usage(self) -> float
-        "Check if GPU is available for processing.
-
-Returns:
-    True if GPU is available and has sufficient memory."
+        def get_gpu_memory_usage(self) -> float:  # GPU memory usage as a percentage (0-100)
+        "Check if GPU is available for processing."
     
-    def get_gpu_memory_usage(self) -> float
-        "Get current GPU memory usage percentage.
-
-Returns:
-    GPU memory usage as a percentage (0-100)."
+    def get_gpu_memory_usage(self) -> float:  # GPU memory usage as a percentage (0-100)
+        "Get current GPU memory usage percentage."
 ```
 
 ### Results Components (`results.ipynb`)

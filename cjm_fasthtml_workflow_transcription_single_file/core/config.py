@@ -21,79 +21,52 @@ DEFAULT_WORKFLOW_CONFIG_DIR = Path("configs/workflows/single_file")
 # %% ../../nbs/core/config.ipynb 6
 @dataclass
 class SingleFileWorkflowConfig:
-    """Configuration for single-file transcription workflow.
-
-    This configuration allows customization of the workflow behavior
-    without modifying the workflow code itself.
-
-    The workflow is fully self-contained with internal subsystems:
-    - MediaLibrary (configured via media)
-    - ResultStorage (configured via storage)
-    - TranscriptionJobManager (created internally)
-    - SSEBroadcastManager (created internally)
-    """
+    """Configuration for single-file transcription workflow."""
 
     # Workflow identification
-    workflow_id: str = "single_file_transcription"
-    worker_type: str = "transcription:single_file"
+    workflow_id: str = "single_file_transcription"  # Unique identifier for this workflow
+    worker_type: str = "transcription:single_file"  # Worker process type identifier
 
     # Route configuration
-    # The workflow router will be mounted at route_prefix
-    # The StepFlow router will be mounted at route_prefix + stepflow_prefix
-    # The media router will be mounted at route_prefix + media_prefix
-    route_prefix: str = "/single_file"
-    stepflow_prefix: str = "/flow"
-    media_prefix: str = "/media"
+    route_prefix: str = "/single_file"  # Base URL prefix for workflow routes
+    stepflow_prefix: str = "/flow"  # Sub-prefix for StepFlow routes
+    media_prefix: str = "/media"  # Sub-prefix for media browser routes
 
-    # Container ID for workflow content (can override for custom layouts)
-    container_id: str = SingleFileHtmlIds.WORKFLOW_CONTAINER
+    # Container ID for workflow content
+    container_id: str = SingleFileHtmlIds.WORKFLOW_CONTAINER  # HTML ID for main workflow container
 
     # UI options
     show_progress: bool = True  # Show step progress indicator
     max_files_displayed: int = 50  # Maximum files to show in simple file selector
 
     # Export formats supported
-    export_formats: List[str] = field(default_factory=lambda: ["txt", "srt", "vtt"])
+    export_formats: List[str] = field(default_factory=lambda: ["txt", "srt", "vtt"])  # Available export formats
 
     # Optional navigation URLs
-    # These are used for UI links when dependencies are missing
-    # The workflow itself doesn't depend on these routes existing
-    no_plugins_redirect: Optional[str] = None  # URL when no plugins configured
-    no_files_redirect: Optional[str] = None  # URL when no media files found
+    no_plugins_redirect: Optional[str] = None  # URL to redirect when no plugins configured
+    no_files_redirect: Optional[str] = None  # URL to redirect when no media files found
 
-    # SSE polling interval in seconds
-    sse_poll_interval: float = 2.0
+    # SSE polling interval
+    sse_poll_interval: float = 2.0  # Seconds between SSE status checks
 
     # Resource management
-    gpu_memory_threshold_percent: float = 45.0
+    gpu_memory_threshold_percent: float = 45.0  # Max GPU memory % before blocking new jobs
 
-    # Configuration persistence directory
-    # The workflow saves/loads its settings from this directory
-    config_dir: Path = field(default_factory=lambda: DEFAULT_WORKFLOW_CONFIG_DIR)
+    # Configuration persistence
+    config_dir: Path = field(default_factory=lambda: DEFAULT_WORKFLOW_CONFIG_DIR)  # Directory for workflow settings
+    plugin_config_dir: Path = field(default_factory=lambda: DEFAULT_WORKFLOW_CONFIG_DIR / "plugins")  # Directory for plugin configs
 
-    # Plugin configuration directory
-    # Each workflow has its own plugin configs for isolation
-    plugin_config_dir: Path = field(default_factory=lambda: DEFAULT_WORKFLOW_CONFIG_DIR / "plugins")
-
-    # Plugin category for this workflow
-    plugin_category: str = "transcription"
+    # Plugin category
+    plugin_category: str = "transcription"  # Plugin category for this workflow
 
     # Internal subsystem configurations
-    media: MediaConfig = field(default_factory=MediaConfig)
-    storage: StorageConfig = field(default_factory=StorageConfig)
+    media: MediaConfig = field(default_factory=MediaConfig)  # Media scanning and display settings
+    storage: StorageConfig = field(default_factory=StorageConfig)  # Result storage settings
 
-    def get_full_stepflow_prefix(self) -> str:
-        """Get the full prefix for the StepFlow router.
-
-        Returns:
-            Combined route_prefix + stepflow_prefix.
-        """
+    def get_full_stepflow_prefix(self) -> str:  # Combined route_prefix + stepflow_prefix
+        """Get the full prefix for the StepFlow router."""
         return f"{self.route_prefix}{self.stepflow_prefix}"
 
-    def get_full_media_prefix(self) -> str:
-        """Get the full prefix for the media router.
-
-        Returns:
-            Combined route_prefix + media_prefix.
-        """
+    def get_full_media_prefix(self) -> str:  # Combined route_prefix + media_prefix
+        """Get the full prefix for the media router."""
         return f"{self.route_prefix}{self.media_prefix}"

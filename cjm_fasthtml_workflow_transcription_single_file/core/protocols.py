@@ -12,11 +12,7 @@ from dataclasses import dataclass
 # %% ../../nbs/core/protocols.ipynb 5
 @dataclass
 class PluginInfo:
-    """Information about a transcription plugin.
-
-    This dataclass provides a standardized representation of plugins
-    that the workflow can display and use.
-    """
+    """Information about a transcription plugin."""
     id: str  # Unique plugin identifier (e.g., "transcription:voxtral_hf")
     name: str  # Plugin name (e.g., "voxtral_hf")
     title: str  # Display title (e.g., "Voxtral HF")
@@ -26,63 +22,33 @@ class PluginInfo:
 # %% ../../nbs/core/protocols.ipynb 7
 @runtime_checkable
 class PluginRegistryProtocol(Protocol):
-    """Protocol for plugin registry access.
+    """Protocol for plugin registry access."""
 
-    The workflow receives an adapter to the app's UnifiedPluginRegistry
-    that implements this interface.
-    """
-
-    def get_configured_plugins(self) -> List[PluginInfo]:
-        """Get all configured transcription plugins.
-
-        Returns:
-            List of PluginInfo for plugins that have valid configurations.
-        """
+    def get_configured_plugins(self) -> List[PluginInfo]:  # List of PluginInfo for configured plugins
+        """Get all configured transcription plugins."""
         ...
 
-    def get_plugin(self, plugin_id: str) -> Optional[PluginInfo]:
-        """Get a specific plugin by ID.
-
-        Args:
-            plugin_id: Unique plugin identifier.
-
-        Returns:
-            PluginInfo if found, None otherwise.
-        """
+    def get_plugin(self,
+                   plugin_id: str  # Unique plugin identifier
+                   ) -> Optional[PluginInfo]:  # PluginInfo if found, None otherwise
+        """Get a specific plugin by ID."""
         ...
 
-    def get_plugin_config(self, plugin_id: str) -> Dict[str, Any]:
-        """Get the configuration for a plugin.
-
-        Args:
-            plugin_id: Unique plugin identifier.
-
-        Returns:
-            Configuration dictionary, empty dict if not configured.
-        """
+    def get_plugin_config(self,
+                          plugin_id: str  # Unique plugin identifier
+                          ) -> Dict[str, Any]:  # Configuration dictionary, empty dict if not configured
+        """Get the configuration for a plugin."""
         ...
 
 # %% ../../nbs/core/protocols.ipynb 9
 @runtime_checkable
 class ResourceManagerProtocol(Protocol):
-    """Protocol for resource availability checks.
+    """Protocol for resource availability checks."""
 
-    The workflow can use this to check if GPU/CPU resources are available
-    before starting transcription jobs.
-    """
-
-    def check_gpu_available(self) -> bool:
-        """Check if GPU is available for processing.
-
-        Returns:
-            True if GPU is available and has sufficient memory.
-        """
+    def check_gpu_available(self) -> bool:  # True if GPU is available and has sufficient memory
+        """Check if GPU is available for processing."""
         ...
 
-    def get_gpu_memory_usage(self) -> float:
-        """Get current GPU memory usage percentage.
-
-        Returns:
-            GPU memory usage as a percentage (0-100).
-        """
+    def get_gpu_memory_usage(self) -> float:  # GPU memory usage as a percentage (0-100)
+        """Get current GPU memory usage percentage."""
         ...

@@ -69,13 +69,15 @@ class SingleFileHtmlIds(InteractionHtmlIds):
     PLUGIN_CONFIG_COLLAPSE = "sf-plugin-config-collapse"
 
     @staticmethod
-    def plugin_radio(plugin_id: str) -> str:
+    def plugin_radio(plugin_id: str  # Unique plugin identifier to generate ID for
+                     ) -> str:  # HTML ID for the plugin radio button
         """Generate HTML ID for a plugin radio button."""
         # Sanitize plugin_id for use in HTML ID
         safe_id = plugin_id.replace(":", "-").replace("_", "-")
         return f"sf-plugin-radio-{safe_id}"
 
     @staticmethod
-    def file_radio(index: int) -> str:
+    def file_radio(index: int  # File index in the selection list
+                   ) -> str:  # HTML ID for the file radio button
         """Generate HTML ID for a file radio button."""
         return f"sf-file-radio-{index}"

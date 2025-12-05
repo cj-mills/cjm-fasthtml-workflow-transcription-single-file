@@ -13,28 +13,18 @@ from .protocols import PluginInfo, PluginRegistryProtocol
 
 # %% ../../nbs/core/adapters.ipynb 5
 class PluginRegistryAdapter:
-    """Adapts app's UnifiedPluginRegistry to workflow's PluginRegistryProtocol.
+    """Adapts app's UnifiedPluginRegistry to workflow's PluginRegistryProtocol."""
 
-    This adapter wraps the app's plugin registry and provides a simplified
-    interface for the workflow to access transcription plugins.
-    """
-
-    def __init__(self, app_registry, category: str = "transcription"):
-        """Initialize the adapter.
-
-        Args:
-            app_registry: The app's UnifiedPluginRegistry instance.
-            category: Plugin category to filter by (default: "transcription").
-        """
+    def __init__(self,
+                 app_registry,  # The app's UnifiedPluginRegistry instance
+                 category: str = "transcription"  # Plugin category to filter by
+                 ):
+        """Initialize the adapter."""
         self._registry = app_registry
         self._category = category
 
-    def get_configured_plugins(self) -> List[PluginInfo]:
-        """Get all configured transcription plugins (those with saved config files).
-
-        Returns:
-            List of PluginInfo for plugins that have saved configurations.
-        """
+    def get_configured_plugins(self) -> List[PluginInfo]:  # List of PluginInfo for configured plugins
+        """Get all configured transcription plugins (those with saved config files)."""
         plugins = self._registry.get_plugins_by_category(self._category)
         return [
             PluginInfo(
@@ -47,15 +37,8 @@ class PluginRegistryAdapter:
             for p in plugins if p.is_configured
         ]
 
-    def get_all_plugins(self) -> List[PluginInfo]:
-        """Get all discovered transcription plugins (configured or not).
-
-        Plugins without saved config files can still be used with their
-        default configuration values from the schema.
-
-        Returns:
-            List of PluginInfo for all discovered plugins.
-        """
+    def get_all_plugins(self) -> List[PluginInfo]:  # List of PluginInfo for all discovered plugins
+        """Get all discovered transcription plugins (configured or not)."""
         plugins = self._registry.get_plugins_by_category(self._category)
         return [
             PluginInfo(
@@ -68,15 +51,10 @@ class PluginRegistryAdapter:
             for p in plugins
         ]
 
-    def get_plugin(self, plugin_id: str) -> Optional[PluginInfo]:
-        """Get a specific plugin by ID.
-
-        Args:
-            plugin_id: Unique plugin identifier.
-
-        Returns:
-            PluginInfo if found, None otherwise.
-        """
+    def get_plugin(self,
+                   plugin_id: str  # Unique plugin identifier
+                   ) -> Optional[PluginInfo]:  # PluginInfo if found, None otherwise
+        """Get a specific plugin by ID."""
         plugin_meta = self._registry.get_plugin(plugin_id)
         if not plugin_meta:
             return None
@@ -89,26 +67,16 @@ class PluginRegistryAdapter:
             supports_streaming=self._check_streaming_support(plugin_meta)
         )
 
-    def get_plugin_config(self, plugin_id: str) -> Dict[str, Any]:
-        """Get the configuration for a plugin.
-
-        Args:
-            plugin_id: Unique plugin identifier.
-
-        Returns:
-            Configuration dictionary, empty dict if not configured.
-        """
+    def get_plugin_config(self,
+                          plugin_id: str  # Unique plugin identifier
+                          ) -> Dict[str, Any]:  # Configuration dictionary, empty dict if not configured
+        """Get the configuration for a plugin."""
         return self._registry.load_plugin_config(plugin_id) or {}
 
-    def _check_streaming_support(self, plugin_meta) -> bool:
-        """Check if a plugin supports streaming output.
-
-        Args:
-            plugin_meta: Plugin metadata object.
-
-        Returns:
-            True if the plugin supports streaming.
-        """
+    def _check_streaming_support(self,
+                                 plugin_meta  # Plugin metadata object
+                                 ) -> bool:  # True if the plugin supports streaming
+        """Check if a plugin supports streaming output."""
         if hasattr(plugin_meta, 'config_schema'):
             schema = plugin_meta.config_schema
             if isinstance(schema, dict):
@@ -118,40 +86,32 @@ class PluginRegistryAdapter:
 
 # %% ../../nbs/core/adapters.ipynb 7
 class DefaultConfigPluginRegistryAdapter(PluginRegistryAdapter):
-    # COPY FROM: fasthtml_transcription/transcription/workflows/single_file/adapters.py
-    # Lines 59-111: DefaultConfigPluginRegistryAdapter class
-    #
-    # Includes:
-    # - Class docstring
-    # - _apply_defaults(self, config: Dict[str, Any], schema: Optional[Dict[str, Any]]) method
-    # - get_plugin_config(self, plugin_id: str) -> Dict[str, Any] method (overridden)
-    """Plugin registry adapter that provides default config values for unconfigured plugins.
+    """Plugin registry adapter that provides default config values for unconfigured plugins."""
 
-    This adapter wraps a UnifiedPluginRegistry and ensures that `load_plugin_config`
-    returns default values from the plugin's schema when no saved config exists.
-    This allows plugins to be used immediately without requiring a saved .json config file.
-    """
-
-    def __init__(self, registry: UnifiedPluginRegistry, category: str = "transcription"):
+    def __init__(self,
+                 registry: UnifiedPluginRegistry,  # The UnifiedPluginRegistry instance to wrap
+                 category: str = "transcription"  # Plugin category to filter by
+                 ):
         """Initialize adapter with registry instance."""
         self._registry = registry
         self._category = category
 
-    def get_plugins_by_category(self, category) -> list:
+    def get_plugins_by_category(self,
+                                category: str  # Plugin category to filter by
+                                ) -> list:  # List of plugins in the category
         """Get all plugins in a specific category."""
         return self._registry.get_plugins_by_category(category)
 
-    def get_plugin(self, plugin_id: str):
+    def get_plugin(self,
+                   plugin_id: str  # Unique plugin identifier
+                   ):  # Plugin metadata or None
         """Get a specific plugin by ID."""
         return self._registry.get_plugin(plugin_id)
 
-    def load_plugin_config(self, plugin_id: str) -> Dict[str, Any]:
-        """Load configuration for a plugin, using defaults if no saved config exists.
-
-        Returns:
-            Configuration dictionary. If no saved config exists, returns default
-            values extracted from the plugin's config schema.
-        """
+    def load_plugin_config(self,
+                           plugin_id: str  # Unique plugin identifier
+                           ) -> Dict[str, Any]:  # Configuration dictionary with defaults applied
+        """Load configuration for a plugin, using defaults if no saved config exists."""
         # First try to load saved config
         saved_config = self._registry.load_plugin_config(plugin_id)
 
