@@ -8,10 +8,11 @@ __all__ = ['MediaMounter']
 # %% ../../nbs/media/mounter.ipynb 3
 import hashlib
 from pathlib import Path
-from typing import Dict, Optional, List
+from typing import Dict, List, Optional
 from fastcore.basics import patch
 
 from starlette.staticfiles import StaticFiles
+from starlette.routing import Mount
 
 # %% ../../nbs/media/mounter.ipynb 5
 class MediaMounter:
