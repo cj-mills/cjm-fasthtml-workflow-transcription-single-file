@@ -41,43 +41,16 @@ from .job_handler import start_transcription_job
 class SingleFileTranscriptionWorkflow:
     """Self-contained single-file transcription workflow.
 
-    Creates and manages:
-    - Internal UnifiedPluginRegistry with workflow-specific config directory
-    - Internal ResourceManager for GPU/CPU availability checks
-    - Internal TranscriptionJobManager with workflow-specific callback
-    - Internal SSEBroadcastManager for event streaming
-    - Internal MediaLibrary for file discovery and browsing
-    - Internal ResultStorage for persisting results
-    - StepFlow for plugin → file → confirm wizard
-    - APIRouter for workflow-specific routes (SSE, cancel, export, etc.)
-
-    Example usage:
-        workflow = SingleFileTranscriptionWorkflow(
-            config=SingleFileWorkflowConfig(
-                route_prefix="/transcription/workflows/single_file",
-                media=MediaConfig(directories=["/path/to/media"]),
-            )
-        )
-
-        # Initialize with app (mounts media directories)
-        workflow.setup(app)
-
-        # Register routers with your app
-        register_routes(app, *workflow.get_routers())
-
-        # Store in app.state for access from routes
-        app.state.single_file_workflow = workflow
+    Creates and manages internal UnifiedPluginRegistry, ResourceManager,
+    TranscriptionJobManager, SSEBroadcastManager, MediaLibrary, ResultStorage,
+    StepFlow (plugin → file → confirm wizard), and APIRouter.
     """
 
     def __init__(
         self,
-        config: Optional[SingleFileWorkflowConfig] = None,
+        config: Optional[SingleFileWorkflowConfig] = None,  # Workflow configuration including media and storage settings
     ):
-        """Initialize the workflow.
-
-        Args:
-            config: Workflow configuration including media and storage settings.
-        """
+        """Initialize the workflow."""
         self.config = config or SingleFileWorkflowConfig()
         self._app = None  # Set in setup()
 
@@ -196,25 +169,24 @@ class SingleFileTranscriptionWorkflow:
 
 # %% ../../nbs/workflow/workflow.ipynb 7
 @patch
-def setup(self: SingleFileTranscriptionWorkflow, app) -> None:
-    """Initialize workflow with FastHTML app.
-
-    Must be called after app creation to mount media directories.
-
-    Args:
-        app: FastHTML application instance.
-    """
+def setup(
+    self: SingleFileTranscriptionWorkflow,
+    app,  # FastHTML application instance
+) -> None:
+    """Initialize workflow with FastHTML app. Must be called after app creation."""
     self._app = app
     self._media_library.mount(app)
 
 # %% ../../nbs/workflow/workflow.ipynb 8
 @patch
-def _ensure_plugin_configs_exist(self: SingleFileTranscriptionWorkflow) -> None:
+def _ensure_plugin_configs_exist(
+    self: SingleFileTranscriptionWorkflow,
+) -> None:
     """Ensure all discovered plugins have config files.
-
+    
     For plugins without saved config files, creates a config file with
-    default values from the plugin's schema. This is necessary because
-    the worker only loads plugins that have config files.
+    default values from the plugin's schema. Required because workers
+    only load plugins that have config files.
     """
     plugins = self._plugin_registry.get_plugins_by_category(self.config.plugin_category)
 
@@ -231,15 +203,10 @@ def _ensure_plugin_configs_exist(self: SingleFileTranscriptionWorkflow) -> None:
 
 # %% ../../nbs/workflow/workflow.ipynb 9
 @patch
-def get_routers(self: SingleFileTranscriptionWorkflow) -> List[APIRouter]:
-    """Return all routers for registration with the app.
-
-    Example usage:
-        register_routes(app, *workflow.get_routers())
-
-    Returns:
-        List containing the main router, stepflow router, media router, and file selection router.
-    """
+def get_routers(
+    self: SingleFileTranscriptionWorkflow,
+) -> List[APIRouter]:  # List containing main router, stepflow router, media router, and file selection router
+    """Return all routers for registration with the app."""
     routers = [self._router, self._stepflow_router]
     if self._media_router:
         routers.append(self._media_router)
@@ -249,22 +216,16 @@ def get_routers(self: SingleFileTranscriptionWorkflow) -> List[APIRouter]:
 
 # %% ../../nbs/workflow/workflow.ipynb 11
 @patch
-def render_entry_point(self: SingleFileTranscriptionWorkflow, request, sess) -> FT:
+def render_entry_point(
+    self: SingleFileTranscriptionWorkflow,
+    request,  # FastHTML request object
+    sess,  # FastHTML session object
+) -> FT:  # AsyncLoadingContainer component
     """Render the workflow entry point for embedding in tabs, etc.
 
-    This returns an AsyncLoadingContainer that loads the current_status
-    endpoint, which determines what to show (running job, workflow in progress,
+    Returns an AsyncLoadingContainer that loads the current_status endpoint,
+    which determines what to show (running job, workflow in progress,
     completed job, or fresh start).
-
-    Plugins are usable even without saved config files - they will use
-    their default configuration values from the schema.
-
-    Args:
-        request: FastHTML request object.
-        sess: FastHTML session object.
-
-    Returns:
-        AsyncLoadingContainer component.
     """
     # Check if there are any discovered plugins (configured or not)
     # Plugins can use default config values even without saved .json files
@@ -302,16 +263,12 @@ def render_entry_point(self: SingleFileTranscriptionWorkflow, request, sess) -> 
 
 # %% ../../nbs/workflow/workflow.ipynb 12
 @patch
-def _on_job_completed(self: SingleFileTranscriptionWorkflow, job_id: str, manager) -> None:
-    """Workflow-specific completion handling.
-
-    Called by TranscriptionJobManager when a job completes.
-    Auto-saves results if enabled in configuration.
-
-    Args:
-        job_id: The completed job's ID.
-        manager: The TranscriptionJobManager instance.
-    """
+def _on_job_completed(
+    self: SingleFileTranscriptionWorkflow,
+    job_id: str,  # The completed job's ID
+    manager,  # The TranscriptionJobManager instance
+) -> None:
+    """Workflow-specific completion handling. Auto-saves results if enabled."""
     if not self._result_storage.should_auto_save():
         return
 
@@ -353,7 +310,9 @@ def _on_job_completed(self: SingleFileTranscriptionWorkflow, job_id: str, manage
 
 # %% ../../nbs/workflow/workflow.ipynb 13
 @patch
-def _create_preview_route_func(self: SingleFileTranscriptionWorkflow):
+def _create_preview_route_func(
+    self: SingleFileTranscriptionWorkflow,
+):  # Function that generates preview route URLs
     """Create a function that generates preview route URLs (with optional media_type)."""
     route_prefix = self.config.route_prefix
 
@@ -367,7 +326,9 @@ def _create_preview_route_func(self: SingleFileTranscriptionWorkflow):
 
 # %% ../../nbs/workflow/workflow.ipynb 14
 @patch
-def _create_preview_url_func(self: SingleFileTranscriptionWorkflow):
+def _create_preview_url_func(
+    self: SingleFileTranscriptionWorkflow,
+):  # Function that generates preview URLs for file selection
     """Create a function that generates preview URLs for file selection (index only)."""
     route_prefix = self.config.route_prefix
 
@@ -378,17 +339,15 @@ def _create_preview_url_func(self: SingleFileTranscriptionWorkflow):
 
 # %% ../../nbs/workflow/workflow.ipynb 15
 @patch
-def _create_step_flow(self: SingleFileTranscriptionWorkflow) -> StepFlow:
+def _create_step_flow(
+    self: SingleFileTranscriptionWorkflow,
+) -> StepFlow:  # Configured StepFlow instance
     """Create and configure the StepFlow instance."""
     # Create wrapper functions that capture self
     workflow = self
 
     def load_plugins(request) -> Dict[str, Any]:
-        """Load available transcription plugins.
-
-        Returns all discovered plugins, not just those with saved configs.
-        Plugins can use their default configuration values from the schema.
-        """
+        """Load available transcription plugins."""
         plugins = workflow._plugin_adapter.get_all_plugins()
         return {"plugins": plugins}
 
@@ -411,7 +370,7 @@ def _create_step_flow(self: SingleFileTranscriptionWorkflow) -> StepFlow:
         return {"media_files": media_infos}
 
     def load_confirmation_data(request) -> Dict[str, Any]:
-        """Load data for confirmation step (just displays previous data)."""
+        """Load data for confirmation step."""
         return {}
 
     def render_plugin_step(ctx: InteractionContext):
@@ -503,7 +462,9 @@ def _create_step_flow(self: SingleFileTranscriptionWorkflow) -> StepFlow:
 
 # %% ../../nbs/workflow/workflow.ipynb 16
 @patch
-def _create_router(self: SingleFileTranscriptionWorkflow) -> APIRouter:
+def _create_router(
+    self: SingleFileTranscriptionWorkflow,
+) -> APIRouter:  # Configured APIRouter with all workflow routes
     """Create the workflow's API router with all routes."""
     from cjm_fasthtml_workflow_transcription_single_file.workflow.routes import init_router
     return init_router(self)

@@ -80,49 +80,49 @@ graph LR
     components_steps --> core_protocols
     components_steps --> core_config
     core_adapters --> core_protocols
-    core_config --> storage_config
-    core_config --> media_config
     core_config --> core_html_ids
+    core_config --> media_config
+    core_config --> storage_config
     media_components --> media_models
     media_components --> media_mounter
-    media_file_selection_pagination --> media_library
     media_file_selection_pagination --> media_models
+    media_file_selection_pagination --> media_library
     media_file_selection_pagination --> media_scanner
-    media_library --> media_scanner
-    media_library --> media_config
-    media_library --> media_mounter
     media_library --> media_models
-    media_pagination --> media_library
+    media_library --> media_config
+    media_library --> media_scanner
+    media_library --> media_mounter
     media_pagination --> media_components
-    media_pagination --> media_mounter
+    media_pagination --> media_library
     media_pagination --> media_scanner
+    media_pagination --> media_mounter
+    media_scanner --> media_models
     media_scanner --> media_utils
     media_scanner --> media_config
-    media_scanner --> media_models
     settings_components --> core_html_ids
-    settings_schemas --> media_config
     settings_schemas --> storage_config
     settings_schemas --> core_config
+    settings_schemas --> media_config
     storage_file_storage --> storage_config
-    workflow_job_handler --> core_protocols
     workflow_job_handler --> components_results
-    workflow_job_handler --> storage_file_storage
-    workflow_job_handler --> components_processor
-    workflow_job_handler --> core_config
     workflow_job_handler --> core_html_ids
-    workflow_routes --> components_steps
-    workflow_routes --> components_results
+    workflow_job_handler --> storage_file_storage
+    workflow_job_handler --> core_config
+    workflow_job_handler --> core_protocols
+    workflow_job_handler --> components_processor
     workflow_routes --> workflow_job_handler
-    workflow_routes --> workflow_workflow
-    workflow_routes --> components_processor
+    workflow_routes --> components_results
     workflow_routes --> core_html_ids
-    workflow_workflow --> media_library
-    workflow_workflow --> core_adapters
-    workflow_workflow --> core_html_ids
-    workflow_workflow --> components_steps
+    workflow_routes --> workflow_workflow
+    workflow_routes --> components_steps
+    workflow_routes --> components_processor
     workflow_workflow --> storage_file_storage
+    workflow_workflow --> core_html_ids
+    workflow_workflow --> media_library
     workflow_workflow --> core_config
     workflow_workflow --> workflow_job_handler
+    workflow_workflow --> components_steps
+    workflow_workflow --> core_adapters
 ```
 
 *51 cross-module dependencies detected*
@@ -700,122 +700,69 @@ from cjm_fasthtml_workflow_transcription_single_file.workflow.job_handler import
 
 ``` python
 def get_job_session_info(
-    job_id: str,
-    job,
-    sess,
-    plugin_registry: PluginRegistryProtocol,
-) -> tuple[Dict[str, Any], Dict[str, Any]]
-    """
-    Get file and plugin info from session with fallbacks.
-    
-    Args:
-        job_id: Unique job identifier.
-        job: Job object from the manager.
-        sess: FastHTML session object.
-        plugin_registry: Plugin registry for getting plugin info.
-    
-    Returns:
-        Tuple of (file_info, plugin_info) dictionaries.
-    """
+    job_id: str,  # Unique job identifier
+    job,  # Job object from the manager
+    sess,  # FastHTML session object
+    plugin_registry: PluginRegistryProtocol,  # Plugin registry for getting plugin info
+) -> tuple[Dict[str, Any], Dict[str, Any]]:  # Tuple of (file_info, plugin_info) dictionaries
+    "Get file and plugin info from session with fallbacks."
 ```
 
 ``` python
 def _save_job_result_once(
-    sess,
-    job_id: str,
-    job,
-    data: Dict[str, Any],
-    plugin_registry: PluginRegistryProtocol,
-    result_storage: ResultStorage,
-)
+    sess,  # FastHTML session object
+    job_id: str,  # Job identifier
+    job,  # Job object
+    data: Dict[str, Any],  # Transcription data containing text and metadata
+    plugin_registry: PluginRegistryProtocol,  # Plugin registry for getting plugin info
+    result_storage: ResultStorage,  # Storage for saving transcription results
+) -> None
     """
     Save transcription result to disk, ensuring it's only saved once per job.
     
-    Note: This is called from the SSE stream handler as a fallback. The primary
-    save mechanism is the workflow's _on_job_completed callback which is called
-    by the TranscriptionJobManager when a job completes.
-    
-    Args:
-        sess: FastHTML session object.
-        job_id: Job identifier.
-        job: Job object.
-        data: Transcription data containing text and metadata.
-        plugin_registry: Plugin registry for getting plugin info.
-        result_storage: Storage for saving transcription results.
+    Called from the SSE stream handler as a fallback. The primary save mechanism
+    is the workflow's `_on_job_completed` callback called by TranscriptionJobManager.
     """
 ```
 
 ``` python
-def _create_sse_swap_message(content, container_id: str)
-    """
-    Wrap content in a Div with HTMX OOB swap for SSE messages.
-    
-    Args:
-        content: HTML content to wrap.
-        container_id: Target container ID for the swap.
-    
-    Returns:
-        Div with OOB swap attributes.
-    """
+def _create_sse_swap_message(
+    content,  # HTML content to wrap
+    container_id: str,  # Target container ID for the swap
+):  # Div with OOB swap attributes
+    "Wrap content in a Div with HTMX OOB swap for SSE messages."
 ```
 
 ``` python
 async def start_transcription_job(
-    state: Dict[str, Any],
-    request,
-    config: SingleFileWorkflowConfig,
-    router,
-    transcription_manager,
-    plugin_registry: PluginRegistryProtocol,
-)
+    state: Dict[str, Any],  # Workflow state containing plugin_id, file_path, file_name, etc.
+    request,  # FastHTML request object
+    config: SingleFileWorkflowConfig,  # Workflow configuration
+    router,  # Workflow router for generating route URLs
+    transcription_manager,  # Manager for starting transcription jobs
+    plugin_registry: PluginRegistryProtocol,  # Plugin registry for getting plugin info
+):  # transcription_in_progress component showing job status
     """
     Handle workflow completion by starting the transcription job.
     
-    This is called by StepFlow's on_complete handler when the user confirms
+    Called by StepFlow's `on_complete` handler when the user confirms
     and clicks "Start Transcription".
-    
-    Args:
-        state: Workflow state containing plugin_id, file_path, file_name, etc.
-        request: FastHTML request object.
-        config: Workflow configuration.
-        router: Workflow router for generating route URLs.
-        transcription_manager: Manager for starting transcription jobs.
-        plugin_registry: Plugin registry for getting plugin info.
-    
-    Returns:
-        transcription_in_progress component showing job status.
     """
 ```
 
 ``` python
 def create_job_stream_handler(
-    job_id: str,
-    request,
-    sess,
-    config: SingleFileWorkflowConfig,
-    router,
-    stepflow_router: APIRouter,
-    transcription_manager,
-    plugin_registry: PluginRegistryProtocol,
-    result_storage: ResultStorage,
-)
-    """
-    Create an SSE stream generator for monitoring job completion.
-    
-    Args:
-        job_id: Unique job identifier.
-        request: FastHTML request object.
-        sess: FastHTML session object.
-        config: Workflow configuration.
-        router: Workflow router for generating route URLs.
-        stepflow_router: StepFlow router for generating stepflow URLs.
-        transcription_manager: Manager for getting job status.
-        plugin_registry: Plugin registry for getting plugin info.
-        result_storage: Storage for saving transcription results.
-    
-    Returns:
-        Async generator for SSE streaming.
-    """
+    job_id: str,  # Unique job identifier
+    request,  # FastHTML request object
+    sess,  # FastHTML session object
+    config: SingleFileWorkflowConfig,  # Workflow configuration
+    router,  # Workflow router for generating route URLs
+    stepflow_router: APIRouter,  # StepFlow router for generating stepflow URLs
+    transcription_manager,  # Manager for getting job status
+    plugin_registry: PluginRegistryProtocol,  # Plugin registry for getting plugin info
+    result_storage: ResultStorage,  # Storage for saving transcription results
+):  # Async generator for SSE streaming
+    "Create an SSE stream generator for monitoring job completion."
 ```
 
 ### Media Library (`library.ipynb`)
@@ -1277,54 +1224,19 @@ from cjm_fasthtml_workflow_transcription_single_file.workflow.routes import (
 #### Functions
 
 ``` python
-def init_router(workflow: SingleFileTranscriptionWorkflow) -> APIRouter:
-    """Initialize and return the workflow's API router with all routes.
-
-    Args:
-        workflow: The workflow instance providing access to config and dependencies.
-
-    Returns:
-        Configured APIRouter with all workflow routes.
-    """
-    router = APIRouter(prefix=workflow.config.route_prefix)
-
-    @router
-    def current_status(request, sess)
-    """
-    Initialize and return the workflow's API router with all routes.
-    
-    Args:
-        workflow: The workflow instance providing access to config and dependencies.
-    
-    Returns:
-        Configured APIRouter with all workflow routes.
-    """
+def init_router(
+    workflow: SingleFileTranscriptionWorkflow,  # The workflow instance providing access to config and dependencies
+) -> APIRouter:  # Configured APIRouter with all workflow routes
+    "Initialize and return the workflow's API router with all routes."
 ```
 
 ``` python
-def _export_transcription(text: str, format: str, filename: str) -> str:
-    """Format transcription for export.
-
-    Args:
-        text: Transcription text.
-        format: Export format (txt, srt, vtt).
-        filename: Original filename for metadata.
-
-    Returns:
-        Formatted transcription string.
-    """
-    if format == "txt"
-    """
-    Format transcription for export.
-    
-    Args:
-        text: Transcription text.
-        format: Export format (txt, srt, vtt).
-        filename: Original filename for metadata.
-    
-    Returns:
-        Formatted transcription string.
-    """
+def _export_transcription(
+    text: str,  # Transcription text
+    format: str,  # Export format (txt, srt, vtt)
+    filename: str,  # Original filename for metadata
+) -> str:  # Formatted transcription string
+    "Format transcription for export."
 ```
 
 ### Media Scanner (`scanner.ipynb`)
@@ -1614,143 +1526,86 @@ from cjm_fasthtml_workflow_transcription_single_file.workflow.workflow import (
 
 ``` python
 @patch
-def setup(self: SingleFileTranscriptionWorkflow, app) -> None
-    """
-    Initialize workflow with FastHTML app.
-    
-    Must be called after app creation to mount media directories.
-    
-    Args:
-        app: FastHTML application instance.
-    """
+def setup(
+    self: SingleFileTranscriptionWorkflow,
+    app,  # FastHTML application instance
+) -> None
+    "Initialize workflow with FastHTML app. Must be called after app creation."
 ```
 
 ``` python
 @patch
-def _ensure_plugin_configs_exist(self: SingleFileTranscriptionWorkflow) -> None:
-    """Ensure all discovered plugins have config files.
-
-    For plugins without saved config files, creates a config file with
-    default values from the plugin's schema. This is necessary because
-    the worker only loads plugins that have config files.
-    """
-    plugins = self._plugin_registry.get_plugins_by_category(self.config.plugin_category)
-
-    for plugin_meta in plugins
+def _ensure_plugin_configs_exist(
+    self: SingleFileTranscriptionWorkflow,
+) -> None
     """
     Ensure all discovered plugins have config files.
     
     For plugins without saved config files, creates a config file with
-    default values from the plugin's schema. This is necessary because
-    the worker only loads plugins that have config files.
+    default values from the plugin's schema. Required because workers
+    only load plugins that have config files.
     """
 ```
 
 ``` python
 @patch
-def get_routers(self: SingleFileTranscriptionWorkflow) -> List[APIRouter]:
-    """Return all routers for registration with the app.
-
-    Example usage:
-        register_routes(app, *workflow.get_routers())
-
-    Returns:
-        List containing the main router, stepflow router, media router, and file selection router.
-    """
-    routers = [self._router, self._stepflow_router]
-    if self._media_router
-    """
-    Return all routers for registration with the app.
-    
-    Example usage:
-        register_routes(app, *workflow.get_routers())
-    
-    Returns:
-        List containing the main router, stepflow router, media router, and file selection router.
-    """
+def get_routers(
+    self: SingleFileTranscriptionWorkflow,
+) -> List[APIRouter]:  # List containing main router, stepflow router, media router, and file selection router
+    "Return all routers for registration with the app."
 ```
 
 ``` python
 @patch
-def render_entry_point(self: SingleFileTranscriptionWorkflow, request, sess) -> FT
+def render_entry_point(
+    self: SingleFileTranscriptionWorkflow,
+    request,  # FastHTML request object
+    sess,  # FastHTML session object
+) -> FT:  # AsyncLoadingContainer component
     """
     Render the workflow entry point for embedding in tabs, etc.
     
-    This returns an AsyncLoadingContainer that loads the current_status
-    endpoint, which determines what to show (running job, workflow in progress,
+    Returns an AsyncLoadingContainer that loads the current_status endpoint,
+    which determines what to show (running job, workflow in progress,
     completed job, or fresh start).
-    
-    Plugins are usable even without saved config files - they will use
-    their default configuration values from the schema.
-    
-    Args:
-        request: FastHTML request object.
-        sess: FastHTML session object.
-    
-    Returns:
-        AsyncLoadingContainer component.
     """
 ```
 
 ``` python
 @patch
-def _on_job_completed(self: SingleFileTranscriptionWorkflow, job_id: str, manager) -> None:
-    """Workflow-specific completion handling.
-
-    Called by TranscriptionJobManager when a job completes.
-    Auto-saves results if enabled in configuration.
-
-    Args:
-        job_id: The completed job's ID.
-        manager: The TranscriptionJobManager instance.
-    """
-    if not self._result_storage.should_auto_save()
-    """
-    Workflow-specific completion handling.
-    
-    Called by TranscriptionJobManager when a job completes.
-    Auto-saves results if enabled in configuration.
-    
-    Args:
-        job_id: The completed job's ID.
-        manager: The TranscriptionJobManager instance.
-    """
+def _on_job_completed(
+    "Workflow-specific completion handling. Auto-saves results if enabled."
 ```
 
 ``` python
 @patch
-def _create_preview_route_func(self: SingleFileTranscriptionWorkflow):
-    """Create a function that generates preview route URLs (with optional media_type)."""
-    route_prefix = self.config.route_prefix
-
-    def preview_route_func(idx: int, media_type: Optional[str] = None) -> str
+def _create_preview_route_func(
+    self: SingleFileTranscriptionWorkflow,
+):  # Function that generates preview route URLs
     "Create a function that generates preview route URLs (with optional media_type)."
 ```
 
 ``` python
 @patch
-def _create_preview_url_func(self: SingleFileTranscriptionWorkflow):
-    """Create a function that generates preview URLs for file selection (index only)."""
-    route_prefix = self.config.route_prefix
-
-    def preview_url_func(idx: int) -> str
+def _create_preview_url_func(
+    self: SingleFileTranscriptionWorkflow,
+):  # Function that generates preview URLs for file selection
     "Create a function that generates preview URLs for file selection (index only)."
 ```
 
 ``` python
 @patch
-def _create_step_flow(self: SingleFileTranscriptionWorkflow) -> StepFlow:
-    """Create and configure the StepFlow instance."""
-    # Create wrapper functions that capture self
-    workflow = self
-
-    def load_plugins(request) -> Dict[str, Any]
+def _create_step_flow(
+    self: SingleFileTranscriptionWorkflow,
+) -> StepFlow:  # Configured StepFlow instance
     "Create and configure the StepFlow instance."
 ```
 
 ``` python
 @patch
-def _create_router(self: SingleFileTranscriptionWorkflow) -> APIRouter
+def _create_router(
+    self: SingleFileTranscriptionWorkflow,
+) -> APIRouter:  # Configured APIRouter with all workflow routes
     "Create the workflow's API router with all routes."
 ```
 
@@ -1760,47 +1615,21 @@ def _create_router(self: SingleFileTranscriptionWorkflow) -> APIRouter
 class SingleFileTranscriptionWorkflow:
     def __init__(
         self,
-        config: Optional[SingleFileWorkflowConfig] = None,
+        config: Optional[SingleFileWorkflowConfig] = None,  # Workflow configuration including media and storage settings
     )
     """
     Self-contained single-file transcription workflow.
     
-    Creates and manages:
-    - Internal UnifiedPluginRegistry with workflow-specific config directory
-    - Internal ResourceManager for GPU/CPU availability checks
-    - Internal TranscriptionJobManager with workflow-specific callback
-    - Internal SSEBroadcastManager for event streaming
-    - Internal MediaLibrary for file discovery and browsing
-    - Internal ResultStorage for persisting results
-    - StepFlow for plugin → file → confirm wizard
-    - APIRouter for workflow-specific routes (SSE, cancel, export, etc.)
-    
-    Example usage:
-        workflow = SingleFileTranscriptionWorkflow(
-            config=SingleFileWorkflowConfig(
-                route_prefix="/transcription/workflows/single_file",
-                media=MediaConfig(directories=["/path/to/media"]),
-            )
-        )
-    
-        # Initialize with app (mounts media directories)
-        workflow.setup(app)
-    
-        # Register routers with your app
-        register_routes(app, *workflow.get_routers())
-    
-        # Store in app.state for access from routes
-        app.state.single_file_workflow = workflow
+    Creates and manages internal UnifiedPluginRegistry, ResourceManager,
+    TranscriptionJobManager, SSEBroadcastManager, MediaLibrary, ResultStorage,
+    StepFlow (plugin → file → confirm wizard), and APIRouter.
     """
     
     def __init__(
             self,
-            config: Optional[SingleFileWorkflowConfig] = None,
+            config: Optional[SingleFileWorkflowConfig] = None,  # Workflow configuration including media and storage settings
         )
-        "Initialize the workflow.
-
-Args:
-    config: Workflow configuration including media and storage settings."
+        "Initialize the workflow."
     
     def transcription_manager(self) -> TranscriptionJobManager:
             """Access to internal transcription manager."""

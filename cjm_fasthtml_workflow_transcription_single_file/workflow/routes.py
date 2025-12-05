@@ -24,19 +24,17 @@ from cjm_fasthtml_workflow_transcription_single_file.workflow.job_handler import
 from .workflow import SingleFileTranscriptionWorkflow
 
 # %% ../../nbs/workflow/routes.ipynb 5
-def init_router(workflow: SingleFileTranscriptionWorkflow) -> APIRouter:
-    """Initialize and return the workflow's API router with all routes.
-
-    Args:
-        workflow: The workflow instance providing access to config and dependencies.
-
-    Returns:
-        Configured APIRouter with all workflow routes.
-    """
+def init_router(
+    workflow: SingleFileTranscriptionWorkflow,  # The workflow instance providing access to config and dependencies
+) -> APIRouter:  # Configured APIRouter with all workflow routes
+    """Initialize and return the workflow's API router with all routes."""
     router = APIRouter(prefix=workflow.config.route_prefix)
 
     @router
-    def current_status(request, sess):
+    def current_status(
+        request,  # FastHTML request object
+        sess,  # FastHTML session object
+    ):  # Appropriate UI component based on current state
         """Return current transcription status - determines what to show."""
         manager = workflow._transcription_manager
         all_jobs = manager.get_all_jobs()
@@ -95,7 +93,11 @@ def init_router(workflow: SingleFileTranscriptionWorkflow) -> APIRouter:
         return workflow._stepflow_router.start(request, sess)
 
     @router
-    async def cancel_job(request, sess, job_id: str):
+    async def cancel_job(
+        request,  # FastHTML request object
+        sess,  # FastHTML session object
+        job_id: str,  # ID of the job to cancel
+    ):  # StepFlow start view or error component
         """Cancel a running transcription job."""
         manager = workflow._transcription_manager
         success = await manager.cancel_job(job_id)
@@ -114,14 +116,21 @@ def init_router(workflow: SingleFileTranscriptionWorkflow) -> APIRouter:
             )
 
     @router
-    def reset(request, sess):
-        """Reset transcription workflow."""
+    def reset(
+        request,  # FastHTML request object
+        sess,  # FastHTML session object
+    ):  # StepFlow start view
+        """Reset transcription workflow and return to start."""
         workflow_session = WorkflowSession(sess, workflow.config.workflow_id)
         workflow_session.clear()
         return workflow._stepflow_router.start(request, sess)
 
     @router
-    def stream_job(request, sess, job_id: str):
+    def stream_job(
+        request,  # FastHTML request object
+        sess,  # FastHTML session object
+        job_id: str,  # ID of the job to monitor
+    ):  # EventStream for SSE updates
         """SSE endpoint for monitoring job completion."""
         stream_generator = create_job_stream_handler(
             job_id,
@@ -137,7 +146,11 @@ def init_router(workflow: SingleFileTranscriptionWorkflow) -> APIRouter:
         return EventStream(stream_generator())
 
     @router
-    def export(request, job_id: str, format: str = "txt"):
+    def export(
+        request,  # FastHTML request object
+        job_id: str,  # ID of the job to export
+        format: str = "txt",  # Export format (txt, srt, vtt)
+    ):  # Response with file download
         """Export transcription in specified format."""
         manager = workflow._transcription_manager
         job = manager.get_job(job_id)
@@ -165,7 +178,10 @@ def init_router(workflow: SingleFileTranscriptionWorkflow) -> APIRouter:
         )
 
     @router
-    def plugin_details(request, plugin_id: str = ""):
+    def plugin_details(
+        request,  # FastHTML request object
+        plugin_id: str = "",  # ID of the plugin to show details for
+    ):  # Plugin details component or empty Div
         """Get plugin details for display in workflow."""
         if plugin_id and plugin_id.strip():
             return render_plugin_details_route(
@@ -179,7 +195,10 @@ def init_router(workflow: SingleFileTranscriptionWorkflow) -> APIRouter:
             return Div()
 
     @router
-    async def save_plugin_config(request, plugin_id: str = ""):
+    async def save_plugin_config(
+        request,  # FastHTML request object
+        plugin_id: str = "",  # ID of the plugin to save config for
+    ):  # Updated config form or error alert
         """Save plugin configuration from the collapse form."""
         from cjm_fasthtml_app_core.components.alerts import create_success_alert, create_error_alert
         from cjm_fasthtml_settings.core.utils import convert_form_data_to_config
@@ -215,7 +234,10 @@ def init_router(workflow: SingleFileTranscriptionWorkflow) -> APIRouter:
             return create_error_alert(f"Error saving configuration: {str(e)}")
 
     @router
-    def reset_plugin_config(request, plugin_id: str = ""):
+    def reset_plugin_config(
+        request,  # FastHTML request object
+        plugin_id: str = "",  # ID of the plugin to reset config for
+    ):  # Updated config form with defaults or empty Div
         """Reset plugin configuration to defaults."""
         from cjm_fasthtml_app_core.components.alerts import create_success_alert
         from cjm_fasthtml_settings.core.utils import get_default_values_from_schema
@@ -242,7 +264,11 @@ def init_router(workflow: SingleFileTranscriptionWorkflow) -> APIRouter:
         )
 
     @router
-    def media_preview(request, idx: int = 0, media_type: str = None):
+    def media_preview(
+        request,  # FastHTML request object
+        idx: int = 0,  # Index of the file to preview
+        media_type: str = None,  # Optional filter by media type
+    ):  # Media preview modal or error Div
         """Render media preview modal for a specific file."""
         from cjm_fasthtml_workflow_transcription_single_file.media.components import media_preview_modal
 
@@ -264,13 +290,17 @@ def init_router(workflow: SingleFileTranscriptionWorkflow) -> APIRouter:
         )
 
     @router
-    def refresh_media(request):
+    def refresh_media(
+        request,  # FastHTML request object
+    ):  # JSON status response
         """Refresh media file cache."""
         workflow._media_library.clear_cache()
         return {"status": "success", "message": "Cache cleared"}
 
     @router
-    def settings_modal(request):
+    def settings_modal(
+        request,  # FastHTML request object
+    ):  # Settings modal component
         """Render the settings modal for the workflow."""
         from cjm_fasthtml_workflow_transcription_single_file.settings.components import settings_modal as create_settings_modal
         from cjm_fasthtml_workflow_transcription_single_file.settings.schemas import WORKFLOW_SETTINGS_SCHEMA, get_settings_from_config
@@ -291,7 +321,9 @@ def init_router(workflow: SingleFileTranscriptionWorkflow) -> APIRouter:
         )
 
     @router
-    async def settings_save(request):
+    async def settings_save(
+        request,  # FastHTML request object
+    ):  # Success alert with modal close script or error alert
         """Save workflow settings."""
         from cjm_fasthtml_app_core.components.alerts import create_success_alert, create_error_alert
         from cjm_fasthtml_interactions.core.html_ids import InteractionHtmlIds
@@ -375,17 +407,12 @@ def init_router(workflow: SingleFileTranscriptionWorkflow) -> APIRouter:
     return router
 
 # %% ../../nbs/workflow/routes.ipynb 6
-def _export_transcription(text: str, format: str, filename: str) -> str:
-    """Format transcription for export.
-
-    Args:
-        text: Transcription text.
-        format: Export format (txt, srt, vtt).
-        filename: Original filename for metadata.
-
-    Returns:
-        Formatted transcription string.
-    """
+def _export_transcription(
+    text: str,  # Transcription text
+    format: str,  # Export format (txt, srt, vtt)
+    filename: str,  # Original filename for metadata
+) -> str:  # Formatted transcription string
+    """Format transcription for export."""
     if format == "txt":
         return text
 

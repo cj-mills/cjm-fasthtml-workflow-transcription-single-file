@@ -19,22 +19,12 @@ from ..storage.file_storage import ResultStorage
 
 # %% ../../nbs/workflow/job_handler.ipynb 5
 def get_job_session_info(
-    job_id: str,
-    job,
-    sess,
-    plugin_registry: PluginRegistryProtocol,
-) -> tuple[Dict[str, Any], Dict[str, Any]]:
-    """Get file and plugin info from session with fallbacks.
-
-    Args:
-        job_id: Unique job identifier.
-        job: Job object from the manager.
-        sess: FastHTML session object.
-        plugin_registry: Plugin registry for getting plugin info.
-
-    Returns:
-        Tuple of (file_info, plugin_info) dictionaries.
-    """
+    job_id: str,  # Unique job identifier
+    job,  # Job object from the manager
+    sess,  # FastHTML session object
+    plugin_registry: PluginRegistryProtocol,  # Plugin registry for getting plugin info
+) -> tuple[Dict[str, Any], Dict[str, Any]]:  # Tuple of (file_info, plugin_info) dictionaries
+    """Get file and plugin info from session with fallbacks."""
     job_sess = JobSessionManager(sess)
     job_metadata = job_sess.get_job_metadata(job_id, {})
 
@@ -61,26 +51,17 @@ def get_job_session_info(
 
 # %% ../../nbs/workflow/job_handler.ipynb 7
 def _save_job_result_once(
-    sess,
-    job_id: str,
-    job,
-    data: Dict[str, Any],
-    plugin_registry: PluginRegistryProtocol,
-    result_storage: ResultStorage,
-):
+    sess,  # FastHTML session object
+    job_id: str,  # Job identifier
+    job,  # Job object
+    data: Dict[str, Any],  # Transcription data containing text and metadata
+    plugin_registry: PluginRegistryProtocol,  # Plugin registry for getting plugin info
+    result_storage: ResultStorage,  # Storage for saving transcription results
+) -> None:
     """Save transcription result to disk, ensuring it's only saved once per job.
-
-    Note: This is called from the SSE stream handler as a fallback. The primary
-    save mechanism is the workflow's _on_job_completed callback which is called
-    by the TranscriptionJobManager when a job completes.
-
-    Args:
-        sess: FastHTML session object.
-        job_id: Job identifier.
-        job: Job object.
-        data: Transcription data containing text and metadata.
-        plugin_registry: Plugin registry for getting plugin info.
-        result_storage: Storage for saving transcription results.
+    
+    Called from the SSE stream handler as a fallback. The primary save mechanism
+    is the workflow's `_on_job_completed` callback called by TranscriptionJobManager.
     """
     # Skip if auto-save is disabled
     if not result_storage.should_auto_save():
@@ -114,16 +95,11 @@ def _save_job_result_once(
         print(f"Error saving transcription result for job {job_id}: {e}")
 
 # %% ../../nbs/workflow/job_handler.ipynb 9
-def _create_sse_swap_message(content, container_id: str):
-    """Wrap content in a Div with HTMX OOB swap for SSE messages.
-
-    Args:
-        content: HTML content to wrap.
-        container_id: Target container ID for the swap.
-
-    Returns:
-        Div with OOB swap attributes.
-    """
+def _create_sse_swap_message(
+    content,  # HTML content to wrap
+    container_id: str,  # Target container ID for the swap
+):  # Div with OOB swap attributes
+    """Wrap content in a Div with HTMX OOB swap for SSE messages."""
     return Div(
         content,
         id=container_id,
@@ -132,28 +108,17 @@ def _create_sse_swap_message(content, container_id: str):
 
 # %% ../../nbs/workflow/job_handler.ipynb 12
 async def start_transcription_job(
-    state: Dict[str, Any],
-    request,
-    config: SingleFileWorkflowConfig,
-    router,
-    transcription_manager,
-    plugin_registry: PluginRegistryProtocol,
-):
+    state: Dict[str, Any],  # Workflow state containing plugin_id, file_path, file_name, etc.
+    request,  # FastHTML request object
+    config: SingleFileWorkflowConfig,  # Workflow configuration
+    router,  # Workflow router for generating route URLs
+    transcription_manager,  # Manager for starting transcription jobs
+    plugin_registry: PluginRegistryProtocol,  # Plugin registry for getting plugin info
+):  # transcription_in_progress component showing job status
     """Handle workflow completion by starting the transcription job.
-
-    This is called by StepFlow's on_complete handler when the user confirms
+    
+    Called by StepFlow's `on_complete` handler when the user confirms
     and clicks "Start Transcription".
-
-    Args:
-        state: Workflow state containing plugin_id, file_path, file_name, etc.
-        request: FastHTML request object.
-        config: Workflow configuration.
-        router: Workflow router for generating route URLs.
-        transcription_manager: Manager for starting transcription jobs.
-        plugin_registry: Plugin registry for getting plugin info.
-
-    Returns:
-        transcription_in_progress component showing job status.
     """
     plugin_id = state.get("plugin_id")
     file_path = state.get("file_path")
@@ -207,32 +172,17 @@ async def start_transcription_job(
 
 # %% ../../nbs/workflow/job_handler.ipynb 14
 def create_job_stream_handler(
-    job_id: str,
-    request,
-    sess,
-    config: SingleFileWorkflowConfig,
-    router,
-    stepflow_router: APIRouter,
-    transcription_manager,
-    plugin_registry: PluginRegistryProtocol,
-    result_storage: ResultStorage,
-):
-    """Create an SSE stream generator for monitoring job completion.
-
-    Args:
-        job_id: Unique job identifier.
-        request: FastHTML request object.
-        sess: FastHTML session object.
-        config: Workflow configuration.
-        router: Workflow router for generating route URLs.
-        stepflow_router: StepFlow router for generating stepflow URLs.
-        transcription_manager: Manager for getting job status.
-        plugin_registry: Plugin registry for getting plugin info.
-        result_storage: Storage for saving transcription results.
-
-    Returns:
-        Async generator for SSE streaming.
-    """
+    job_id: str,  # Unique job identifier
+    request,  # FastHTML request object
+    sess,  # FastHTML session object
+    config: SingleFileWorkflowConfig,  # Workflow configuration
+    router,  # Workflow router for generating route URLs
+    stepflow_router: APIRouter,  # StepFlow router for generating stepflow URLs
+    transcription_manager,  # Manager for getting job status
+    plugin_registry: PluginRegistryProtocol,  # Plugin registry for getting plugin info
+    result_storage: ResultStorage,  # Storage for saving transcription results
+):  # Async generator for SSE streaming
+    """Create an SSE stream generator for monitoring job completion."""
     poll_interval = config.sse_poll_interval
     container_id = config.container_id
     # Build URL using router's .to() method for proper route generation
