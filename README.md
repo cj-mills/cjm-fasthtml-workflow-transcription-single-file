@@ -8,3 +8,2647 @@
 ``` bash
 pip install cjm_fasthtml_workflow_transcription_single_file
 ```
+
+## Project Structure
+
+    nbs/
+    ├── components/ (3)
+    │   ├── processor.ipynb  # UI component for displaying transcription in-progress state
+    │   ├── results.ipynb    # UI components for displaying transcription results and errors
+    │   └── steps.ipynb      # UI components for workflow step rendering (plugin selection, file selection, confirmation)
+    ├── core/ (4)
+    │   ├── adapters.ipynb   # Adapter implementations for integrating with plugin registries
+    │   ├── config.ipynb     # Configuration dataclass for single-file transcription workflow
+    │   ├── html_ids.ipynb   # Centralized HTML ID constants for single-file transcription workflow components
+    │   └── protocols.ipynb  # Protocol definitions for external dependencies and plugin integration
+    ├── media/ (9)
+    │   ├── components.ipynb                 # UI components for media browser views (grid, list, preview modal)
+    │   ├── config.ipynb                     # Configuration for media file discovery and browser settings
+    │   ├── file_selection_pagination.ipynb  # Factory function for creating paginated file selection table with radio buttons
+    │   ├── library.ipynb                    # Unified facade for media file discovery, mounting, and access
+    │   ├── models.ipynb                     # Data models for media files
+    │   ├── mounter.ipynb                    # Mounts media directories as static files for serving through the web server
+    │   ├── pagination.ipynb                 # Factory function for creating paginated media browser views
+    │   ├── scanner.ipynb                    # Scans directories for media files with caching support
+    │   └── utils.ipynb                      # Formatting utilities for media files
+    ├── settings/ (2)
+    │   ├── components.ipynb  # UI components for workflow settings modal and forms
+    │   └── schemas.ipynb     # JSON schemas and utilities for workflow settings
+    ├── storage/ (2)
+    │   ├── config.ipynb        # Configuration for transcription result storage
+    │   └── file_storage.ipynb  # File-based storage for transcription results
+    └── workflow/ (3)
+        ├── job_handler.ipynb  # Functions for starting transcription jobs and handling SSE streaming
+        ├── routes.ipynb       # Route initialization and handlers for the single-file transcription workflow
+        └── workflow.ipynb     # Main workflow class orchestrating all subsystems for single-file transcription
+
+Total: 23 notebooks across 6 directories
+
+## Module Dependencies
+
+``` mermaid
+graph LR
+    components_processor[components.processor<br/>Processor Component]
+    components_results[components.results<br/>Results Components]
+    components_steps[components.steps<br/>Step Components]
+    core_adapters[core.adapters<br/>Adapters]
+    core_config[core.config<br/>Configuration]
+    core_html_ids[core.html_ids<br/>HTML IDs]
+    core_protocols[core.protocols<br/>Protocols]
+    media_components[media.components<br/>Media Components]
+    media_config[media.config<br/>Media Configuration]
+    media_file_selection_pagination[media.file_selection_pagination<br/>File Selection Pagination]
+    media_library[media.library<br/>Media Library]
+    media_models[media.models<br/>Media Models]
+    media_mounter[media.mounter<br/>Media Mounter]
+    media_pagination[media.pagination<br/>Media Pagination]
+    media_scanner[media.scanner<br/>Media Scanner]
+    media_utils[media.utils<br/>Media Utilities]
+    settings_components[settings.components<br/>Settings Components]
+    settings_schemas[settings.schemas<br/>Settings Schemas]
+    storage_config[storage.config<br/>Storage Configuration]
+    storage_file_storage[storage.file_storage<br/>Result Storage]
+    workflow_job_handler[workflow.job_handler<br/>Job Handler]
+    workflow_routes[workflow.routes<br/>Workflow Routes]
+    workflow_workflow[workflow.workflow<br/>Single File Transcription Workflow]
+
+    components_processor --> core_html_ids
+    components_processor --> core_config
+    components_results --> core_html_ids
+    components_results --> core_config
+    components_steps --> core_html_ids
+    components_steps --> core_config
+    components_steps --> core_protocols
+    core_adapters --> core_protocols
+    core_config --> media_config
+    core_config --> core_html_ids
+    core_config --> storage_config
+    media_components --> media_mounter
+    media_components --> media_models
+    media_file_selection_pagination --> media_scanner
+    media_file_selection_pagination --> media_library
+    media_file_selection_pagination --> media_models
+    media_library --> media_config
+    media_library --> media_mounter
+    media_library --> media_models
+    media_library --> media_scanner
+    media_pagination --> media_components
+    media_pagination --> media_library
+    media_pagination --> media_mounter
+    media_pagination --> media_scanner
+    media_scanner --> media_config
+    media_scanner --> media_utils
+    media_scanner --> media_models
+    settings_components --> core_html_ids
+    settings_schemas --> storage_config
+    settings_schemas --> media_config
+    settings_schemas --> core_config
+    storage_file_storage --> storage_config
+    workflow_job_handler --> components_results
+    workflow_job_handler --> components_processor
+    workflow_job_handler --> storage_file_storage
+    workflow_job_handler --> core_html_ids
+    workflow_job_handler --> core_protocols
+    workflow_job_handler --> core_config
+    workflow_routes --> components_results
+    workflow_routes --> components_processor
+    workflow_routes --> core_html_ids
+    workflow_routes --> workflow_workflow
+    workflow_routes --> workflow_job_handler
+    workflow_routes --> components_steps
+    workflow_workflow --> components_steps
+    workflow_workflow --> core_html_ids
+    workflow_workflow --> core_config
+    workflow_workflow --> media_library
+    workflow_workflow --> core_adapters
+    workflow_workflow --> workflow_job_handler
+    workflow_workflow --> storage_file_storage
+```
+
+*51 cross-module dependencies detected*
+
+## CLI Reference
+
+No CLI commands found in this project.
+
+## Module Overview
+
+Detailed documentation for each module in the project:
+
+### Adapters (`adapters.ipynb`)
+
+> Adapter implementations for integrating with plugin registries
+
+#### Import
+
+``` python
+from cjm_fasthtml_workflow_transcription_single_file.core.adapters import (
+    PluginRegistryAdapter,
+    DefaultConfigPluginRegistryAdapter
+)
+```
+
+#### Classes
+
+``` python
+class PluginRegistryAdapter:
+    def __init__(self, app_registry, category: str = "transcription"):
+        """Initialize the adapter.
+
+        Args:
+            app_registry: The app's UnifiedPluginRegistry instance.
+            category: Plugin category to filter by (default: "transcription").
+        """
+        self._registry = app_registry
+        self._category = category
+
+    def get_configured_plugins(self) -> List[PluginInfo]
+    """
+    Adapts app's UnifiedPluginRegistry to workflow's PluginRegistryProtocol.
+    
+    This adapter wraps the app's plugin registry and provides a simplified
+    interface for the workflow to access transcription plugins.
+    """
+    
+    def __init__(self, app_registry, category: str = "transcription"):
+            """Initialize the adapter.
+    
+            Args:
+                app_registry: The app's UnifiedPluginRegistry instance.
+                category: Plugin category to filter by (default: "transcription").
+            """
+            self._registry = app_registry
+            self._category = category
+    
+        def get_configured_plugins(self) -> List[PluginInfo]
+        "Initialize the adapter.
+
+Args:
+    app_registry: The app's UnifiedPluginRegistry instance.
+    category: Plugin category to filter by (default: "transcription")."
+    
+    def get_configured_plugins(self) -> List[PluginInfo]:
+            """Get all configured transcription plugins (those with saved config files).
+    
+            Returns:
+                List of PluginInfo for plugins that have saved configurations.
+            """
+            plugins = self._registry.get_plugins_by_category(self._category)
+            return [
+                PluginInfo(
+                    id=p.get_unique_id(),
+                    name=p.name,
+                    title=p.title,
+                    is_configured=p.is_configured,
+                    supports_streaming=self._check_streaming_support(p)
+                )
+                for p in plugins if p.is_configured
+            ]
+    
+        def get_all_plugins(self) -> List[PluginInfo]
+        "Get all configured transcription plugins (those with saved config files).
+
+Returns:
+    List of PluginInfo for plugins that have saved configurations."
+    
+    def get_all_plugins(self) -> List[PluginInfo]
+        "Get all discovered transcription plugins (configured or not).
+
+Plugins without saved config files can still be used with their
+default configuration values from the schema.
+
+Returns:
+    List of PluginInfo for all discovered plugins."
+    
+    def get_plugin(self, plugin_id: str) -> Optional[PluginInfo]:
+            """Get a specific plugin by ID.
+    
+            Args:
+                plugin_id: Unique plugin identifier.
+    
+            Returns:
+                PluginInfo if found, None otherwise.
+            """
+            plugin_meta = self._registry.get_plugin(plugin_id)
+            if not plugin_meta
+        "Get a specific plugin by ID.
+
+Args:
+    plugin_id: Unique plugin identifier.
+
+Returns:
+    PluginInfo if found, None otherwise."
+    
+    def get_plugin_config(self, plugin_id: str) -> Dict[str, Any]:
+            """Get the configuration for a plugin.
+    
+            Args:
+                plugin_id: Unique plugin identifier.
+    
+            Returns:
+                Configuration dictionary, empty dict if not configured.
+            """
+            return self._registry.load_plugin_config(plugin_id) or {}
+    
+        def _check_streaming_support(self, plugin_meta) -> bool
+        "Get the configuration for a plugin.
+
+Args:
+    plugin_id: Unique plugin identifier.
+
+Returns:
+    Configuration dictionary, empty dict if not configured."
+```
+
+``` python
+class DefaultConfigPluginRegistryAdapter:
+    def __init__(self, registry: UnifiedPluginRegistry, category: str = "transcription"):
+        """Initialize adapter with registry instance."""
+        self._registry = registry
+        self._category = category
+
+    def get_plugins_by_category(self, category) -> list
+    """
+    Plugin registry adapter that provides default config values for unconfigured plugins.
+    
+    This adapter wraps a UnifiedPluginRegistry and ensures that `load_plugin_config`
+    returns default values from the plugin's schema when no saved config exists.
+    This allows plugins to be used immediately without requiring a saved .json config file.
+    """
+    
+    def __init__(self, registry: UnifiedPluginRegistry, category: str = "transcription"):
+            """Initialize adapter with registry instance."""
+            self._registry = registry
+            self._category = category
+    
+        def get_plugins_by_category(self, category) -> list
+        "Initialize adapter with registry instance."
+    
+    def get_plugins_by_category(self, category) -> list:
+            """Get all plugins in a specific category."""
+            return self._registry.get_plugins_by_category(category)
+    
+        def get_plugin(self, plugin_id: str)
+        "Get all plugins in a specific category."
+    
+    def get_plugin(self, plugin_id: str):
+            """Get a specific plugin by ID."""
+            return self._registry.get_plugin(plugin_id)
+    
+        def load_plugin_config(self, plugin_id: str) -> Dict[str, Any]
+        "Get a specific plugin by ID."
+    
+    def load_plugin_config(self, plugin_id: str) -> Dict[str, Any]:
+            """Load configuration for a plugin, using defaults if no saved config exists.
+    
+            Returns:
+                Configuration dictionary. If no saved config exists, returns default
+                values extracted from the plugin's config schema.
+            """
+            # First try to load saved config
+            saved_config = self._registry.load_plugin_config(plugin_id)
+    
+            # If config exists and has values, return it
+            if saved_config
+        "Load configuration for a plugin, using defaults if no saved config exists.
+
+Returns:
+    Configuration dictionary. If no saved config exists, returns default
+    values extracted from the plugin's config schema."
+```
+
+### Media Components (`components.ipynb`)
+
+> UI components for media browser views (grid, list, preview modal)
+
+#### Import
+
+``` python
+from cjm_fasthtml_workflow_transcription_single_file.media.components import (
+    get_media_icon,
+    grid_view_content,
+    list_view_content,
+    media_preview_modal,
+    empty_media_content,
+    media_browser_controls
+)
+```
+
+#### Functions
+
+``` python
+def get_media_icon(media_type: str  # "video" or "audio"
+                  ) -> FT:  # SVG element with icon
+    """
+    Get an SVG icon for the media type.
+    
+    Args:
+        media_type: Either "video" or "audio".
+    
+    Returns:
+        SVG element with appropriate icon.
+    """
+```
+
+``` python
+def grid_view_content(
+    media_files: List[MediaFile],  # List of media files to display
+    mounter: MediaMounter,  # MediaMounter instance for URL generation
+    start_idx: int = 0,  # Starting index for item numbering
+    media_type: Optional[str] = None,  # Current filter type for maintaining state
+    preview_route_func=None,  # Function to generate preview route URL
+    modal_id: str = "sf-media-preview"  # ID for the preview modal
+) -> FT:  # Grid container with media cards
+    """
+    Grid view of media files as cards.
+    
+    Args:
+        media_files: List of media files to display.
+        mounter: MediaMounter instance for URL generation.
+        start_idx: Starting index for item numbering.
+        media_type: Current filter type for maintaining state.
+        preview_route_func: Function to generate preview route URL.
+        modal_id: ID for the preview modal.
+    
+    Returns:
+        Grid container with media cards.
+    """
+```
+
+``` python
+def list_view_content(
+    media_files: List[MediaFile],  # List of media files to display
+    mounter: MediaMounter,  # MediaMounter instance for URL generation
+    start_idx: int = 0,  # Starting index for item numbering
+    media_type: Optional[str] = None,  # Current filter type for maintaining state
+    preview_route_func=None,  # Function to generate preview route URL
+    modal_id: str = "sf-media-preview"  # ID for the preview modal
+) -> FT:  # Table with media file rows
+    """
+    List view of media files as table.
+    
+    Args:
+        media_files: List of media files to display.
+        mounter: MediaMounter instance for URL generation.
+        start_idx: Starting index for item numbering.
+        media_type: Current filter type for maintaining state.
+        preview_route_func: Function to generate preview route URL.
+        modal_id: ID for the preview modal.
+    
+    Returns:
+        Table with media file rows.
+    """
+```
+
+``` python
+def media_preview_modal(
+    media_file: MediaFile,  # MediaFile to preview
+    media_url: Optional[str],  # URL to the media file for playback
+    modal_id: str = "sf-media-preview"  # ID for the modal element
+) -> FT:  # Modal dialog with media preview
+    """
+    Modal for viewing/previewing a media file.
+    
+    Args:
+        media_file: MediaFile to preview.
+        media_url: URL to the media file for playback.
+        modal_id: ID for the modal element.
+    
+    Returns:
+        Modal dialog with media preview.
+    """
+```
+
+``` python
+def empty_media_content(
+    message: str = "No media files found.",  # Message to display
+    action_url: Optional[str] = None,  # Optional URL for action button
+    action_text: str = "Configure Settings"  # Text for action button
+) -> FT:  # Empty state container
+    """
+    Empty state content when no media files are available.
+    
+    Args:
+        message: Message to display.
+        action_url: Optional URL for action button.
+        action_text: Text for action button.
+    
+    Returns:
+        Empty state container.
+    """
+```
+
+``` python
+def media_browser_controls(
+    view_mode: str,  # Current view mode ("grid" or "list")
+    media_type_filter: Optional[str],  # Current media type filter
+    change_view_url_func,  # Function to generate URL for view change
+    change_filter_url_func,  # Function to generate URL for filter change
+    content_target_id: str  # ID of content container to target
+) -> FT:  # Controls bar element
+    """
+    Controls bar for media browser (view mode, filters).
+    
+    Args:
+        view_mode: Current view mode ("grid" or "list").
+        media_type_filter: Current media type filter.
+        change_view_url_func: Function to generate URL for view change.
+        change_filter_url_func: Function to generate URL for filter change.
+        content_target_id: ID of content container to target.
+    
+    Returns:
+        Controls bar element.
+    """
+```
+
+### Settings Components (`components.ipynb`)
+
+> UI components for workflow settings modal and forms
+
+#### Import
+
+``` python
+from cjm_fasthtml_workflow_transcription_single_file.settings.components import (
+    settings_trigger_button,
+    simple_settings_form,
+    settings_modal
+)
+```
+
+#### Functions
+
+``` python
+def settings_trigger_button(
+    modal_id: str,
+    label: str = "Settings",
+    button_cls: Optional[str] = None
+) -> FT
+    """
+    Create a button that opens the settings modal.
+    
+    Args:
+        modal_id: ID of the modal to trigger.
+        label: Button label text.
+        button_cls: Optional additional button classes.
+    
+    Returns:
+        Button element that triggers the modal.
+    """
+```
+
+``` python
+def simple_settings_form(
+    directories: list,
+    auto_save: bool,
+    results_directory: str,
+    save_url: str,
+    target_id: str,
+    modal_id: str
+) -> FT
+    """
+    Create a simple settings form without full schema generation.
+    
+    This is a fallback for when the full JSON schema form generator
+    is not needed.
+    
+    Args:
+        directories: List of media directories.
+        auto_save: Current auto-save setting.
+        results_directory: Current results directory.
+        save_url: URL to POST settings to.
+        target_id: Target element ID for HTMX response.
+        modal_id: Modal ID for close button.
+    
+    Returns:
+        Simple form element.
+    """
+```
+
+``` python
+def settings_modal(
+    modal_id: str,
+    schema: Dict[str, Any],
+    current_values: Dict[str, Any],
+    save_url: str,
+    target_id: str
+) -> FT
+    """
+    Create the settings modal with form.
+    
+    This is a simplified settings modal. For full schema-based form generation,
+    use the cjm_fasthtml_jsonschema library.
+    
+    Args:
+        modal_id: ID for the modal element.
+        schema: JSON schema for settings.
+        current_values: Current settings values.
+        save_url: URL to POST settings to.
+        target_id: Target element ID for HTMX response.
+    
+    Returns:
+        Modal dialog with settings form.
+    """
+```
+
+### Configuration (`config.ipynb`)
+
+> Configuration dataclass for single-file transcription workflow
+
+#### Import
+
+``` python
+from cjm_fasthtml_workflow_transcription_single_file.core.config import (
+    DEFAULT_WORKFLOW_CONFIG_DIR,
+    SingleFileWorkflowConfig
+)
+```
+
+#### Classes
+
+``` python
+@dataclass
+class SingleFileWorkflowConfig:
+    """
+    Configuration for single-file transcription workflow.
+    
+    This configuration allows customization of the workflow behavior
+    without modifying the workflow code itself.
+    
+    The workflow is fully self-contained with internal subsystems:
+    - MediaLibrary (configured via media)
+    - ResultStorage (configured via storage)
+    - TranscriptionJobManager (created internally)
+    - SSEBroadcastManager (created internally)
+    """
+    
+    workflow_id: str = 'single_file_transcription'
+    worker_type: str = 'transcription:single_file'
+    route_prefix: str = '/single_file'
+    stepflow_prefix: str = '/flow'
+    media_prefix: str = '/media'
+    container_id: str = SingleFileHtmlIds.WORKFLOW_CONTAINER
+    show_progress: bool = True  # Show step progress indicator
+    max_files_displayed: int = 50  # Maximum files to show in simple file selector
+    export_formats: List[str] = field(...)
+    no_plugins_redirect: Optional[str]  # URL when no plugins configured
+    no_files_redirect: Optional[str]  # URL when no media files found
+    sse_poll_interval: float = 2.0
+    gpu_memory_threshold_percent: float = 45.0
+    config_dir: Path = field(...)
+    plugin_config_dir: Path = field(...)
+    plugin_category: str = 'transcription'
+    media: MediaConfig = field(...)
+    storage: StorageConfig = field(...)
+    
+    def get_full_stepflow_prefix(self) -> str:
+            """Get the full prefix for the StepFlow router.
+    
+            Returns:
+                Combined route_prefix + stepflow_prefix.
+            """
+            return f"{self.route_prefix}{self.stepflow_prefix}"
+    
+        def get_full_media_prefix(self) -> str
+        "Get the full prefix for the StepFlow router.
+
+Returns:
+    Combined route_prefix + stepflow_prefix."
+    
+    def get_full_media_prefix(self) -> str
+        "Get the full prefix for the media router.
+
+Returns:
+    Combined route_prefix + media_prefix."
+```
+
+#### Variables
+
+``` python
+DEFAULT_WORKFLOW_CONFIG_DIR
+```
+
+### Media Configuration (`config.ipynb`)
+
+> Configuration for media file discovery and browser settings
+
+#### Import
+
+``` python
+from cjm_fasthtml_workflow_transcription_single_file.media.config import (
+    MEDIA_CONFIG_SCHEMA,
+    MediaConfig
+)
+```
+
+#### Classes
+
+``` python
+@dataclass
+class MediaConfig:
+    """
+    Media scanning and display configuration.
+    
+    This configuration controls how the workflow discovers and presents
+    media files for transcription.
+    """
+    
+    directories: List[str] = field(...)
+    scan_audio: bool = True
+    scan_video: bool = True
+    audio_extensions: List[str] = field(...)
+    video_extensions: List[str] = field(...)
+    min_file_size_kb: int = 0
+    max_file_size_mb: int = 0  # 0 = unlimited
+    recursive_scan: bool = True
+    include_hidden: bool = False
+    follow_symlinks: bool = False
+    exclude_patterns: List[str] = field(...)
+    cache_results: bool = True
+    cache_duration_minutes: int = 60
+    max_results: int = 1000
+    items_per_page: int = 30
+    default_view: str = 'list'  # Currently only "list" is implemented
+    sort_by: str = 'name'  # name, size, modified
+    sort_descending: bool = False
+```
+
+#### Variables
+
+``` python
+MEDIA_CONFIG_SCHEMA = {5 items}
+```
+
+### Storage Configuration (`config.ipynb`)
+
+> Configuration for transcription result storage
+
+#### Import
+
+``` python
+from cjm_fasthtml_workflow_transcription_single_file.storage.config import (
+    STORAGE_CONFIG_SCHEMA,
+    StorageConfig
+)
+```
+
+#### Classes
+
+``` python
+@dataclass
+class StorageConfig:
+    """
+    Result storage configuration.
+    
+    This configuration controls how and where transcription results
+    are persisted.
+    """
+    
+    auto_save: bool = True
+    results_directory: str = 'transcription_results'
+```
+
+#### Variables
+
+``` python
+STORAGE_CONFIG_SCHEMA = {5 items}
+```
+
+### File Selection Pagination (`file_selection_pagination.ipynb`)
+
+> Factory function for creating paginated file selection table with
+> radio buttons
+
+#### Import
+
+``` python
+from cjm_fasthtml_workflow_transcription_single_file.media.file_selection_pagination import (
+    create_file_selection_pagination
+)
+```
+
+#### Functions
+
+``` python
+def _escape_js(s: str) -> str
+    "Escape a string for use in JavaScript."
+```
+
+``` python
+def _render_file_row(
+    file: MediaFile,
+    idx: int,
+    selected_file: Optional[str],
+    preview_url_func: Optional[Callable[[int], str]],
+    preview_target_id: Optional[str]
+) -> FT
+    """
+    Render a single file row in the selection table.
+    
+    Args:
+        file: MediaFile to render.
+        idx: Global index of this file (across all pages).
+        selected_file: Currently selected file path (if any).
+        preview_url_func: Function to generate preview URL.
+        preview_target_id: Target ID for preview modal.
+    
+    Returns:
+        Table row element.
+    """
+```
+
+``` python
+def create_file_selection_pagination(
+    pagination_id: str,
+    scanner: MediaScanner,
+    items_per_page: int = 30,
+    content_id: Optional[str] = None,
+    preview_url_func: Optional[Callable[[int], str]] = None,
+    preview_target_id: Optional[str] = None,
+) -> Pagination
+    """
+    Create a Pagination instance for file selection.
+    
+    Args:
+        pagination_id: Unique identifier for this pagination instance.
+        scanner: MediaScanner instance for loading files.
+        items_per_page: Number of items per page.
+        content_id: HTML ID for content area.
+        preview_url_func: Function that takes file index and returns preview URL.
+        preview_target_id: HTML ID to target for preview modal.
+    
+    Returns:
+        Configured Pagination instance.
+    """
+```
+
+### Result Storage (`file_storage.ipynb`)
+
+> File-based storage for transcription results
+
+#### Import
+
+``` python
+from cjm_fasthtml_workflow_transcription_single_file.storage.file_storage import (
+    ResultStorage
+)
+```
+
+#### Functions
+
+``` python
+@patch
+def should_auto_save(self: ResultStorage) -> bool
+    """
+    Check if auto-save is enabled.
+    
+    Returns:
+        True if results should be automatically saved.
+    """
+```
+
+``` python
+@patch
+def save(
+    self: ResultStorage,
+    job_id: str,
+    file_path: str,
+    file_name: str,
+    plugin_id: str,
+    plugin_name: str,
+    text: str,
+    metadata: Optional[Dict[str, Any]] = None,
+    additional_info: Optional[Dict[str, Any]] = None
+) -> Path
+    """
+    Save a transcription result to JSON file.
+    
+    Args:
+        job_id: Unique job identifier.
+        file_path: Path to the transcribed media file.
+        file_name: Name of the media file.
+        plugin_id: Plugin unique identifier.
+        plugin_name: Plugin display name.
+        text: The transcription text.
+        metadata: Optional metadata from the transcription plugin.
+        additional_info: Optional additional information to store.
+    
+    Returns:
+        Path to the saved JSON file.
+    """
+```
+
+``` python
+@patch
+def load(self: ResultStorage, result_file: Path) -> Optional[Dict[str, Any]]:
+    """Load a transcription result from JSON file.
+
+    Args:
+        result_file: Path to the JSON result file.
+
+    Returns:
+        Dictionary containing the result data, or None if error.
+    """
+    try
+    """
+    Load a transcription result from JSON file.
+    
+    Args:
+        result_file: Path to the JSON result file.
+    
+    Returns:
+        Dictionary containing the result data, or None if error.
+    """
+```
+
+``` python
+@patch
+def list_results(
+    self: ResultStorage,
+    sort_by: str = "timestamp",
+    reverse: bool = True
+) -> List[Dict[str, Any]]
+    """
+    List all saved transcription results.
+    
+    Args:
+        sort_by: Field to sort by ("timestamp", "file_name", "word_count").
+        reverse: Sort in reverse order (newest first by default).
+    
+    Returns:
+        List of result dictionaries.
+    """
+```
+
+``` python
+@patch
+def get_by_job_id(self: ResultStorage, job_id: str) -> Optional[Dict[str, Any]]:
+    """Find and load a transcription result by job ID.
+
+    Args:
+        job_id: The job identifier to search for.
+
+    Returns:
+        Result dictionary if found, None otherwise.
+    """
+    results = self.list_results()
+
+    for result in results
+    """
+    Find and load a transcription result by job ID.
+    
+    Args:
+        job_id: The job identifier to search for.
+    
+    Returns:
+        Result dictionary if found, None otherwise.
+    """
+```
+
+``` python
+@patch
+def delete(self: ResultStorage, result_file: str) -> bool:
+    """Delete a transcription result file.
+
+    Args:
+        result_file: Path to the result file (can be full path or filename).
+
+    Returns:
+        True if deletion successful, False otherwise.
+    """
+    try
+    """
+    Delete a transcription result file.
+    
+    Args:
+        result_file: Path to the result file (can be full path or filename).
+    
+    Returns:
+        True if deletion successful, False otherwise.
+    """
+```
+
+``` python
+@patch
+def update_text(self: ResultStorage, result_file: str, new_text: str) -> bool:
+    """Update the transcription text in a saved result.
+
+    Args:
+        result_file: Path to the result file.
+        new_text: New transcription text.
+
+    Returns:
+        True if update successful, False otherwise.
+    """
+    try
+    """
+    Update the transcription text in a saved result.
+    
+    Args:
+        result_file: Path to the result file.
+        new_text: New transcription text.
+    
+    Returns:
+        True if update successful, False otherwise.
+    """
+```
+
+``` python
+@patch
+def _generate_filename(self: ResultStorage, job_id: str, file_name: str) -> str:
+    """Generate a filename for storing transcription results.
+
+    Args:
+        job_id: Unique job identifier.
+        file_name: Original media file name.
+
+    Returns:
+        Generated filename for the JSON result file.
+    """
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    # Sanitize file_name for use in filename
+    safe_name = Path(file_name).stem.replace(" ", "_")[:50]
+    """
+    Generate a filename for storing transcription results.
+    
+    Args:
+        job_id: Unique job identifier.
+        file_name: Original media file name.
+    
+    Returns:
+        Generated filename for the JSON result file.
+    """
+```
+
+#### Classes
+
+``` python
+class ResultStorage:
+    def __init__(self, config: StorageConfig):
+        """Initialize the storage.
+
+        Args:
+            config: Storage configuration.
+        """
+        self.config = config
+        self._results_dir: Optional[Path] = None
+    """
+    File-based storage for transcription results.
+    
+    Each workflow instance gets its own storage instance with its own
+    configuration, ensuring proper isolation between workflow instances.
+    
+    Results are stored as JSON files in the configured directory.
+    """
+    
+    def __init__(self, config: StorageConfig):
+            """Initialize the storage.
+    
+            Args:
+                config: Storage configuration.
+            """
+            self.config = config
+            self._results_dir: Optional[Path] = None
+        "Initialize the storage.
+
+Args:
+    config: Storage configuration."
+    
+    def results_directory(self) -> Path:
+            """Get the results directory, creating it if needed.
+    
+            Returns:
+                Path to the results directory.
+            """
+            if self._results_dir is None
+        "Get the results directory, creating it if needed.
+
+Returns:
+    Path to the results directory."
+```
+
+### HTML IDs (`html_ids.ipynb`)
+
+> Centralized HTML ID constants for single-file transcription workflow
+> components
+
+#### Import
+
+``` python
+from cjm_fasthtml_workflow_transcription_single_file.core.html_ids import (
+    SingleFileHtmlIds
+)
+```
+
+#### Classes
+
+``` python
+class SingleFileHtmlIds(InteractionHtmlIds):
+    "HTML ID constants for single-file transcription workflow."
+    
+    def plugin_radio(plugin_id: str) -> str:
+            """Generate HTML ID for a plugin radio button."""
+            # Sanitize plugin_id for use in HTML ID
+            safe_id = plugin_id.replace(":", "-").replace("_", "-")
+            return f"sf-plugin-radio-{safe_id}"
+    
+        @staticmethod
+        def file_radio(index: int) -> str
+        "Generate HTML ID for a plugin radio button."
+    
+    def file_radio(index: int) -> str
+        "Generate HTML ID for a file radio button."
+```
+
+### Job Handler (`job_handler.ipynb`)
+
+> Functions for starting transcription jobs and handling SSE streaming
+
+#### Import
+
+``` python
+from cjm_fasthtml_workflow_transcription_single_file.workflow.job_handler import (
+    get_job_session_info,
+    start_transcription_job,
+    create_job_stream_handler
+)
+```
+
+#### Functions
+
+``` python
+def get_job_session_info(
+    job_id: str,
+    job,
+    sess,
+    plugin_registry: PluginRegistryProtocol,
+) -> tuple[Dict[str, Any], Dict[str, Any]]
+    """
+    Get file and plugin info from session with fallbacks.
+    
+    Args:
+        job_id: Unique job identifier.
+        job: Job object from the manager.
+        sess: FastHTML session object.
+        plugin_registry: Plugin registry for getting plugin info.
+    
+    Returns:
+        Tuple of (file_info, plugin_info) dictionaries.
+    """
+```
+
+``` python
+def _save_job_result_once(
+    sess,
+    job_id: str,
+    job,
+    data: Dict[str, Any],
+    plugin_registry: PluginRegistryProtocol,
+    result_storage: ResultStorage,
+)
+    """
+    Save transcription result to disk, ensuring it's only saved once per job.
+    
+    Note: This is called from the SSE stream handler as a fallback. The primary
+    save mechanism is the workflow's _on_job_completed callback which is called
+    by the TranscriptionJobManager when a job completes.
+    
+    Args:
+        sess: FastHTML session object.
+        job_id: Job identifier.
+        job: Job object.
+        data: Transcription data containing text and metadata.
+        plugin_registry: Plugin registry for getting plugin info.
+        result_storage: Storage for saving transcription results.
+    """
+```
+
+``` python
+def _create_sse_swap_message(content, container_id: str)
+    """
+    Wrap content in a Div with HTMX OOB swap for SSE messages.
+    
+    Args:
+        content: HTML content to wrap.
+        container_id: Target container ID for the swap.
+    
+    Returns:
+        Div with OOB swap attributes.
+    """
+```
+
+``` python
+async def start_transcription_job(
+    state: Dict[str, Any],
+    request,
+    config: SingleFileWorkflowConfig,
+    router,
+    transcription_manager,
+    plugin_registry: PluginRegistryProtocol,
+)
+    """
+    Handle workflow completion by starting the transcription job.
+    
+    This is called by StepFlow's on_complete handler when the user confirms
+    and clicks "Start Transcription".
+    
+    Args:
+        state: Workflow state containing plugin_id, file_path, file_name, etc.
+        request: FastHTML request object.
+        config: Workflow configuration.
+        router: Workflow router for generating route URLs.
+        transcription_manager: Manager for starting transcription jobs.
+        plugin_registry: Plugin registry for getting plugin info.
+    
+    Returns:
+        transcription_in_progress component showing job status.
+    """
+```
+
+``` python
+def create_job_stream_handler(
+    job_id: str,
+    request,
+    sess,
+    config: SingleFileWorkflowConfig,
+    router,
+    stepflow_router: APIRouter,
+    transcription_manager,
+    plugin_registry: PluginRegistryProtocol,
+    result_storage: ResultStorage,
+)
+    """
+    Create an SSE stream generator for monitoring job completion.
+    
+    Args:
+        job_id: Unique job identifier.
+        request: FastHTML request object.
+        sess: FastHTML session object.
+        config: Workflow configuration.
+        router: Workflow router for generating route URLs.
+        stepflow_router: StepFlow router for generating stepflow URLs.
+        transcription_manager: Manager for getting job status.
+        plugin_registry: Plugin registry for getting plugin info.
+        result_storage: Storage for saving transcription results.
+    
+    Returns:
+        Async generator for SSE streaming.
+    """
+```
+
+### Media Library (`library.ipynb`)
+
+> Unified facade for media file discovery, mounting, and access
+
+#### Import
+
+``` python
+from cjm_fasthtml_workflow_transcription_single_file.media.library import (
+    MediaLibrary
+)
+```
+
+#### Functions
+
+``` python
+@patch
+def mount(self: MediaLibrary, app) -> None
+    """
+    Mount media directories to app for static file serving.
+    
+    This must be called after the FastHTML app is created.
+    
+    Args:
+        app: FastHTML/Starlette application instance.
+    """
+```
+
+``` python
+@patch
+def scan(self: MediaLibrary, force_refresh: bool = False) -> List[MediaFile]
+    """
+    Scan for media files.
+    
+    Args:
+        force_refresh: Force a fresh scan, ignoring cache.
+    
+    Returns:
+        List of MediaFile objects.
+    """
+```
+
+``` python
+@patch
+def get_transcribable_files(self: MediaLibrary) -> List[MediaFile]
+    """
+    Get files suitable for transcription (audio and video only).
+    
+    Returns:
+        List of MediaFile objects with media_type 'audio' or 'video'.
+    """
+```
+
+``` python
+@patch
+def get_url(self: MediaLibrary, file_path: str) -> Optional[str]
+    """
+    Get URL for a media file.
+    
+    Args:
+        file_path: Full path to the media file.
+    
+    Returns:
+        URL path to access the file, or None if not in a mounted directory.
+    """
+```
+
+``` python
+@patch
+def clear_cache(self: MediaLibrary) -> None
+    "Clear the scan cache."
+```
+
+``` python
+@patch
+def get_summary(self: MediaLibrary) -> dict
+    """
+    Get summary statistics for scanned files.
+    
+    Returns:
+        Dictionary with file counts, sizes, and breakdowns.
+    """
+```
+
+``` python
+@patch
+def create_pagination(
+    self: MediaLibrary,
+    pagination_id: str,
+    content_id: str,
+    preview_route_func=None,
+    modal_id: str = "sf-media-preview"
+)
+    """
+    Create a pagination instance for browsing media files.
+    
+    Args:
+        pagination_id: Unique identifier for this pagination instance.
+        content_id: HTML ID for the content area.
+        preview_route_func: Optional function to generate preview route URL.
+        modal_id: ID for the preview modal.
+    
+    Returns:
+        Configured Pagination instance.
+    """
+```
+
+``` python
+@patch
+def get_pagination_router(self: MediaLibrary, prefix: str) -> Optional[APIRouter]:
+    """Get the pagination router for registration with the app.
+
+    Must be called after create_pagination().
+
+    Args:
+        prefix: URL prefix for pagination routes.
+
+    Returns:
+        APIRouter for pagination, or None if pagination not created.
+    """
+    if self._pagination
+    """
+    Get the pagination router for registration with the app.
+    
+    Must be called after create_pagination().
+    
+    Args:
+        prefix: URL prefix for pagination routes.
+    
+    Returns:
+        APIRouter for pagination, or None if pagination not created.
+    """
+```
+
+``` python
+@patch
+def create_file_selection_pagination(
+    self: MediaLibrary,
+    pagination_id: str,
+    content_id: str,
+    preview_url_func=None,
+    preview_target_id: str = None
+)
+    """
+    Create a pagination instance for file selection table.
+    
+    This pagination is specifically for the file selection step,
+    rendering a table with radio buttons for selection.
+    
+    Args:
+        pagination_id: Unique identifier for this pagination instance.
+        content_id: HTML ID for the content area.
+        preview_url_func: Function that takes file index and returns preview URL.
+        preview_target_id: HTML ID to target for preview modal.
+    
+    Returns:
+        Configured Pagination instance for file selection.
+    """
+```
+
+``` python
+@patch
+def get_file_selection_router(self: MediaLibrary, prefix: str) -> Optional[APIRouter]:
+    """Get the file selection pagination router.
+
+    Must be called after create_file_selection_pagination().
+
+    Args:
+        prefix: URL prefix for pagination routes.
+
+    Returns:
+        APIRouter for file selection pagination, or None if not created.
+    """
+    if self._file_selection_pagination
+    """
+    Get the file selection pagination router.
+    
+    Must be called after create_file_selection_pagination().
+    
+    Args:
+        prefix: URL prefix for pagination routes.
+    
+    Returns:
+        APIRouter for file selection pagination, or None if not created.
+    """
+```
+
+#### Classes
+
+``` python
+class MediaLibrary:
+    def __init__(self, config: MediaConfig):
+        """Initialize the media library.
+
+        Args:
+            config: Media configuration with directories and settings.
+        """
+        self.config = config
+        self.scanner = MediaScanner(config)
+        self.mounter = MediaMounter()
+        self._pagination = None
+        self._pagination_router = None
+
+    @property
+    def pagination(self)
+    """
+    Unified interface for media scanning, mounting, and browsing.
+    
+    This class provides a facade over the individual media components,
+    offering a simple API for workflow integration.
+    
+    Example usage:
+        config = MediaConfig(directories=["/path/to/media"])
+        library = MediaLibrary(config)
+    
+        # Mount directories to app
+        library.mount(app)
+    
+        # Scan for files
+        files = library.scan()
+    
+        # Get URL for a file
+        url = library.get_url(files[0].path)
+    
+        # Create pagination for browsing
+        pagination = library.create_pagination("my_pagination", "content-id")
+    """
+    
+    def __init__(self, config: MediaConfig):
+            """Initialize the media library.
+    
+            Args:
+                config: Media configuration with directories and settings.
+            """
+            self.config = config
+            self.scanner = MediaScanner(config)
+            self.mounter = MediaMounter()
+            self._pagination = None
+            self._pagination_router = None
+    
+        @property
+        def pagination(self)
+        "Initialize the media library.
+
+Args:
+    config: Media configuration with directories and settings."
+    
+    def pagination(self):
+            """Access to the pagination instance."""
+            return self._pagination
+    
+        @property
+        def pagination_router(self) -> Optional[APIRouter]
+        "Access to the pagination instance."
+    
+    def pagination_router(self) -> Optional[APIRouter]:
+            """Access to the pagination router."""
+            return self._pagination_router
+    
+        @property
+        def file_selection_pagination(self)
+        "Access to the pagination router."
+    
+    def file_selection_pagination(self):
+            """Access to the file selection pagination instance."""
+            return getattr(self, '_file_selection_pagination', None)
+    
+        @property
+        def file_selection_router(self) -> Optional[APIRouter]
+        "Access to the file selection pagination instance."
+    
+    def file_selection_router(self) -> Optional[APIRouter]
+        "Access to the file selection pagination router."
+```
+
+### Media Models (`models.ipynb`)
+
+> Data models for media files
+
+#### Import
+
+``` python
+from cjm_fasthtml_workflow_transcription_single_file.media.models import (
+    MediaFile
+)
+```
+
+#### Classes
+
+``` python
+@dataclass
+class MediaFile:
+    """
+    Represents a discovered media file.
+    
+    This dataclass provides a standardized representation of media files
+    that the workflow can display and process.
+    """
+    
+    path: str  # Full path to the file
+    name: str  # Display name of the file
+    extension: str  # File extension (without dot)
+    size: int  # Size in bytes
+    size_str: str  # Human-readable size (e.g., "15.2 MB")
+    modified: float  # Modification timestamp
+    modified_str: str  # Human-readable modification date
+    media_type: str  # 'video' or 'audio'
+    directory: str  # Parent directory path
+```
+
+### Media Mounter (`mounter.ipynb`)
+
+> Mounts media directories as static files for serving through the web
+> server
+
+#### Import
+
+``` python
+from cjm_fasthtml_workflow_transcription_single_file.media.mounter import (
+    MediaMounter
+)
+```
+
+#### Functions
+
+``` python
+@patch
+def mount(self: MediaMounter,
+          app,  # FastHTML app instance
+          directories: List[str]  # Directory to mount
+         ) -> str:  # URL prefix for the mounted directory
+    """
+    Mount directories to app for static file serving.
+    
+    This method clears any existing mounts from this instance before
+    adding new ones, ensuring a clean state on each call.
+    
+    Args:
+        app: FastHTML/Starlette application instance.
+        directories: List of directory paths to mount.
+    """
+```
+
+``` python
+@patch
+def get_url(self: MediaMounter,
+            file_path: str  # Full path to the media file
+           ) -> Optional[str]:  # URL to access the file or None
+    """
+    Get URL for a file based on mounted directories.
+    
+    Args:
+        file_path: Full path to the media file.
+    
+    Returns:
+        URL path to access the file, or None if not in a mounted directory.
+    """
+```
+
+``` python
+@patch
+def is_mounted(self: MediaMounter,
+               directory: str  # Directory to check
+              ) -> bool:  # True if directory is mounted
+    """
+    Check if a directory is currently mounted.
+    
+    Args:
+        directory: Directory path to check.
+    
+    Returns:
+        True if the directory is mounted.
+    """
+```
+
+``` python
+@patch
+def get_mounted_directories(self: MediaMounter) -> List[str]
+    """
+    Get list of currently mounted directories.
+    
+    Returns:
+        List of mounted directory paths.
+    """
+```
+
+``` python
+@patch
+def unmount_all(self: MediaMounter) -> None:
+    """Remove all mounts from this instance."""
+    if self._app
+    "Remove all mounts from this instance."
+```
+
+``` python
+@patch
+def _mount_directory(self: MediaMounter, 
+                     app, 
+                     directory: str) -> None
+    """
+    Mount a single directory.
+    
+    Args:
+        app: FastHTML/Starlette application instance.
+        directory: Directory path to mount.
+    """
+```
+
+``` python
+@patch
+def _generate_prefix(self: MediaMounter, 
+                     directory: str) -> str
+    """
+    Generate a unique route prefix for a directory.
+    
+    Uses MD5 hash of the directory path to ensure uniqueness while
+    keeping the prefix reasonably short.
+    
+    Args:
+        directory: Directory path.
+    
+    Returns:
+        Route prefix string (e.g., "sf_media_abc12345").
+    """
+```
+
+``` python
+@patch
+def _remove_existing_mounts(self: MediaMounter, 
+                            app) -> None
+    """
+    Remove existing mounts from this instance.
+    
+    Only removes mounts that match this mounter's prefix pattern.
+    
+    Args:
+        app: FastHTML/Starlette application instance.
+    """
+```
+
+#### Classes
+
+``` python
+class MediaMounter:
+    def __init__(self):
+        """Initialize the mounter with empty state."""
+        self._mounted: Dict[str, str] = {}  # directory -> route_prefix
+    """
+    Mounts directories for static file serving with instance-level state.
+    
+    Each workflow instance gets its own mounter with its own registry of
+    mounted directories, ensuring proper isolation between workflow instances.
+    
+    The mounter uses a unique prefix pattern (sf_media_{hash}) to avoid
+    conflicts with other mounters or static file routes.
+    """
+    
+    def __init__(self):
+            """Initialize the mounter with empty state."""
+            self._mounted: Dict[str, str] = {}  # directory -> route_prefix
+        "Initialize the mounter with empty state."
+```
+
+### Media Pagination (`pagination.ipynb`)
+
+> Factory function for creating paginated media browser views
+
+#### Import
+
+``` python
+from cjm_fasthtml_workflow_transcription_single_file.media.pagination import (
+    create_media_pagination
+)
+```
+
+#### Functions
+
+``` python
+def create_media_pagination(
+    pagination_id: str,
+    scanner: MediaScanner,
+    mounter: MediaMounter,
+    items_per_page: int = 30,
+    content_id: Optional[str] = None,
+    preview_route_func=None,
+    modal_id: str = "sf-media-preview"
+) -> Pagination
+    """
+    Create a Pagination instance for media browsing.
+    
+    Args:
+        pagination_id: Unique identifier for this pagination instance.
+        scanner: MediaScanner instance for loading files.
+        mounter: MediaMounter instance for URL generation.
+        items_per_page: Number of items per page.
+        content_id: HTML ID for content area.
+        preview_route_func: Function to generate preview route URL.
+        modal_id: ID for the preview modal.
+    
+    Returns:
+        Configured Pagination instance.
+    """
+```
+
+### Processor Component (`processor.ipynb`)
+
+> UI component for displaying transcription in-progress state
+
+#### Import
+
+``` python
+from cjm_fasthtml_workflow_transcription_single_file.components.processor import (
+    transcription_in_progress
+)
+```
+
+#### Functions
+
+``` python
+def transcription_in_progress(
+    job_id: str,
+    plugin_info: Dict[str, Any],
+    file_info: Dict[str, Any],
+    config: SingleFileWorkflowConfig,
+    router: APIRouter,
+)
+    """
+    Render transcription in-progress view with SSE updates.
+    
+    Args:
+        job_id: Unique identifier for the transcription job.
+        plugin_info: Dictionary with plugin details (id, title, supports_streaming).
+        file_info: Dictionary with file details (name, path, type, size_str).
+        config: Workflow configuration.
+        router: Workflow router for generating route URLs.
+    
+    Returns:
+        FastHTML component showing progress and SSE connection.
+    """
+```
+
+### Protocols (`protocols.ipynb`)
+
+> Protocol definitions for external dependencies and plugin integration
+
+#### Import
+
+``` python
+from cjm_fasthtml_workflow_transcription_single_file.core.protocols import (
+    PluginInfo,
+    PluginRegistryProtocol,
+    ResourceManagerProtocol
+)
+```
+
+#### Classes
+
+``` python
+@dataclass
+class PluginInfo:
+    """
+    Information about a transcription plugin.
+    
+    This dataclass provides a standardized representation of plugins
+    that the workflow can display and use.
+    """
+    
+    id: str  # Unique plugin identifier (e.g., "transcription:voxtral_hf")
+    name: str  # Plugin name (e.g., "voxtral_hf")
+    title: str  # Display title (e.g., "Voxtral HF")
+    is_configured: bool  # Whether the plugin has a valid configuration
+    supports_streaming: bool = False  # Whether the plugin supports streaming output
+```
+
+``` python
+@runtime_checkable
+class PluginRegistryProtocol(Protocol):
+    """
+    Protocol for plugin registry access.
+    
+    The workflow receives an adapter to the app's UnifiedPluginRegistry
+    that implements this interface.
+    """
+    
+    def get_configured_plugins(self) -> List[PluginInfo]:
+            """Get all configured transcription plugins.
+    
+            Returns:
+                List of PluginInfo for plugins that have valid configurations.
+            """
+            ...
+    
+        def get_plugin(self, plugin_id: str) -> Optional[PluginInfo]
+        "Get all configured transcription plugins.
+
+Returns:
+    List of PluginInfo for plugins that have valid configurations."
+    
+    def get_plugin(self, plugin_id: str) -> Optional[PluginInfo]:
+            """Get a specific plugin by ID.
+    
+            Args:
+                plugin_id: Unique plugin identifier.
+    
+            Returns:
+                PluginInfo if found, None otherwise.
+            """
+            ...
+    
+        def get_plugin_config(self, plugin_id: str) -> Dict[str, Any]
+        "Get a specific plugin by ID.
+
+Args:
+    plugin_id: Unique plugin identifier.
+
+Returns:
+    PluginInfo if found, None otherwise."
+    
+    def get_plugin_config(self, plugin_id: str) -> Dict[str, Any]
+        "Get the configuration for a plugin.
+
+Args:
+    plugin_id: Unique plugin identifier.
+
+Returns:
+    Configuration dictionary, empty dict if not configured."
+```
+
+``` python
+@runtime_checkable
+class ResourceManagerProtocol(Protocol):
+    """
+    Protocol for resource availability checks.
+    
+    The workflow can use this to check if GPU/CPU resources are available
+    before starting transcription jobs.
+    """
+    
+    def check_gpu_available(self) -> bool:
+            """Check if GPU is available for processing.
+    
+            Returns:
+                True if GPU is available and has sufficient memory.
+            """
+            ...
+    
+        def get_gpu_memory_usage(self) -> float
+        "Check if GPU is available for processing.
+
+Returns:
+    True if GPU is available and has sufficient memory."
+    
+    def get_gpu_memory_usage(self) -> float
+        "Get current GPU memory usage percentage.
+
+Returns:
+    GPU memory usage as a percentage (0-100)."
+```
+
+### Results Components (`results.ipynb`)
+
+> UI components for displaying transcription results and errors
+
+#### Import
+
+``` python
+from cjm_fasthtml_workflow_transcription_single_file.components.results import (
+    transcription_results,
+    transcription_error
+)
+```
+
+#### Functions
+
+``` python
+def transcription_results(
+    job_id: str,
+    transcription_text: str,
+    metadata: Dict[str, Any],
+    file_info: Dict[str, Any],
+    plugin_info: Dict[str, Any],
+    config: SingleFileWorkflowConfig,
+    router: APIRouter,
+    stepflow_router: APIRouter,
+)
+    """
+    Render transcription results with export options.
+    
+    Args:
+        job_id: Unique identifier for the transcription job.
+        transcription_text: The transcribed text.
+        metadata: Transcription metadata from the plugin.
+        file_info: Dictionary with file details (name, path, type, size_str).
+        plugin_info: Dictionary with plugin details (id, title, supports_streaming).
+        config: Workflow configuration.
+        router: Workflow router for generating route URLs.
+        stepflow_router: StepFlow router for generating stepflow URLs.
+    
+    Returns:
+        FastHTML component showing results with export options.
+    """
+```
+
+``` python
+def transcription_error(
+    error_message: str,
+    file_info: Optional[Dict[str, Any]],
+    config: SingleFileWorkflowConfig,
+    stepflow_router: APIRouter,
+)
+    """
+    Render transcription error message.
+    
+    Args:
+        error_message: Description of the error that occurred.
+        file_info: Optional dictionary with file details.
+        config: Workflow configuration.
+        stepflow_router: StepFlow router for generating stepflow URLs.
+    
+    Returns:
+        FastHTML component showing error with retry option.
+    """
+```
+
+### Workflow Routes (`routes.ipynb`)
+
+> Route initialization and handlers for the single-file transcription
+> workflow
+
+#### Import
+
+``` python
+from cjm_fasthtml_workflow_transcription_single_file.workflow.routes import (
+    init_router
+)
+```
+
+#### Functions
+
+``` python
+def init_router(workflow: SingleFileTranscriptionWorkflow) -> APIRouter:
+    """Initialize and return the workflow's API router with all routes.
+
+    Args:
+        workflow: The workflow instance providing access to config and dependencies.
+
+    Returns:
+        Configured APIRouter with all workflow routes.
+    """
+    router = APIRouter(prefix=workflow.config.route_prefix)
+
+    @router
+    def current_status(request, sess)
+    """
+    Initialize and return the workflow's API router with all routes.
+    
+    Args:
+        workflow: The workflow instance providing access to config and dependencies.
+    
+    Returns:
+        Configured APIRouter with all workflow routes.
+    """
+```
+
+``` python
+def _export_transcription(text: str, format: str, filename: str) -> str:
+    """Format transcription for export.
+
+    Args:
+        text: Transcription text.
+        format: Export format (txt, srt, vtt).
+        filename: Original filename for metadata.
+
+    Returns:
+        Formatted transcription string.
+    """
+    if format == "txt"
+    """
+    Format transcription for export.
+    
+    Args:
+        text: Transcription text.
+        format: Export format (txt, srt, vtt).
+        filename: Original filename for metadata.
+    
+    Returns:
+        Formatted transcription string.
+    """
+```
+
+### Media Scanner (`scanner.ipynb`)
+
+> Scans directories for media files with caching support
+
+#### Import
+
+``` python
+from cjm_fasthtml_workflow_transcription_single_file.media.scanner import (
+    MediaScanner
+)
+```
+
+#### Functions
+
+``` python
+@patch
+def _is_cache_valid(self: MediaScanner) -> bool:  # True if cache is valid
+    """Check if cache is still valid.
+
+    Returns:
+        True if cache exists and hasn't expired.
+    """
+    if not self.config.cache_results or self._cache is None
+    """
+    Check if cache is still valid.
+    
+    Returns:
+        True if cache exists and hasn't expired.
+    """
+```
+
+``` python
+@patch
+def clear_cache(self: MediaScanner) -> None
+    "Clear the scan cache."
+```
+
+``` python
+@patch
+def _update_cache(self: MediaScanner, 
+                  files: List[MediaFile] # List of scanned MediaFile objects.
+                 ) -> None
+    "Update cache with new scan results."
+```
+
+``` python
+@patch
+def _scan_directories(self: MediaScanner,
+                     ) -> List[MediaFile]: # List of MediaFile objects matching the configuration.
+    "Perform actual directory scan."
+```
+
+``` python
+@patch
+def _sort_files(self: MediaScanner,
+                files: List[MediaFile]  # Files to sort
+               ) -> List[MediaFile]:  # Sorted files
+    """
+    Sort files according to configuration.
+    
+    Args:
+        files: List of MediaFile objects to sort.
+    
+    Returns:
+        Sorted list of MediaFile objects.
+    """
+```
+
+``` python
+@patch
+def scan(self: MediaScanner, 
+         force_refresh: bool = False
+        ) -> List[MediaFile]
+    """
+    Scan for media files, using cache if valid.
+    
+    Args:
+        force_refresh: Force a fresh scan, ignoring cache.
+    
+    Returns:
+        List of MediaFile objects.
+    """
+```
+
+``` python
+@patch
+def get_summary(self: MediaScanner,
+               ) -> Dict[str, Any]: # Dictionary with total count, size, and breakdowns by type/extension.
+    "Get summary statistics for scanned files."
+```
+
+#### Classes
+
+``` python
+class MediaScanner:
+    def __init__(self, config: MediaConfig):
+        """Initialize the scanner.
+
+        Args:
+            config: Media configuration with directories and filters.
+        """
+        self.config = config
+        self._cache: Optional[List[MediaFile]] = None
+    """
+    Scans directories for media files with instance-level caching.
+    
+    Each workflow instance gets its own scanner with its own cache,
+    ensuring proper isolation between workflow instances.
+    """
+    
+    def __init__(self, config: MediaConfig):
+            """Initialize the scanner.
+    
+            Args:
+                config: Media configuration with directories and filters.
+            """
+            self.config = config
+            self._cache: Optional[List[MediaFile]] = None
+        "Initialize the scanner.
+
+Args:
+    config: Media configuration with directories and filters."
+```
+
+### Settings Schemas (`schemas.ipynb`)
+
+> JSON schemas and utilities for workflow settings
+
+#### Import
+
+``` python
+from cjm_fasthtml_workflow_transcription_single_file.settings.schemas import (
+    WORKFLOW_SETTINGS_SCHEMA,
+    get_settings_from_config
+)
+```
+
+#### Functions
+
+``` python
+def get_settings_from_config(media_config, 
+                             storage_config, 
+                             workflow_config=None) -> dict
+    """
+    Extract settings values from config objects.
+    
+    Args:
+        media_config: MediaConfig instance.
+        storage_config: StorageConfig instance.
+        workflow_config: Optional SingleFileWorkflowConfig instance for additional settings.
+    
+    Returns:
+        Dictionary of current settings values.
+    """
+```
+
+#### Variables
+
+``` python
+WORKFLOW_SETTINGS_SCHEMA = {5 items}
+```
+
+### Step Components (`steps.ipynb`)
+
+> UI components for workflow step rendering (plugin selection, file
+> selection, confirmation)
+
+#### Import
+
+``` python
+from cjm_fasthtml_workflow_transcription_single_file.components.steps import (
+    render_plugin_config_form,
+    render_plugin_details_route,
+    render_plugin_selection,
+    render_file_selection,
+    render_confirmation
+)
+```
+
+#### Functions
+
+``` python
+def _get_file_attr(file_path: str, media_files: list, attr: str) -> str:
+    """Get an attribute from a file by path."""
+    if not file_path
+    "Get an attribute from a file by path."
+```
+
+``` python
+def _render_plugin_details_content(
+    plugin_id: str,
+    plugins: List[PluginInfo],
+    plugin_registry: PluginRegistryProtocol,
+)
+    """
+    Render details for selected plugin (info card only, no config collapse).
+    
+    Args:
+        plugin_id: ID of the plugin to display details for.
+        plugins: List of available plugins.
+        plugin_registry: Plugin registry adapter for getting plugin config.
+    """
+```
+
+``` python
+def _render_plugin_details_with_config(
+    plugin_id: str,
+    plugins: List[PluginInfo],
+    plugin_registry: PluginRegistryProtocol,
+    raw_plugin_registry,
+    save_url: str,
+    reset_url: str,
+)
+    """
+    Render plugin details with configuration collapse.
+    
+    This is used for initial render when returning to the plugin selection step
+    with a previously selected plugin.
+    
+    Args:
+        plugin_id: ID of the plugin to display details for.
+        plugins: List of available plugins.
+        plugin_registry: Plugin registry adapter for getting plugin config.
+        raw_plugin_registry: UnifiedPluginRegistry for config_schema access.
+        save_url: URL for saving plugin configuration.
+        reset_url: URL for resetting plugin configuration.
+    """
+```
+
+``` python
+def render_plugin_config_form(
+    plugin_id: str,
+    plugin_registry,  # UnifiedPluginRegistry - raw registry with config_schema access
+    save_url: str,
+    reset_url: str,
+    alert_message: Optional[Any] = None,
+) -> FT
+    """
+    Render the plugin configuration form for the collapse content.
+    
+    This creates a settings form container using the plugin's config schema
+    and current configuration values.
+    
+    Args:
+        plugin_id: ID of the plugin to render config for.
+        plugin_registry: UnifiedPluginRegistry with config_schema access.
+        save_url: URL for saving the configuration.
+        reset_url: URL for resetting to defaults.
+        alert_message: Optional alert to display above the form.
+    
+    Returns:
+        Div containing the settings form with alert container.
+    """
+```
+
+``` python
+def _render_plugin_config_collapse(
+    plugin_id: str,
+    plugin_registry,  # UnifiedPluginRegistry - raw registry with config_schema access
+    save_url: str,
+    reset_url: str,
+) -> FT
+    """
+    Render a collapse component containing the plugin configuration form.
+    
+    Args:
+        plugin_id: ID of the plugin to render config for.
+        plugin_registry: UnifiedPluginRegistry with config_schema access.
+        save_url: URL for saving the configuration.
+        reset_url: URL for resetting to defaults.
+    
+    Returns:
+        Collapse component with plugin configuration form.
+    """
+```
+
+``` python
+def render_plugin_details_route(
+    plugin_id: str,
+    plugin_registry: PluginRegistryProtocol,
+    raw_plugin_registry,  # UnifiedPluginRegistry for config_schema access
+    save_url: str,
+    reset_url: str,
+)
+    """
+    Render plugin details for HTMX route.
+    
+    This is called by the workflow router when the plugin dropdown changes.
+    Includes a collapse component with the plugin's configuration form.
+    
+    Args:
+        plugin_id: ID of the plugin to display details for.
+        plugin_registry: Plugin registry adapter for getting plugins and config.
+        raw_plugin_registry: UnifiedPluginRegistry for config_schema access.
+        save_url: URL for saving plugin configuration.
+        reset_url: URL for resetting plugin configuration to defaults.
+    """
+```
+
+``` python
+def render_plugin_selection(
+    ctx: InteractionContext,
+    config: SingleFileWorkflowConfig,
+    plugin_registry: PluginRegistryProtocol,
+    settings_modal_url: str,
+    plugin_details_url: str,
+    raw_plugin_registry=None,
+    save_plugin_config_url: str = "",
+    reset_plugin_config_url: str = "",
+)
+    """
+    Render plugin selection step.
+    
+    All discovered plugins are shown, not just those with saved configs.
+    Plugins can use their default configuration values from the schema.
+    
+    Args:
+        ctx: Interaction context with state and data.
+        config: Workflow configuration.
+        plugin_registry: Plugin registry adapter for getting plugin config.
+        settings_modal_url: URL for the settings modal route.
+        plugin_details_url: URL for the plugin details route.
+        raw_plugin_registry: UnifiedPluginRegistry for config_schema access (optional).
+        save_plugin_config_url: URL for saving plugin configuration.
+        reset_plugin_config_url: URL for resetting plugin configuration.
+    """
+```
+
+``` python
+def render_file_selection(
+    ctx: InteractionContext,
+    config: SingleFileWorkflowConfig,
+    file_selection_router: APIRouter,
+)
+    """
+    Render file selection step with paginated table view and preview capability.
+    
+    Args:
+        ctx: Interaction context with state and data.
+        config: Workflow configuration.
+        file_selection_router: Router for file selection pagination (or None).
+    """
+```
+
+``` python
+def render_confirmation(
+    ctx: InteractionContext,
+    plugin_registry: PluginRegistryProtocol,
+)
+    """
+    Render confirmation step showing selected plugin and file.
+    
+    Args:
+        ctx: Interaction context with state and data.
+        plugin_registry: Plugin registry adapter for getting plugin info.
+    """
+```
+
+### Media Utilities (`utils.ipynb`)
+
+> Formatting utilities for media files
+
+#### Import
+
+``` python
+from cjm_fasthtml_workflow_transcription_single_file.media.utils import (
+    format_file_size,
+    format_timestamp,
+    matches_patterns
+)
+```
+
+#### Functions
+
+``` python
+def format_file_size(size_bytes: int  # Size in bytes
+                    ) -> str:  # Human-readable size string
+    """
+    Format file size in human-readable format.
+    
+    Args:
+        size_bytes: Size in bytes.
+    
+    Returns:
+        Human-readable size string (e.g., "15.2 MB").
+    """
+```
+
+``` python
+def format_timestamp(timestamp: float  # Unix timestamp
+                    ) -> str:  # Human-readable date string
+    """
+    Format timestamp to human-readable date.
+    
+    Uses relative time for recent files (e.g., "5 min ago", "yesterday").
+    
+    Args:
+        timestamp: Unix timestamp.
+    
+    Returns:
+        Human-readable date string.
+    """
+```
+
+``` python
+def matches_patterns(path: str,  # File path to check
+                     patterns: List[str]  # List of glob patterns to match against
+                    ) -> bool:  # True if path matches any pattern
+    """
+    Check if path matches any of the exclude patterns.
+    
+    Args:
+        path: File path to check.
+        patterns: List of glob patterns to match against.
+    
+    Returns:
+        True if path matches any pattern.
+    """
+```
+
+### Single File Transcription Workflow (`workflow.ipynb`)
+
+> Main workflow class orchestrating all subsystems for single-file
+> transcription
+
+#### Import
+
+``` python
+from cjm_fasthtml_workflow_transcription_single_file.workflow.workflow import (
+    SingleFileTranscriptionWorkflow
+)
+```
+
+#### Functions
+
+``` python
+@patch
+def setup(self: SingleFileTranscriptionWorkflow, app) -> None
+    """
+    Initialize workflow with FastHTML app.
+    
+    Must be called after app creation to mount media directories.
+    
+    Args:
+        app: FastHTML application instance.
+    """
+```
+
+``` python
+@patch
+def _ensure_plugin_configs_exist(self: SingleFileTranscriptionWorkflow) -> None:
+    """Ensure all discovered plugins have config files.
+
+    For plugins without saved config files, creates a config file with
+    default values from the plugin's schema. This is necessary because
+    the worker only loads plugins that have config files.
+    """
+    plugins = self._plugin_registry.get_plugins_by_category(self.config.plugin_category)
+
+    for plugin_meta in plugins
+    """
+    Ensure all discovered plugins have config files.
+    
+    For plugins without saved config files, creates a config file with
+    default values from the plugin's schema. This is necessary because
+    the worker only loads plugins that have config files.
+    """
+```
+
+``` python
+@patch
+def get_routers(self: SingleFileTranscriptionWorkflow) -> List[APIRouter]:
+    """Return all routers for registration with the app.
+
+    Example usage:
+        register_routes(app, *workflow.get_routers())
+
+    Returns:
+        List containing the main router, stepflow router, media router, and file selection router.
+    """
+    routers = [self._router, self._stepflow_router]
+    if self._media_router
+    """
+    Return all routers for registration with the app.
+    
+    Example usage:
+        register_routes(app, *workflow.get_routers())
+    
+    Returns:
+        List containing the main router, stepflow router, media router, and file selection router.
+    """
+```
+
+``` python
+@patch
+def render_entry_point(self: SingleFileTranscriptionWorkflow, request, sess) -> FT
+    """
+    Render the workflow entry point for embedding in tabs, etc.
+    
+    This returns an AsyncLoadingContainer that loads the current_status
+    endpoint, which determines what to show (running job, workflow in progress,
+    completed job, or fresh start).
+    
+    Plugins are usable even without saved config files - they will use
+    their default configuration values from the schema.
+    
+    Args:
+        request: FastHTML request object.
+        sess: FastHTML session object.
+    
+    Returns:
+        AsyncLoadingContainer component.
+    """
+```
+
+``` python
+@patch
+def _on_job_completed(self: SingleFileTranscriptionWorkflow, job_id: str, manager) -> None:
+    """Workflow-specific completion handling.
+
+    Called by TranscriptionJobManager when a job completes.
+    Auto-saves results if enabled in configuration.
+
+    Args:
+        job_id: The completed job's ID.
+        manager: The TranscriptionJobManager instance.
+    """
+    if not self._result_storage.should_auto_save()
+    """
+    Workflow-specific completion handling.
+    
+    Called by TranscriptionJobManager when a job completes.
+    Auto-saves results if enabled in configuration.
+    
+    Args:
+        job_id: The completed job's ID.
+        manager: The TranscriptionJobManager instance.
+    """
+```
+
+``` python
+@patch
+def _create_preview_route_func(self: SingleFileTranscriptionWorkflow):
+    """Create a function that generates preview route URLs (with optional media_type)."""
+    route_prefix = self.config.route_prefix
+
+    def preview_route_func(idx: int, media_type: Optional[str] = None) -> str
+    "Create a function that generates preview route URLs (with optional media_type)."
+```
+
+``` python
+@patch
+def _create_preview_url_func(self: SingleFileTranscriptionWorkflow):
+    """Create a function that generates preview URLs for file selection (index only)."""
+    route_prefix = self.config.route_prefix
+
+    def preview_url_func(idx: int) -> str
+    "Create a function that generates preview URLs for file selection (index only)."
+```
+
+``` python
+@patch
+def _create_step_flow(self: SingleFileTranscriptionWorkflow) -> StepFlow:
+    """Create and configure the StepFlow instance."""
+    # Create wrapper functions that capture self
+    workflow = self
+
+    def load_plugins(request) -> Dict[str, Any]
+    "Create and configure the StepFlow instance."
+```
+
+``` python
+@patch
+def _create_router(self: SingleFileTranscriptionWorkflow) -> APIRouter
+    "Create the workflow's API router with all routes."
+```
+
+#### Classes
+
+``` python
+class SingleFileTranscriptionWorkflow:
+    def __init__(
+        self,
+        config: Optional[SingleFileWorkflowConfig] = None,
+    )
+    """
+    Self-contained single-file transcription workflow.
+    
+    Creates and manages:
+    - Internal UnifiedPluginRegistry with workflow-specific config directory
+    - Internal ResourceManager for GPU/CPU availability checks
+    - Internal TranscriptionJobManager with workflow-specific callback
+    - Internal SSEBroadcastManager for event streaming
+    - Internal MediaLibrary for file discovery and browsing
+    - Internal ResultStorage for persisting results
+    - StepFlow for plugin → file → confirm wizard
+    - APIRouter for workflow-specific routes (SSE, cancel, export, etc.)
+    
+    Example usage:
+        workflow = SingleFileTranscriptionWorkflow(
+            config=SingleFileWorkflowConfig(
+                route_prefix="/transcription/workflows/single_file",
+                media=MediaConfig(directories=["/path/to/media"]),
+            )
+        )
+    
+        # Initialize with app (mounts media directories)
+        workflow.setup(app)
+    
+        # Register routers with your app
+        register_routes(app, *workflow.get_routers())
+    
+        # Store in app.state for access from routes
+        app.state.single_file_workflow = workflow
+    """
+    
+    def __init__(
+            self,
+            config: Optional[SingleFileWorkflowConfig] = None,
+        )
+        "Initialize the workflow.
+
+Args:
+    config: Workflow configuration including media and storage settings."
+    
+    def transcription_manager(self) -> TranscriptionJobManager:
+            """Access to internal transcription manager."""
+            return self._transcription_manager
+        
+        @property
+        def plugin_registry(self) -> PluginRegistryAdapter
+        "Access to internal transcription manager."
+    
+    def plugin_registry(self) -> PluginRegistryAdapter:
+            """Access to plugin registry adapter."""
+            return self._plugin_adapter
+        
+        @property
+        def media_library(self) -> MediaLibrary
+        "Access to plugin registry adapter."
+    
+    def media_library(self) -> MediaLibrary:
+            """Access to internal media library."""
+            return self._media_library
+        
+        @property
+        def result_storage(self) -> ResultStorage
+        "Access to internal media library."
+    
+    def result_storage(self) -> ResultStorage:
+            """Access to internal result storage."""
+            return self._result_storage
+        
+        @property
+        def router(self) -> APIRouter
+        "Access to internal result storage."
+    
+    def router(self) -> APIRouter:
+            """Main workflow router."""
+            return self._router
+        
+        @property
+        def stepflow_router(self) -> APIRouter
+        "Main workflow router."
+    
+    def stepflow_router(self) -> APIRouter
+        "StepFlow-generated router."
+```
