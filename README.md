@@ -72,57 +72,57 @@ graph LR
     workflow_routes[workflow.routes<br/>Workflow Routes]
     workflow_workflow[workflow.workflow<br/>Single File Transcription Workflow]
 
-    components_processor --> core_config
     components_processor --> core_html_ids
-    components_results --> core_config
+    components_processor --> core_config
     components_results --> core_html_ids
+    components_results --> core_config
+    components_steps --> core_html_ids
     components_steps --> core_protocols
     components_steps --> core_config
-    components_steps --> core_html_ids
     core_adapters --> core_protocols
     core_config --> storage_config
-    core_config --> core_html_ids
     core_config --> media_config
+    core_config --> core_html_ids
     media_components --> media_models
     media_components --> media_mounter
-    media_file_selection_pagination --> media_models
     media_file_selection_pagination --> media_library
+    media_file_selection_pagination --> media_models
     media_file_selection_pagination --> media_scanner
-    media_library --> media_models
-    media_library --> media_mounter
     media_library --> media_scanner
     media_library --> media_config
+    media_library --> media_mounter
+    media_library --> media_models
+    media_pagination --> media_library
     media_pagination --> media_components
     media_pagination --> media_mounter
     media_pagination --> media_scanner
-    media_pagination --> media_library
-    media_scanner --> media_models
     media_scanner --> media_utils
     media_scanner --> media_config
+    media_scanner --> media_models
     settings_components --> core_html_ids
-    settings_schemas --> storage_config
     settings_schemas --> media_config
+    settings_schemas --> storage_config
     settings_schemas --> core_config
     storage_file_storage --> storage_config
-    workflow_job_handler --> components_results
-    workflow_job_handler --> core_html_ids
     workflow_job_handler --> core_protocols
+    workflow_job_handler --> components_results
     workflow_job_handler --> storage_file_storage
-    workflow_job_handler --> core_config
     workflow_job_handler --> components_processor
+    workflow_job_handler --> core_config
+    workflow_job_handler --> core_html_ids
+    workflow_routes --> components_steps
     workflow_routes --> components_results
     workflow_routes --> workflow_job_handler
-    workflow_routes --> core_html_ids
     workflow_routes --> workflow_workflow
-    workflow_routes --> components_steps
     workflow_routes --> components_processor
-    workflow_workflow --> core_adapters
+    workflow_routes --> core_html_ids
     workflow_workflow --> media_library
-    workflow_workflow --> core_config
-    workflow_workflow --> components_steps
-    workflow_workflow --> workflow_job_handler
+    workflow_workflow --> core_adapters
     workflow_workflow --> core_html_ids
+    workflow_workflow --> components_steps
     workflow_workflow --> storage_file_storage
+    workflow_workflow --> core_config
+    workflow_workflow --> workflow_job_handler
 ```
 
 *51 cross-module dependencies detected*
@@ -482,15 +482,10 @@ from cjm_fasthtml_workflow_transcription_single_file.storage.config import (
 ``` python
 @dataclass
 class StorageConfig:
-    """
-    Result storage configuration.
+    "Result storage configuration."
     
-    This configuration controls how and where transcription results
-    are persisted.
-    """
-    
-    auto_save: bool = True
-    results_directory: str = 'transcription_results'
+    auto_save: bool = True  # Automatically save transcription results when complete
+    results_directory: str = 'transcription_results'  # Directory to save transcription results
 ```
 
 #### Variables
@@ -560,233 +555,103 @@ from cjm_fasthtml_workflow_transcription_single_file.storage.file_storage import
 
 ``` python
 @patch
-def should_auto_save(self: ResultStorage) -> bool
-    """
-    Check if auto-save is enabled.
-    
-    Returns:
-        True if results should be automatically saved.
-    """
+def should_auto_save(
+    self: ResultStorage
+) -> bool:  # True if results should be automatically saved
+    "Check if auto-save is enabled."
 ```
 
 ``` python
 @patch
 def save(
     self: ResultStorage,
-    job_id: str,
-    file_path: str,
-    file_name: str,
-    plugin_id: str,
-    plugin_name: str,
-    text: str,
-    metadata: Optional[Dict[str, Any]] = None,
-    additional_info: Optional[Dict[str, Any]] = None
-) -> Path
-    """
-    Save a transcription result to JSON file.
-    
-    Args:
-        job_id: Unique job identifier.
-        file_path: Path to the transcribed media file.
-        file_name: Name of the media file.
-        plugin_id: Plugin unique identifier.
-        plugin_name: Plugin display name.
-        text: The transcription text.
-        metadata: Optional metadata from the transcription plugin.
-        additional_info: Optional additional information to store.
-    
-    Returns:
-        Path to the saved JSON file.
-    """
+    job_id: str,  # Unique job identifier
+    file_path: str,  # Path to the transcribed media file
+    file_name: str,  # Name of the media file
+    plugin_id: str,  # Plugin unique identifier
+    plugin_name: str,  # Plugin display name
+    text: str,  # The transcription text
+    metadata: Optional[Dict[str, Any]] = None,  # Optional metadata from the transcription plugin
+    additional_info: Optional[Dict[str, Any]] = None  # Optional additional information to store
+) -> Path:  # Path to the saved JSON file
+    "Save a transcription result to JSON file."
 ```
 
 ``` python
 @patch
-def load(self: ResultStorage, result_file: Path) -> Optional[Dict[str, Any]]:
-    """Load a transcription result from JSON file.
-
-    Args:
-        result_file: Path to the JSON result file.
-
-    Returns:
-        Dictionary containing the result data, or None if error.
-    """
-    try
-    """
-    Load a transcription result from JSON file.
-    
-    Args:
-        result_file: Path to the JSON result file.
-    
-    Returns:
-        Dictionary containing the result data, or None if error.
-    """
+def load(
+    self: ResultStorage,
+    result_file: Path  # Path to the JSON result file
+) -> Optional[Dict[str, Any]]:  # Dictionary containing the result data, or None if error
+    "Load a transcription result from JSON file."
 ```
 
 ``` python
 @patch
 def list_results(
     self: ResultStorage,
-    sort_by: str = "timestamp",
-    reverse: bool = True
-) -> List[Dict[str, Any]]
-    """
-    List all saved transcription results.
-    
-    Args:
-        sort_by: Field to sort by ("timestamp", "file_name", "word_count").
-        reverse: Sort in reverse order (newest first by default).
-    
-    Returns:
-        List of result dictionaries.
-    """
+    sort_by: str = "timestamp",  # Field to sort by ("timestamp", "file_name", "word_count")
+    reverse: bool = True  # Sort in reverse order (newest first by default)
+) -> List[Dict[str, Any]]:  # List of result dictionaries
+    "List all saved transcription results."
 ```
 
 ``` python
 @patch
-def get_by_job_id(self: ResultStorage, job_id: str) -> Optional[Dict[str, Any]]:
-    """Find and load a transcription result by job ID.
-
-    Args:
-        job_id: The job identifier to search for.
-
-    Returns:
-        Result dictionary if found, None otherwise.
-    """
-    results = self.list_results()
-
-    for result in results
-    """
-    Find and load a transcription result by job ID.
-    
-    Args:
-        job_id: The job identifier to search for.
-    
-    Returns:
-        Result dictionary if found, None otherwise.
-    """
+def get_by_job_id(
+    self: ResultStorage,
+    job_id: str  # The job identifier to search for
+) -> Optional[Dict[str, Any]]:  # Result dictionary if found, None otherwise
+    "Find and load a transcription result by job ID."
 ```
 
 ``` python
 @patch
-def delete(self: ResultStorage, result_file: str) -> bool:
-    """Delete a transcription result file.
-
-    Args:
-        result_file: Path to the result file (can be full path or filename).
-
-    Returns:
-        True if deletion successful, False otherwise.
-    """
-    try
-    """
-    Delete a transcription result file.
-    
-    Args:
-        result_file: Path to the result file (can be full path or filename).
-    
-    Returns:
-        True if deletion successful, False otherwise.
-    """
+def delete(
+    self: ResultStorage,
+    result_file: str  # Path to the result file (can be full path or filename)
+) -> bool:  # True if deletion successful, False otherwise
+    "Delete a transcription result file."
 ```
 
 ``` python
 @patch
-def update_text(self: ResultStorage, result_file: str, new_text: str) -> bool:
-    """Update the transcription text in a saved result.
-
-    Args:
-        result_file: Path to the result file.
-        new_text: New transcription text.
-
-    Returns:
-        True if update successful, False otherwise.
-    """
-    try
-    """
-    Update the transcription text in a saved result.
-    
-    Args:
-        result_file: Path to the result file.
-        new_text: New transcription text.
-    
-    Returns:
-        True if update successful, False otherwise.
-    """
+def update_text(
+    self: ResultStorage,
+    result_file: str,  # Path to the result file
+    new_text: str  # New transcription text
+) -> bool:  # True if update successful, False otherwise
+    "Update the transcription text in a saved result."
 ```
 
 ``` python
 @patch
-def _generate_filename(self: ResultStorage, job_id: str, file_name: str) -> str:
-    """Generate a filename for storing transcription results.
-
-    Args:
-        job_id: Unique job identifier.
-        file_name: Original media file name.
-
-    Returns:
-        Generated filename for the JSON result file.
-    """
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    # Sanitize file_name for use in filename
-    safe_name = Path(file_name).stem.replace(" ", "_")[:50]
-    """
-    Generate a filename for storing transcription results.
-    
-    Args:
-        job_id: Unique job identifier.
-        file_name: Original media file name.
-    
-    Returns:
-        Generated filename for the JSON result file.
-    """
+def _generate_filename(
+    self: ResultStorage,
+    job_id: str,  # Unique job identifier
+    file_name: str  # Original media file name
+) -> str:  # Generated filename for the JSON result file
+    "Generate a filename for storing transcription results."
 ```
 
 #### Classes
 
 ``` python
 class ResultStorage:
-    def __init__(self, config: StorageConfig):
-        """Initialize the storage.
-
-        Args:
-            config: Storage configuration.
-        """
-        self.config = config
-        self._results_dir: Optional[Path] = None
-    """
-    File-based storage for transcription results.
+    def __init__(self,
+                 config: StorageConfig  # Storage configuration
+                 )
+    "File-based storage for transcription results."
     
-    Each workflow instance gets its own storage instance with its own
-    configuration, ensuring proper isolation between workflow instances.
+    def __init__(self,
+                     config: StorageConfig  # Storage configuration
+                     )
+        "Initialize the storage."
     
-    Results are stored as JSON files in the configured directory.
-    """
-    
-    def __init__(self, config: StorageConfig):
-            """Initialize the storage.
-    
-            Args:
-                config: Storage configuration.
-            """
-            self.config = config
-            self._results_dir: Optional[Path] = None
-        "Initialize the storage.
-
-Args:
-    config: Storage configuration."
-    
-    def results_directory(self) -> Path:
-            """Get the results directory, creating it if needed.
-    
-            Returns:
-                Path to the results directory.
-            """
+    def results_directory(self) -> Path:  # Path to the results directory
+            """Get the results directory, creating it if needed."""
             if self._results_dir is None
-        "Get the results directory, creating it if needed.
-
-Returns:
-    Path to the results directory."
+        "Get the results directory, creating it if needed."
 ```
 
 ### HTML IDs (`html_ids.ipynb`)

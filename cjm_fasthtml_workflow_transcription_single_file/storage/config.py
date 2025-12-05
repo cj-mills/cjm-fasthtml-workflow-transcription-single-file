@@ -11,16 +11,9 @@ from dataclasses import dataclass
 # %% ../../nbs/storage/config.ipynb 5
 @dataclass
 class StorageConfig:
-    """Result storage configuration.
-
-    This configuration controls how and where transcription results
-    are persisted.
-    """
-    # Auto-save behavior
-    auto_save: bool = True
-
-    # Storage location
-    results_directory: str = "transcription_results"
+    """Result storage configuration."""
+    auto_save: bool = True  # Automatically save transcription results when complete
+    results_directory: str = "transcription_results"  # Directory to save transcription results
 
 # %% ../../nbs/storage/config.ipynb 7
 STORAGE_CONFIG_SCHEMA = {

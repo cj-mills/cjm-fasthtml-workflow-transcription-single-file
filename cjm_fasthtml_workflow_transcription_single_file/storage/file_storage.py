@@ -16,30 +16,18 @@ from .config import StorageConfig
 
 # %% ../../nbs/storage/file_storage.ipynb 5
 class ResultStorage:
-    """File-based storage for transcription results.
+    """File-based storage for transcription results."""
 
-    Each workflow instance gets its own storage instance with its own
-    configuration, ensuring proper isolation between workflow instances.
-
-    Results are stored as JSON files in the configured directory.
-    """
-
-    def __init__(self, config: StorageConfig):
-        """Initialize the storage.
-
-        Args:
-            config: Storage configuration.
-        """
+    def __init__(self,
+                 config: StorageConfig  # Storage configuration
+                 ):
+        """Initialize the storage."""
         self.config = config
         self._results_dir: Optional[Path] = None
 
     @property
-    def results_directory(self) -> Path:
-        """Get the results directory, creating it if needed.
-
-        Returns:
-            Path to the results directory.
-        """
+    def results_directory(self) -> Path:  # Path to the results directory
+        """Get the results directory, creating it if needed."""
         if self._results_dir is None:
             self._results_dir = Path(self.config.results_directory)
             self._results_dir.mkdir(exist_ok=True, parents=True)
@@ -47,42 +35,26 @@ class ResultStorage:
 
 # %% ../../nbs/storage/file_storage.ipynb 6
 @patch
-def should_auto_save(self: ResultStorage) -> bool:
-    """Check if auto-save is enabled.
-
-    Returns:
-        True if results should be automatically saved.
-    """
+def should_auto_save(
+    self: ResultStorage
+) -> bool:  # True if results should be automatically saved
+    """Check if auto-save is enabled."""
     return self.config.auto_save
 
 # %% ../../nbs/storage/file_storage.ipynb 7
 @patch
 def save(
     self: ResultStorage,
-    job_id: str,
-    file_path: str,
-    file_name: str,
-    plugin_id: str,
-    plugin_name: str,
-    text: str,
-    metadata: Optional[Dict[str, Any]] = None,
-    additional_info: Optional[Dict[str, Any]] = None
-) -> Path:
-    """Save a transcription result to JSON file.
-
-    Args:
-        job_id: Unique job identifier.
-        file_path: Path to the transcribed media file.
-        file_name: Name of the media file.
-        plugin_id: Plugin unique identifier.
-        plugin_name: Plugin display name.
-        text: The transcription text.
-        metadata: Optional metadata from the transcription plugin.
-        additional_info: Optional additional information to store.
-
-    Returns:
-        Path to the saved JSON file.
-    """
+    job_id: str,  # Unique job identifier
+    file_path: str,  # Path to the transcribed media file
+    file_name: str,  # Name of the media file
+    plugin_id: str,  # Plugin unique identifier
+    plugin_name: str,  # Plugin display name
+    text: str,  # The transcription text
+    metadata: Optional[Dict[str, Any]] = None,  # Optional metadata from the transcription plugin
+    additional_info: Optional[Dict[str, Any]] = None  # Optional additional information to store
+) -> Path:  # Path to the saved JSON file
+    """Save a transcription result to JSON file."""
     # Create result data structure
     result_data = {
         "job_id": job_id,
@@ -115,15 +87,11 @@ def save(
 
 # %% ../../nbs/storage/file_storage.ipynb 8
 @patch
-def load(self: ResultStorage, result_file: Path) -> Optional[Dict[str, Any]]:
-    """Load a transcription result from JSON file.
-
-    Args:
-        result_file: Path to the JSON result file.
-
-    Returns:
-        Dictionary containing the result data, or None if error.
-    """
+def load(
+    self: ResultStorage,
+    result_file: Path  # Path to the JSON result file
+) -> Optional[Dict[str, Any]]:  # Dictionary containing the result data, or None if error
+    """Load a transcription result from JSON file."""
     try:
         with open(result_file, 'r', encoding='utf-8') as f:
             return json.load(f)
@@ -135,18 +103,10 @@ def load(self: ResultStorage, result_file: Path) -> Optional[Dict[str, Any]]:
 @patch
 def list_results(
     self: ResultStorage,
-    sort_by: str = "timestamp",
-    reverse: bool = True
-) -> List[Dict[str, Any]]:
-    """List all saved transcription results.
-
-    Args:
-        sort_by: Field to sort by ("timestamp", "file_name", "word_count").
-        reverse: Sort in reverse order (newest first by default).
-
-    Returns:
-        List of result dictionaries.
-    """
+    sort_by: str = "timestamp",  # Field to sort by ("timestamp", "file_name", "word_count")
+    reverse: bool = True  # Sort in reverse order (newest first by default)
+) -> List[Dict[str, Any]]:  # List of result dictionaries
+    """List all saved transcription results."""
     results = []
 
     # Load all JSON files in the results directory
@@ -172,15 +132,11 @@ def list_results(
 
 # %% ../../nbs/storage/file_storage.ipynb 10
 @patch
-def get_by_job_id(self: ResultStorage, job_id: str) -> Optional[Dict[str, Any]]:
-    """Find and load a transcription result by job ID.
-
-    Args:
-        job_id: The job identifier to search for.
-
-    Returns:
-        Result dictionary if found, None otherwise.
-    """
+def get_by_job_id(
+    self: ResultStorage,
+    job_id: str  # The job identifier to search for
+) -> Optional[Dict[str, Any]]:  # Result dictionary if found, None otherwise
+    """Find and load a transcription result by job ID."""
     results = self.list_results()
 
     for result in results:
@@ -191,15 +147,11 @@ def get_by_job_id(self: ResultStorage, job_id: str) -> Optional[Dict[str, Any]]:
 
 # %% ../../nbs/storage/file_storage.ipynb 11
 @patch
-def delete(self: ResultStorage, result_file: str) -> bool:
-    """Delete a transcription result file.
-
-    Args:
-        result_file: Path to the result file (can be full path or filename).
-
-    Returns:
-        True if deletion successful, False otherwise.
-    """
+def delete(
+    self: ResultStorage,
+    result_file: str  # Path to the result file (can be full path or filename)
+) -> bool:  # True if deletion successful, False otherwise
+    """Delete a transcription result file."""
     try:
         file_path = Path(result_file)
 
@@ -218,16 +170,12 @@ def delete(self: ResultStorage, result_file: str) -> bool:
 
 # %% ../../nbs/storage/file_storage.ipynb 12
 @patch
-def update_text(self: ResultStorage, result_file: str, new_text: str) -> bool:
-    """Update the transcription text in a saved result.
-
-    Args:
-        result_file: Path to the result file.
-        new_text: New transcription text.
-
-    Returns:
-        True if update successful, False otherwise.
-    """
+def update_text(
+    self: ResultStorage,
+    result_file: str,  # Path to the result file
+    new_text: str  # New transcription text
+) -> bool:  # True if update successful, False otherwise
+    """Update the transcription text in a saved result."""
     try:
         file_path = Path(result_file)
 
@@ -258,16 +206,12 @@ def update_text(self: ResultStorage, result_file: str, new_text: str) -> bool:
 
 # %% ../../nbs/storage/file_storage.ipynb 13
 @patch
-def _generate_filename(self: ResultStorage, job_id: str, file_name: str) -> str:
-    """Generate a filename for storing transcription results.
-
-    Args:
-        job_id: Unique job identifier.
-        file_name: Original media file name.
-
-    Returns:
-        Generated filename for the JSON result file.
-    """
+def _generate_filename(
+    self: ResultStorage,
+    job_id: str,  # Unique job identifier
+    file_name: str  # Original media file name
+) -> str:  # Generated filename for the JSON result file
+    """Generate a filename for storing transcription results."""
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     # Sanitize file_name for use in filename
     safe_name = Path(file_name).stem.replace(" ", "_")[:50]

@@ -16,6 +16,7 @@ from cjm_fasthtml_tailwind.utilities.typography import font_size, font_weight
 from cjm_fasthtml_tailwind.utilities.flexbox_and_grid import flex_display, gap, justify
 from cjm_fasthtml_tailwind.core.base import combine_classes
 
+from cjm_fasthtml_interactions.core.html_ids import InteractionHtmlIds
 from cjm_fasthtml_interactions.patterns.modal_dialog import ModalDialog, ModalSize, ModalTriggerButton
 
 from ..core.html_ids import SingleFileHtmlIds
