@@ -7,14 +7,15 @@ __all__ = ['get_job_session_info', 'start_transcription_job', 'create_job_stream
 
 # %% ../../nbs/workflow/job_handler.ipynb 3
 import asyncio
-from typing import Dict, Any, Optional, Callable, AsyncGenerator
+from typing import Dict, Any
 from fasthtml.common import *
+from cjm_fasthtml_workflows.core.job_session import JobSessionManager
 
-from ..core.html_ids import SingleFileHtmlIds
 from ..core.config import SingleFileWorkflowConfig
-from ..core.protocols import PluginRegistryProtocol
+from ..core.html_ids import SingleFileHtmlIds
 from ..components.processor import transcription_in_progress
 from ..components.results import transcription_results, transcription_error
+from ..core.protocols import PluginRegistryProtocol
 from ..storage.file_storage import ResultStorage
 
 # %% ../../nbs/workflow/job_handler.ipynb 5

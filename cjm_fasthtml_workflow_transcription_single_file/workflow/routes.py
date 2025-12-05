@@ -6,7 +6,8 @@
 __all__ = ['init_router']
 
 # %% ../../nbs/workflow/routes.ipynb 3
-from typing import TYPE_CHECKING, Optional
+from pathlib import Path
+from typing import Optional
 from fasthtml.common import *
 from fasthtml.common import APIRouter
 
