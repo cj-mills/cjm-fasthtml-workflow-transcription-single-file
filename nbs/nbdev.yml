@@ -4,6 +4,6 @@ project:
 website:
   title: "cjm-fasthtml-workflow-transcription-single-file"
   site-url: "https://cj-mills.github.io/cjm-fasthtml-workflow-transcription-single-file"
-  description: "A self-contained workflow for single-file transcription in FastHTML applications."
+  description: "A self-contained single-file transcription workflow for FastHTML applications."
   repo-branch: main
   repo-url: "https://github.com/cj-mills/cjm-fasthtml-workflow-transcription-single-file"
