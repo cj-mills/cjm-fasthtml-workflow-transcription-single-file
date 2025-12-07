@@ -150,3 +150,11 @@ checklink/cookies.txt
 
 # Quarto
 .quarto
+
+
+
+# Custom
+*.sesskey
+/test_files/
+/configs/
+/demo_transcription_results/
