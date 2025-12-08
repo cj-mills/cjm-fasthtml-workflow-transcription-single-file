@@ -72,57 +72,57 @@ graph LR
     workflow_routes[workflow.routes<br/>Workflow Routes]
     workflow_workflow[workflow.workflow<br/>Single File Transcription Workflow]
 
-    components_processor --> core_html_ids
     components_processor --> core_config
-    components_results --> core_html_ids
+    components_processor --> core_html_ids
     components_results --> core_config
-    components_steps --> core_html_ids
+    components_results --> core_html_ids
     components_steps --> core_protocols
     components_steps --> core_config
+    components_steps --> core_html_ids
     core_adapters --> core_protocols
     core_config --> core_html_ids
     core_config --> media_config
     core_config --> storage_config
-    media_components --> media_models
     media_components --> media_mounter
-    media_file_selection_pagination --> media_models
-    media_file_selection_pagination --> media_library
+    media_components --> media_models
     media_file_selection_pagination --> media_scanner
-    media_library --> media_models
-    media_library --> media_config
-    media_library --> media_scanner
+    media_file_selection_pagination --> media_models
+    media_library --> media_file_selection_pagination
     media_library --> media_mounter
+    media_library --> media_config
+    media_library --> media_pagination
+    media_library --> media_scanner
+    media_library --> media_models
     media_pagination --> media_components
-    media_pagination --> media_library
-    media_pagination --> media_scanner
     media_pagination --> media_mounter
-    media_scanner --> media_models
+    media_pagination --> media_scanner
+    media_pagination --> media_models
     media_scanner --> media_utils
     media_scanner --> media_config
-    settings_components --> core_html_ids
-    settings_schemas --> storage_config
-    settings_schemas --> core_config
+    media_scanner --> media_models
     settings_schemas --> media_config
+    settings_schemas --> core_config
+    settings_schemas --> storage_config
     storage_file_storage --> storage_config
-    workflow_job_handler --> components_results
     workflow_job_handler --> core_html_ids
-    workflow_job_handler --> storage_file_storage
     workflow_job_handler --> core_config
-    workflow_job_handler --> core_protocols
+    workflow_job_handler --> storage_file_storage
+    workflow_job_handler --> components_results
     workflow_job_handler --> components_processor
-    workflow_routes --> workflow_job_handler
-    workflow_routes --> components_results
+    workflow_job_handler --> core_protocols
     workflow_routes --> core_html_ids
-    workflow_routes --> workflow_workflow
+    workflow_routes --> workflow_job_handler
     workflow_routes --> components_steps
+    workflow_routes --> components_results
     workflow_routes --> components_processor
+    workflow_routes --> workflow_workflow
+    workflow_workflow --> components_steps
+    workflow_workflow --> core_config
     workflow_workflow --> storage_file_storage
+    workflow_workflow --> core_adapters
+    workflow_workflow --> workflow_job_handler
     workflow_workflow --> core_html_ids
     workflow_workflow --> media_library
-    workflow_workflow --> core_config
-    workflow_workflow --> workflow_job_handler
-    workflow_workflow --> components_steps
-    workflow_workflow --> core_adapters
 ```
 
 *51 cross-module dependencies detected*
@@ -1109,8 +1109,7 @@ def transcription_in_progress(
 ``` python
 from cjm_fasthtml_workflow_transcription_single_file.core.protocols import (
     PluginInfo,
-    PluginRegistryProtocol,
-    ResourceManagerProtocol
+    PluginRegistryProtocol
 )
 ```
 
@@ -1151,22 +1150,6 @@ class PluginRegistryProtocol(Protocol):
                               plugin_id: str  # Unique plugin identifier
                               ) -> Dict[str, Any]:  # Configuration dictionary, empty dict if not configured
         "Get the configuration for a plugin."
-```
-
-``` python
-@runtime_checkable
-class ResourceManagerProtocol(Protocol):
-    "Protocol for resource availability checks."
-    
-    def check_gpu_available(self) -> bool:  # True if GPU is available and has sufficient memory
-            """Check if GPU is available for processing."""
-            ...
-    
-        def get_gpu_memory_usage(self) -> float:  # GPU memory usage as a percentage (0-100)
-        "Check if GPU is available for processing."
-    
-    def get_gpu_memory_usage(self) -> float:  # GPU memory usage as a percentage (0-100)
-        "Get current GPU memory usage percentage."
 ```
 
 ### Results Components (`results.ipynb`)
