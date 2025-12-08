@@ -80,7 +80,7 @@ def main():
 
     print("  FastHTML app created successfully")
 
-    # Create the single-file transcription workflow
+    # Create the single-file transcription workflow using the convenience method
     # The workflow is fully self-contained and manages its own:
     # - UnifiedPluginRegistry (discovers transcription plugins)
     # - ResourceManager (GPU/CPU availability)
@@ -92,19 +92,15 @@ def main():
     # Configuration is automatically loaded from saved settings files
     # (configs/workflows/single_file/settings.json) with dataclass defaults
     # for any missing values. Only route-specific overrides needed here.
-    print("\n[1/3] Creating SingleFileTranscriptionWorkflow...")
+    print("\n[1/2] Creating and setting up SingleFileTranscriptionWorkflow...")
 
-    single_file_workflow = SingleFileTranscriptionWorkflow(
+    single_file_workflow = SingleFileTranscriptionWorkflow.create_and_setup(
+        app,
         route_prefix="/workflow",
         no_plugins_redirect="/",  # Redirect to home if no plugins configured
     )
 
-    print("  Workflow instance created")
-
-    # Initialize workflow with app (mounts media directories, registers internal routes)
-    print("\n[2/3] Setting up workflow with app...")
-    single_file_workflow.setup(app)
-    print("  Workflow setup complete")
+    print("  Workflow created and setup complete")
 
     # Store workflow in app.state for access from routes
     app.state.single_file_workflow = single_file_workflow
@@ -278,7 +274,7 @@ def main():
     )
 
     # Register all routes
-    print("\n[3/3] Registering routes...")
+    print("\n[2/2] Registering routes...")
     register_routes(
         app,
         router,

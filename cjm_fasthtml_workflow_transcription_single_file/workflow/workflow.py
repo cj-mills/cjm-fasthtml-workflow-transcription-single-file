@@ -150,6 +150,18 @@ class SingleFileTranscriptionWorkflow:
             prefix=f"{self.config.route_prefix}/file_select"
         )
 
+    @classmethod
+    def create_and_setup(
+        cls,
+        app,  # FastHTML application instance
+        config: Optional[SingleFileWorkflowConfig] = None,  # Explicit config (bypasses auto-loading)
+        **config_overrides  # Override specific config values
+    ) -> "SingleFileTranscriptionWorkflow":  # Configured and setup workflow instance
+        """Create, configure, and setup a workflow in one call."""
+        workflow = cls(config=config, **config_overrides)
+        workflow.setup(app)
+        return workflow
+
     @property
     def transcription_manager(self) -> TranscriptionJobManager:
         """Access to internal transcription manager."""

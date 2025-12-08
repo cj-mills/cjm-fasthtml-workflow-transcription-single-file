@@ -34,15 +34,16 @@ pip install cjm_fasthtml_workflow_transcription_single_file
     ├── settings/ (2)
     │   ├── components.ipynb  # UI components for workflow settings modal and forms
     │   └── schemas.ipynb     # JSON schemas and utilities for workflow settings
-    ├── storage/ (2)
+    ├── storage/ (3)
     │   ├── config.ipynb        # Configuration for transcription result storage
-    │   └── file_storage.ipynb  # File-based storage for transcription results
+    │   ├── file_storage.ipynb  # File-based storage for transcription results
+    │   └── protocols.ipynb     # Protocol definitions for result storage backends
     └── workflow/ (3)
         ├── job_handler.ipynb  # Functions for starting transcription jobs and handling SSE streaming
         ├── routes.ipynb       # Route initialization and handlers for the single-file transcription workflow
         └── workflow.ipynb     # Main workflow class orchestrating all subsystems for single-file transcription
 
-Total: 23 notebooks across 6 directories
+Total: 24 notebooks across 6 directories
 
 ## Module Dependencies
 
@@ -68,6 +69,7 @@ graph LR
     settings_schemas[settings.schemas<br/>Settings Schemas]
     storage_config[storage.config<br/>Storage Configuration]
     storage_file_storage[storage.file_storage<br/>Result Storage]
+    storage_protocols[storage.protocols<br/>Storage Protocols]
     workflow_job_handler[workflow.job_handler<br/>Job Handler]
     workflow_routes[workflow.routes<br/>Workflow Routes]
     workflow_workflow[workflow.workflow<br/>Single File Transcription Workflow]
@@ -80,49 +82,49 @@ graph LR
     components_steps --> core_config
     components_steps --> core_html_ids
     core_adapters --> core_protocols
-    core_config --> media_config
     core_config --> core_html_ids
+    core_config --> media_config
     core_config --> storage_config
     media_components --> media_mounter
     media_components --> media_models
-    media_file_selection_pagination --> media_scanner
     media_file_selection_pagination --> media_models
+    media_file_selection_pagination --> media_scanner
     media_library --> media_scanner
     media_library --> media_config
     media_library --> media_models
+    media_library --> media_file_selection_pagination
     media_library --> media_pagination
     media_library --> media_mounter
-    media_library --> media_file_selection_pagination
-    media_pagination --> media_components
-    media_pagination --> media_scanner
     media_pagination --> media_mounter
+    media_pagination --> media_components
     media_pagination --> media_models
+    media_pagination --> media_scanner
+    media_scanner --> media_utils
     media_scanner --> media_config
     media_scanner --> media_models
-    media_scanner --> media_utils
+    settings_schemas --> core_config
     settings_schemas --> media_config
     settings_schemas --> storage_config
-    settings_schemas --> core_config
     storage_file_storage --> storage_config
     workflow_job_handler --> core_protocols
-    workflow_job_handler --> storage_file_storage
-    workflow_job_handler --> components_results
     workflow_job_handler --> core_html_ids
     workflow_job_handler --> components_processor
+    workflow_job_handler --> components_results
     workflow_job_handler --> core_config
-    workflow_routes --> workflow_job_handler
-    workflow_routes --> components_results
+    workflow_job_handler --> storage_file_storage
     workflow_routes --> core_html_ids
     workflow_routes --> components_processor
     workflow_routes --> workflow_workflow
     workflow_routes --> components_steps
-    workflow_workflow --> components_steps
+    workflow_routes --> components_results
+    workflow_routes --> workflow_job_handler
     workflow_workflow --> storage_file_storage
-    workflow_workflow --> core_adapters
+    workflow_workflow --> media_library
     workflow_workflow --> workflow_job_handler
+    workflow_workflow --> components_steps
     workflow_workflow --> core_config
     workflow_workflow --> core_html_ids
-    workflow_workflow --> media_library
+    workflow_workflow --> core_adapters
 ```
 
 *51 cross-module dependencies detected*
@@ -1168,6 +1170,81 @@ class PluginRegistryProtocol(Protocol):
         "Get the configuration for a plugin."
 ```
 
+### Storage Protocols (`protocols.ipynb`)
+
+> Protocol definitions for result storage backends
+
+#### Import
+
+``` python
+from cjm_fasthtml_workflow_transcription_single_file.storage.protocols import (
+    ResultStorageProtocol
+)
+```
+
+#### Classes
+
+``` python
+@runtime_checkable
+class ResultStorageProtocol(Protocol):
+    "Protocol for transcription result storage backends."
+    
+    def should_auto_save(self) -> bool:  # True if results should be automatically saved
+            """Check if auto-save is enabled."""
+            ...
+    
+        def save(
+            self,
+            job_id: str,  # Unique job identifier
+            file_path: str,  # Path to the transcribed media file
+            file_name: str,  # Name of the media file
+            plugin_id: str,  # Plugin unique identifier
+            plugin_name: str,  # Plugin display name
+            text: str,  # The transcription text
+            metadata: Optional[Dict[str, Any]] = None,  # Optional metadata from the transcription plugin
+            additional_info: Optional[Dict[str, Any]] = None  # Optional additional information to store
+        ) -> Any:  # Implementation-specific return value (e.g., Path for file storage, ID for database)
+        "Check if auto-save is enabled."
+    
+    def save(
+            self,
+            job_id: str,  # Unique job identifier
+            file_path: str,  # Path to the transcribed media file
+            file_name: str,  # Name of the media file
+            plugin_id: str,  # Plugin unique identifier
+            plugin_name: str,  # Plugin display name
+            text: str,  # The transcription text
+            metadata: Optional[Dict[str, Any]] = None,  # Optional metadata from the transcription plugin
+            additional_info: Optional[Dict[str, Any]] = None  # Optional additional information to store
+        ) -> Any:  # Implementation-specific return value (e.g., Path for file storage, ID for database)
+        "Save a transcription result."
+    
+    def load(
+            self,
+            result_id: Any  # Implementation-specific identifier (e.g., Path for file storage, ID for database)
+        ) -> Optional[Dict[str, Any]]:  # Result dictionary or None if not found
+        "Load a transcription result by its identifier."
+    
+    def list_results(
+            self,
+            sort_by: str = "timestamp",  # Field to sort by
+            reverse: bool = True  # Sort in reverse order
+        ) -> List[Dict[str, Any]]:  # List of result dictionaries
+        "List all saved transcription results."
+    
+    def get_by_job_id(
+            self,
+            job_id: str  # The job identifier to search for
+        ) -> Optional[Dict[str, Any]]:  # Result dictionary if found, None otherwise
+        "Find and load a transcription result by job ID."
+    
+    def delete(
+            self,
+            result_id: Any  # Implementation-specific identifier
+        ) -> bool:  # True if deletion successful, False otherwise
+        "Delete a transcription result."
+```
+
 ### Results Components (`results.ipynb`)
 
 > UI components for displaying transcription results and errors
@@ -1639,6 +1716,14 @@ class SingleFileTranscriptionWorkflow:
             **config_overrides  # Override specific config values
         )
         "Initialize the workflow with auto-loaded or explicit configuration."
+    
+    def create_and_setup(
+            cls,
+            app,  # FastHTML application instance
+            config: Optional[SingleFileWorkflowConfig] = None,  # Explicit config (bypasses auto-loading)
+            **config_overrides  # Override specific config values
+        ) -> "SingleFileTranscriptionWorkflow":  # Configured and setup workflow instance
+        "Create, configure, and setup a workflow in one call."
     
     def transcription_manager(self) -> TranscriptionJobManager:
             """Access to internal transcription manager."""
