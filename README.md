@@ -83,44 +83,44 @@ graph LR
     core_config --> core_html_ids
     core_config --> media_config
     core_config --> storage_config
-    media_components --> media_mounter
     media_components --> media_models
-    media_file_selection_pagination --> media_scanner
+    media_components --> media_mounter
     media_file_selection_pagination --> media_models
+    media_file_selection_pagination --> media_scanner
+    media_library --> media_pagination
+    media_library --> media_config
     media_library --> media_file_selection_pagination
     media_library --> media_mounter
-    media_library --> media_config
-    media_library --> media_pagination
-    media_library --> media_scanner
     media_library --> media_models
+    media_library --> media_scanner
+    media_pagination --> media_models
     media_pagination --> media_components
     media_pagination --> media_mounter
     media_pagination --> media_scanner
-    media_pagination --> media_models
-    media_scanner --> media_utils
     media_scanner --> media_config
+    media_scanner --> media_utils
     media_scanner --> media_models
-    settings_schemas --> media_config
     settings_schemas --> core_config
     settings_schemas --> storage_config
+    settings_schemas --> media_config
     storage_file_storage --> storage_config
-    workflow_job_handler --> core_html_ids
     workflow_job_handler --> core_config
     workflow_job_handler --> storage_file_storage
-    workflow_job_handler --> components_results
-    workflow_job_handler --> components_processor
+    workflow_job_handler --> core_html_ids
     workflow_job_handler --> core_protocols
+    workflow_job_handler --> components_processor
+    workflow_job_handler --> components_results
+    workflow_routes --> workflow_workflow
     workflow_routes --> core_html_ids
     workflow_routes --> workflow_job_handler
-    workflow_routes --> components_steps
-    workflow_routes --> components_results
     workflow_routes --> components_processor
-    workflow_routes --> workflow_workflow
-    workflow_workflow --> components_steps
-    workflow_workflow --> core_config
+    workflow_routes --> components_results
+    workflow_routes --> components_steps
     workflow_workflow --> storage_file_storage
-    workflow_workflow --> core_adapters
     workflow_workflow --> workflow_job_handler
+    workflow_workflow --> core_adapters
+    workflow_workflow --> core_config
+    workflow_workflow --> components_steps
     workflow_workflow --> core_html_ids
     workflow_workflow --> media_library
 ```
@@ -409,7 +409,23 @@ class SingleFileWorkflowConfig:
         "Get the full prefix for the StepFlow router."
     
     def get_full_media_prefix(self) -> str:  # Combined route_prefix + media_prefix
+            """Get the full prefix for the media router."""
+            return f"{self.route_prefix}{self.media_prefix}"
+    
+        @classmethod
+        def from_saved_config(
+            cls,
+            config_dir: Optional[Path] = None,  # Directory to load config from
+            **overrides  # Override specific config values
+        ) -> "SingleFileWorkflowConfig":  # Configured instance with saved values merged with defaults
         "Get the full prefix for the media router."
+    
+    def from_saved_config(
+            cls,
+            config_dir: Optional[Path] = None,  # Directory to load config from
+            **overrides  # Override specific config values
+        ) -> "SingleFileWorkflowConfig":  # Configured instance with saved values merged with defaults
+        "Create config by loading saved settings and merging with defaults."
 ```
 
 #### Variables
@@ -1598,7 +1614,8 @@ def _create_router(
 class SingleFileTranscriptionWorkflow:
     def __init__(
         self,
-        config: Optional[SingleFileWorkflowConfig] = None,  # Workflow configuration including media and storage settings
+        config: Optional[SingleFileWorkflowConfig] = None,  # Explicit config (bypasses auto-loading)
+        **config_overrides  # Override specific config values
     )
     """
     Self-contained single-file transcription workflow.
@@ -1610,9 +1627,10 @@ class SingleFileTranscriptionWorkflow:
     
     def __init__(
             self,
-            config: Optional[SingleFileWorkflowConfig] = None,  # Workflow configuration including media and storage settings
+            config: Optional[SingleFileWorkflowConfig] = None,  # Explicit config (bypasses auto-loading)
+            **config_overrides  # Override specific config values
         )
-        "Initialize the workflow."
+        "Initialize the workflow with auto-loaded or explicit configuration."
     
     def transcription_manager(self) -> TranscriptionJobManager:
             """Access to internal transcription manager."""

@@ -48,10 +48,16 @@ class SingleFileTranscriptionWorkflow:
 
     def __init__(
         self,
-        config: Optional[SingleFileWorkflowConfig] = None,  # Workflow configuration including media and storage settings
+        config: Optional[SingleFileWorkflowConfig] = None,  # Explicit config (bypasses auto-loading)
+        **config_overrides  # Override specific config values
     ):
-        """Initialize the workflow."""
-        self.config = config or SingleFileWorkflowConfig()
+        """Initialize the workflow with auto-loaded or explicit configuration."""
+        # Build configuration: explicit config takes precedence, otherwise auto-load with overrides
+        if config is not None:
+            self.config = config
+        else:
+            self.config = SingleFileWorkflowConfig.from_saved_config(**config_overrides)
+        
         self._app = None  # Set in setup()
 
         # Create internal UnifiedPluginRegistry with workflow-specific config directory

@@ -44,8 +44,6 @@ def main():
     from cjm_fasthtml_app_core.core.layout import wrap_with_layout
     from cjm_fasthtml_app_core.core.html_ids import AppHtmlIds
 
-    from cjm_fasthtml_settings.core.utils import load_config
-
     # Import styling utilities
     from cjm_fasthtml_tailwind.utilities.spacing import p, m
     from cjm_fasthtml_tailwind.utilities.sizing import container, max_w
@@ -61,12 +59,6 @@ def main():
 
     # Import workflow components
     from cjm_fasthtml_workflow_transcription_single_file.workflow.workflow import SingleFileTranscriptionWorkflow
-    from cjm_fasthtml_workflow_transcription_single_file.core.config import (
-        SingleFileWorkflowConfig,
-        DEFAULT_WORKFLOW_CONFIG_DIR
-    )
-    from cjm_fasthtml_workflow_transcription_single_file.media.config import MediaConfig
-    from cjm_fasthtml_workflow_transcription_single_file.storage.config import StorageConfig
 
     print("  Library components imported successfully")
 
@@ -96,30 +88,15 @@ def main():
     # - SSEBroadcastManager (event streaming)
     # - MediaLibrary (file discovery and browsing)
     # - ResultStorage (transcription persistence)
+    #
+    # Configuration is automatically loaded from saved settings files
+    # (configs/workflows/single_file/settings.json) with dataclass defaults
+    # for any missing values. Only route-specific overrides needed here.
     print("\n[1/3] Creating SingleFileTranscriptionWorkflow...")
 
-    # Load workflow settings from workflow-internal config directory
-    workflow_saved_config = load_config("settings", DEFAULT_WORKFLOW_CONFIG_DIR) or {}
-    print(f"\n\n{workflow_saved_config}\n\n")
-
     single_file_workflow = SingleFileTranscriptionWorkflow(
-        config=SingleFileWorkflowConfig(
-            route_prefix="/workflow",
-            no_plugins_redirect="/",  # Redirect to home if no plugins configured
-            gpu_memory_threshold_percent=workflow_saved_config.get("gpu_memory_threshold_percent", 45.0),
-            media=MediaConfig(
-                directories=workflow_saved_config.get("directories", []),
-                scan_audio=workflow_saved_config.get("scan_audio", True),
-                scan_video=workflow_saved_config.get("scan_video", True),
-                recursive_scan=workflow_saved_config.get("recursive_scan", True),
-                items_per_page=workflow_saved_config.get("items_per_page", 30),
-                default_view=workflow_saved_config.get("default_view", "list"),
-            ),
-            storage=StorageConfig(
-                auto_save=workflow_saved_config.get("auto_save", True),
-                results_directory=workflow_saved_config.get("results_directory", "transcription_results"),
-            )
-        )
+        route_prefix="/workflow",
+        no_plugins_redirect="/",  # Redirect to home if no plugins configured
     )
 
     print("  Workflow instance created")

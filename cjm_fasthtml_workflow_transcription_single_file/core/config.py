@@ -7,8 +7,8 @@ __all__ = ['DEFAULT_WORKFLOW_CONFIG_DIR', 'SingleFileWorkflowConfig']
 
 # %% ../../nbs/core/config.ipynb 3
 from pathlib import Path
-from dataclasses import dataclass, field
-from typing import Optional, List
+from dataclasses import dataclass, field, fields
+from typing import Optional, List, Dict, Any
 
 from .html_ids import SingleFileHtmlIds
 from ..media.config import MediaConfig
@@ -70,3 +70,62 @@ class SingleFileWorkflowConfig:
     def get_full_media_prefix(self) -> str:  # Combined route_prefix + media_prefix
         """Get the full prefix for the media router."""
         return f"{self.route_prefix}{self.media_prefix}"
+
+    @classmethod
+    def from_saved_config(
+        cls,
+        config_dir: Optional[Path] = None,  # Directory to load config from
+        **overrides  # Override specific config values
+    ) -> "SingleFileWorkflowConfig":  # Configured instance with saved values merged with defaults
+        """Create config by loading saved settings and merging with defaults."""
+        from cjm_fasthtml_settings.core.utils import load_config
+        
+        effective_config_dir = config_dir or DEFAULT_WORKFLOW_CONFIG_DIR
+        saved_config = load_config("settings", effective_config_dir) or {}
+        
+        # Get field names for each config class
+        media_fields = {f.name for f in fields(MediaConfig)}
+        storage_fields = {f.name for f in fields(StorageConfig)}
+        workflow_fields = {f.name for f in fields(cls) if f.name not in ("media", "storage")}
+        
+        # Distribute saved config values to appropriate destinations
+        media_kwargs = {}
+        storage_kwargs = {}
+        workflow_kwargs = {}
+        
+        for key, value in saved_config.items():
+            if key in media_fields:
+                media_kwargs[key] = value
+            elif key in storage_fields:
+                storage_kwargs[key] = value
+            elif key in workflow_fields:
+                workflow_kwargs[key] = value
+        
+        # Apply overrides (take precedence over saved values)
+        for key, value in overrides.items():
+            if key == "media" and isinstance(value, MediaConfig):
+                media_kwargs = {}
+                workflow_kwargs["media"] = value
+            elif key == "storage" and isinstance(value, StorageConfig):
+                storage_kwargs = {}
+                workflow_kwargs["storage"] = value
+            elif key in media_fields:
+                media_kwargs[key] = value
+            elif key in storage_fields:
+                storage_kwargs[key] = value
+            elif key in workflow_fields:
+                workflow_kwargs[key] = value
+        
+        # Build nested configs if we have values and they weren't directly overridden
+        if media_kwargs and "media" not in workflow_kwargs:
+            workflow_kwargs["media"] = MediaConfig(**media_kwargs)
+        if storage_kwargs and "storage" not in workflow_kwargs:
+            workflow_kwargs["storage"] = StorageConfig(**storage_kwargs)
+        
+        # Set config directories
+        if config_dir is not None:
+            workflow_kwargs["config_dir"] = config_dir
+            if "plugin_config_dir" not in workflow_kwargs:
+                workflow_kwargs["plugin_config_dir"] = config_dir / "plugins"
+        
+        return cls(**workflow_kwargs)
