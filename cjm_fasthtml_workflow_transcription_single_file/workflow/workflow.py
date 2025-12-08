@@ -46,6 +46,13 @@ class SingleFileTranscriptionWorkflow:
     StepFlow (plugin → file → confirm wizard), and APIRouter.
     """
 
+    # Class-level metadata for future plugin system discovery
+    workflow_name: str = "single_file_transcription"
+    workflow_version: str = "1.0.0"
+    workflow_category: str = "transcription"
+    workflow_title: str = "Single File Transcription"
+    workflow_description: str = "Transcribe individual audio/video files using configurable transcription plugins"
+
     def __init__(
         self,
         config: Optional[SingleFileWorkflowConfig] = None,  # Explicit config (bypasses auto-loading)
@@ -183,7 +190,16 @@ def setup(
     self._app = app
     self._media_library.mount(app)
 
-# %% ../../nbs/workflow/workflow.ipynb 8
+# %% ../../nbs/workflow/workflow.ipynb 9
+@patch
+def cleanup(
+    self: SingleFileTranscriptionWorkflow,
+) -> None:
+    """Clean up workflow resources. Mirrors PluginInterface.cleanup() for future plugin system compatibility."""
+    self._media_library.clear_cache()
+    self._app = None
+
+# %% ../../nbs/workflow/workflow.ipynb 10
 @patch
 def _ensure_plugin_configs_exist(
     self: SingleFileTranscriptionWorkflow,
@@ -207,7 +223,7 @@ def _ensure_plugin_configs_exist(
                     default_config
                 )
 
-# %% ../../nbs/workflow/workflow.ipynb 9
+# %% ../../nbs/workflow/workflow.ipynb 11
 @patch
 def get_routers(
     self: SingleFileTranscriptionWorkflow,
@@ -220,7 +236,7 @@ def get_routers(
         routers.append(self._file_selection_router)
     return routers
 
-# %% ../../nbs/workflow/workflow.ipynb 11
+# %% ../../nbs/workflow/workflow.ipynb 13
 @patch
 def render_entry_point(
     self: SingleFileTranscriptionWorkflow,
@@ -267,7 +283,7 @@ def render_entry_point(
         load_url=current_status_url
     )
 
-# %% ../../nbs/workflow/workflow.ipynb 12
+# %% ../../nbs/workflow/workflow.ipynb 14
 @patch
 def _on_job_completed(
     self: SingleFileTranscriptionWorkflow,
@@ -314,7 +330,7 @@ def _on_job_completed(
         import traceback
         traceback.print_exc()
 
-# %% ../../nbs/workflow/workflow.ipynb 13
+# %% ../../nbs/workflow/workflow.ipynb 15
 @patch
 def _create_preview_route_func(
     self: SingleFileTranscriptionWorkflow,
@@ -330,7 +346,7 @@ def _create_preview_route_func(
 
     return preview_route_func
 
-# %% ../../nbs/workflow/workflow.ipynb 14
+# %% ../../nbs/workflow/workflow.ipynb 16
 @patch
 def _create_preview_url_func(
     self: SingleFileTranscriptionWorkflow,
@@ -343,7 +359,7 @@ def _create_preview_url_func(
 
     return preview_url_func
 
-# %% ../../nbs/workflow/workflow.ipynb 15
+# %% ../../nbs/workflow/workflow.ipynb 17
 @patch
 def _create_step_flow(
     self: SingleFileTranscriptionWorkflow,
@@ -466,7 +482,7 @@ def _create_step_flow(
         wrap_in_form=True
     )
 
-# %% ../../nbs/workflow/workflow.ipynb 16
+# %% ../../nbs/workflow/workflow.ipynb 18
 @patch
 def _create_router(
     self: SingleFileTranscriptionWorkflow,

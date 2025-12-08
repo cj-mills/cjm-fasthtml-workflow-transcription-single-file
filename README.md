@@ -80,47 +80,47 @@ graph LR
     components_steps --> core_config
     components_steps --> core_html_ids
     core_adapters --> core_protocols
-    core_config --> core_html_ids
     core_config --> media_config
+    core_config --> core_html_ids
     core_config --> storage_config
-    media_components --> media_models
     media_components --> media_mounter
-    media_file_selection_pagination --> media_models
+    media_components --> media_models
     media_file_selection_pagination --> media_scanner
-    media_library --> media_pagination
-    media_library --> media_config
-    media_library --> media_file_selection_pagination
-    media_library --> media_mounter
-    media_library --> media_models
+    media_file_selection_pagination --> media_models
     media_library --> media_scanner
-    media_pagination --> media_models
+    media_library --> media_config
+    media_library --> media_models
+    media_library --> media_pagination
+    media_library --> media_mounter
+    media_library --> media_file_selection_pagination
     media_pagination --> media_components
-    media_pagination --> media_mounter
     media_pagination --> media_scanner
+    media_pagination --> media_mounter
+    media_pagination --> media_models
     media_scanner --> media_config
-    media_scanner --> media_utils
     media_scanner --> media_models
-    settings_schemas --> core_config
-    settings_schemas --> storage_config
+    media_scanner --> media_utils
     settings_schemas --> media_config
+    settings_schemas --> storage_config
+    settings_schemas --> core_config
     storage_file_storage --> storage_config
-    workflow_job_handler --> core_config
-    workflow_job_handler --> storage_file_storage
-    workflow_job_handler --> core_html_ids
     workflow_job_handler --> core_protocols
-    workflow_job_handler --> components_processor
+    workflow_job_handler --> storage_file_storage
     workflow_job_handler --> components_results
-    workflow_routes --> workflow_workflow
-    workflow_routes --> core_html_ids
+    workflow_job_handler --> core_html_ids
+    workflow_job_handler --> components_processor
+    workflow_job_handler --> core_config
     workflow_routes --> workflow_job_handler
-    workflow_routes --> components_processor
     workflow_routes --> components_results
+    workflow_routes --> core_html_ids
+    workflow_routes --> components_processor
+    workflow_routes --> workflow_workflow
     workflow_routes --> components_steps
-    workflow_workflow --> storage_file_storage
-    workflow_workflow --> workflow_job_handler
-    workflow_workflow --> core_adapters
-    workflow_workflow --> core_config
     workflow_workflow --> components_steps
+    workflow_workflow --> storage_file_storage
+    workflow_workflow --> core_adapters
+    workflow_workflow --> workflow_job_handler
+    workflow_workflow --> core_config
     workflow_workflow --> core_html_ids
     workflow_workflow --> media_library
 ```
@@ -1530,6 +1530,14 @@ def setup(
     app,  # FastHTML application instance
 ) -> None
     "Initialize workflow with FastHTML app. Must be called after app creation."
+```
+
+``` python
+@patch
+def cleanup(
+    self: SingleFileTranscriptionWorkflow,
+) -> None
+    "Clean up workflow resources. Mirrors PluginInterface.cleanup() for future plugin system compatibility."
 ```
 
 ``` python
