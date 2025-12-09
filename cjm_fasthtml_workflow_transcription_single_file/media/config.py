@@ -7,165 +7,168 @@ __all__ = ['MEDIA_CONFIG_SCHEMA', 'MediaConfig']
 
 # %% ../../nbs/media/config.ipynb 3
 from dataclasses import dataclass, field
-from typing import List
+from typing import List, ClassVar
+
+from cjm_fasthtml_workflow_transcription_single_file.core.schemas import (
+    SCHEMA_TITLE, SCHEMA_DESC, SCHEMA_MIN, SCHEMA_MAX, SCHEMA_ENUM,
+    dataclass_to_jsonschema
+)
 
 # %% ../../nbs/media/config.ipynb 5
 @dataclass
 class MediaConfig:
     """Configuration for media file discovery and browser display."""
+    
+    # Class-level schema metadata
+    __schema_name__: ClassVar[str] = "media"
+    __schema_title__: ClassVar[str] = "Media Settings"
+    __schema_description__: ClassVar[str] = "Configure media file scanning and display"
+    
     # Directories to scan
-    directories: List[str] = field(default_factory=list)  # Directories to scan for media files
-
-    # File type filters (transcription-specific defaults)
-    scan_audio: bool = True  # Include audio files in scan results
-    scan_video: bool = True  # Include video files in scan results
-    audio_extensions: List[str] = field(default_factory=lambda: [  # File extensions recognized as audio
-        "mp3", "wav", "flac", "m4a", "ogg", "wma", "aac"
-    ])
-    video_extensions: List[str] = field(default_factory=lambda: [  # File extensions recognized as video
-        "mp4", "mkv", "avi", "mov", "webm", "wmv"
-    ])
-
+    directories: List[str] = field(
+        default_factory=list,
+        metadata={
+            SCHEMA_TITLE: "Scan Directories",
+            SCHEMA_DESC: "Directories to scan for media files"
+        }
+    )
+    
+    # File type filters
+    scan_audio: bool = field(
+        default=True,
+        metadata={
+            SCHEMA_TITLE: "Scan Audio Files",
+            SCHEMA_DESC: "Include audio files in scan results"
+        }
+    )
+    scan_video: bool = field(
+        default=True,
+        metadata={
+            SCHEMA_TITLE: "Scan Video Files",
+            SCHEMA_DESC: "Include video files in scan results"
+        }
+    )
+    audio_extensions: List[str] = field(
+        default_factory=lambda: ["mp3", "wav", "flac", "m4a", "ogg", "wma", "aac"],
+        metadata={
+            SCHEMA_TITLE: "Audio Extensions",
+            SCHEMA_DESC: "File extensions to recognize as audio"
+        }
+    )
+    video_extensions: List[str] = field(
+        default_factory=lambda: ["mp4", "mkv", "avi", "mov", "webm", "wmv"],
+        metadata={
+            SCHEMA_TITLE: "Video Extensions",
+            SCHEMA_DESC: "File extensions to recognize as video"
+        }
+    )
+    
     # Size limits
-    min_file_size_kb: int = 0  # Minimum file size in KB (0 = no minimum)
-    max_file_size_mb: int = 0  # Maximum file size in MB (0 = unlimited)
-
+    min_file_size_kb: int = field(
+        default=0,
+        metadata={
+            SCHEMA_TITLE: "Minimum File Size (KB)",
+            SCHEMA_DESC: "Minimum file size in kilobytes (0 = no minimum)",
+            SCHEMA_MIN: 0
+        }
+    )
+    max_file_size_mb: int = field(
+        default=0,
+        metadata={
+            SCHEMA_TITLE: "Maximum File Size (MB)",
+            SCHEMA_DESC: "Maximum file size in megabytes (0 = no limit)",
+            SCHEMA_MIN: 0
+        }
+    )
+    
     # Scanning behavior
-    recursive_scan: bool = True  # Scan subdirectories
-    include_hidden: bool = False  # Include files starting with a dot
-    follow_symlinks: bool = False  # Follow symbolic links when scanning
-    exclude_patterns: List[str] = field(default_factory=list)  # Glob patterns to exclude
-
+    recursive_scan: bool = field(
+        default=True,
+        metadata={
+            SCHEMA_TITLE: "Recursive Scan",
+            SCHEMA_DESC: "Scan subdirectories"
+        }
+    )
+    include_hidden: bool = field(
+        default=False,
+        metadata={
+            SCHEMA_TITLE: "Include Hidden Files",
+            SCHEMA_DESC: "Include files starting with a dot"
+        }
+    )
+    follow_symlinks: bool = field(
+        default=False,
+        metadata={
+            SCHEMA_TITLE: "Follow Symlinks",
+            SCHEMA_DESC: "Follow symbolic links when scanning"
+        }
+    )
+    exclude_patterns: List[str] = field(
+        default_factory=list,
+        metadata={
+            SCHEMA_TITLE: "Exclude Patterns",
+            SCHEMA_DESC: "Glob patterns to exclude from results"
+        }
+    )
+    
     # Caching
-    cache_results: bool = True  # Cache scan results for faster loading
-    cache_duration_minutes: int = 60  # How long to cache scan results
-
+    cache_results: bool = field(
+        default=True,
+        metadata={
+            SCHEMA_TITLE: "Cache Results",
+            SCHEMA_DESC: "Cache scan results for faster loading"
+        }
+    )
+    cache_duration_minutes: int = field(
+        default=60,
+        metadata={
+            SCHEMA_TITLE: "Cache Duration (minutes)",
+            SCHEMA_DESC: "How long to cache scan results",
+            SCHEMA_MIN: 1
+        }
+    )
+    
     # Display settings
-    max_results: int = 1000  # Maximum number of files to return
-    items_per_page: int = 30  # Number of files to show per page
-    default_view: str = "list"  # Default view mode ("grid" or "list")
-    sort_by: str = "name"  # Default sort field (name, size, modified)
-    sort_descending: bool = False  # Sort in descending order
+    max_results: int = field(
+        default=1000,
+        metadata={
+            SCHEMA_TITLE: "Maximum Results",
+            SCHEMA_DESC: "Maximum number of files to return",
+            SCHEMA_MIN: 1
+        }
+    )
+    items_per_page: int = field(
+        default=30,
+        metadata={
+            SCHEMA_TITLE: "Items Per Page",
+            SCHEMA_DESC: "Number of files to show per page",
+            SCHEMA_MIN: 10,
+            SCHEMA_MAX: 100
+        }
+    )
+    default_view: str = field(
+        default="list",
+        metadata={
+            SCHEMA_TITLE: "Default View",
+            SCHEMA_DESC: "Default view mode for media browser",
+            SCHEMA_ENUM: ["grid", "list"]
+        }
+    )
+    sort_by: str = field(
+        default="name",
+        metadata={
+            SCHEMA_TITLE: "Sort By",
+            SCHEMA_DESC: "Default sort field",
+            SCHEMA_ENUM: ["name", "size", "modified"]
+        }
+    )
+    sort_descending: bool = field(
+        default=False,
+        metadata={
+            SCHEMA_TITLE: "Sort Descending",
+            SCHEMA_DESC: "Sort in descending order"
+        }
+    )
 
 # %% ../../nbs/media/config.ipynb 7
-MEDIA_CONFIG_SCHEMA = {
-    "name": "media",
-    "title": "Media Settings",
-    "description": "Configure media file scanning and display",
-    "type": "object",
-    "properties": {
-        "directories": {
-            "type": "array",
-            "title": "Scan Directories",
-            "description": "Directories to scan for media files",
-            "items": {"type": "string"},
-            "default": []
-        },
-        "scan_audio": {
-            "type": "boolean",
-            "title": "Scan Audio Files",
-            "description": "Include audio files in scan results",
-            "default": True
-        },
-        "scan_video": {
-            "type": "boolean",
-            "title": "Scan Video Files",
-            "description": "Include video files in scan results",
-            "default": True
-        },
-        "audio_extensions": {
-            "type": "array",
-            "title": "Audio Extensions",
-            "description": "File extensions to recognize as audio",
-            "items": {"type": "string"},
-            "default": ["mp3", "wav", "flac", "m4a", "ogg", "wma", "aac"]
-        },
-        "video_extensions": {
-            "type": "array",
-            "title": "Video Extensions",
-            "description": "File extensions to recognize as video",
-            "items": {"type": "string"},
-            "default": ["mp4", "mkv", "avi", "mov", "webm", "wmv"]
-        },
-        "min_file_size_kb": {
-            "type": "integer",
-            "title": "Minimum File Size (KB)",
-            "description": "Minimum file size in kilobytes (0 = no minimum)",
-            "default": 0,
-            "minimum": 0
-        },
-        "max_file_size_mb": {
-            "type": "integer",
-            "title": "Maximum File Size (MB)",
-            "description": "Maximum file size in megabytes (0 = no limit)",
-            "default": 0,
-            "minimum": 0
-        },
-        "recursive_scan": {
-            "type": "boolean",
-            "title": "Recursive Scan",
-            "description": "Scan subdirectories",
-            "default": True
-        },
-        "include_hidden": {
-            "type": "boolean",
-            "title": "Include Hidden Files",
-            "description": "Include files starting with a dot",
-            "default": False
-        },
-        "follow_symlinks": {
-            "type": "boolean",
-            "title": "Follow Symlinks",
-            "description": "Follow symbolic links when scanning",
-            "default": False
-        },
-        "exclude_patterns": {
-            "type": "array",
-            "title": "Exclude Patterns",
-            "description": "Glob patterns to exclude from results",
-            "items": {"type": "string"},
-            "default": []
-        },
-        "cache_results": {
-            "type": "boolean",
-            "title": "Cache Results",
-            "description": "Cache scan results for faster loading",
-            "default": True
-        },
-        "cache_duration_minutes": {
-            "type": "integer",
-            "title": "Cache Duration (minutes)",
-            "description": "How long to cache scan results",
-            "default": 60,
-            "minimum": 1
-        },
-        "items_per_page": {
-            "type": "integer",
-            "title": "Items Per Page",
-            "description": "Number of files to show per page",
-            "default": 30,
-            "minimum": 10,
-            "maximum": 100
-        },
-        "default_view": {
-            "type": "string",
-            "title": "Default View",
-            "description": "Default view mode for media browser",
-            "enum": ["grid", "list"],
-            "default": "grid"
-        },
-        "sort_by": {
-            "type": "string",
-            "title": "Sort By",
-            "description": "Default sort field",
-            "enum": ["name", "size", "modified"],
-            "default": "name"
-        },
-        "sort_descending": {
-            "type": "boolean",
-            "title": "Sort Descending",
-            "description": "Sort in descending order",
-            "default": False
-        }
-    }
-}
+MEDIA_CONFIG_SCHEMA = dataclass_to_jsonschema(MediaConfig)

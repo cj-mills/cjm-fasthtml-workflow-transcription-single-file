@@ -6,33 +6,38 @@
 __all__ = ['STORAGE_CONFIG_SCHEMA', 'StorageConfig']
 
 # %% ../../nbs/storage/config.ipynb 3
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import ClassVar
+
+from cjm_fasthtml_workflow_transcription_single_file.core.schemas import (
+    SCHEMA_TITLE, SCHEMA_DESC,
+    dataclass_to_jsonschema
+)
 
 # %% ../../nbs/storage/config.ipynb 5
 @dataclass
 class StorageConfig:
     """Result storage configuration."""
-    auto_save: bool = True  # Automatically save transcription results when complete
-    results_directory: str = "transcription_results"  # Directory to save transcription results
+    
+    # Class-level schema metadata
+    __schema_name__: ClassVar[str] = "storage"
+    __schema_title__: ClassVar[str] = "Storage Settings"
+    __schema_description__: ClassVar[str] = "Configure transcription result storage"
+    
+    auto_save: bool = field(
+        default=True,
+        metadata={
+            SCHEMA_TITLE: "Auto-save Results",
+            SCHEMA_DESC: "Automatically save transcription results when complete"
+        }
+    )
+    results_directory: str = field(
+        default="transcription_results",
+        metadata={
+            SCHEMA_TITLE: "Results Directory",
+            SCHEMA_DESC: "Directory to save transcription results"
+        }
+    )
 
 # %% ../../nbs/storage/config.ipynb 7
-STORAGE_CONFIG_SCHEMA = {
-    "name": "storage",
-    "title": "Storage Settings",
-    "description": "Configure transcription result storage",
-    "type": "object",
-    "properties": {
-        "auto_save": {
-            "type": "boolean",
-            "title": "Auto-save Results",
-            "description": "Automatically save transcription results when complete",
-            "default": True
-        },
-        "results_directory": {
-            "type": "string",
-            "title": "Results Directory",
-            "description": "Directory to save transcription results",
-            "default": "transcription_results"
-        }
-    }
-}
+STORAGE_CONFIG_SCHEMA = dataclass_to_jsonschema(StorageConfig)
