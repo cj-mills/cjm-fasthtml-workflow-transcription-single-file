@@ -304,19 +304,19 @@ def init_router(
     ):  # Settings modal component
         """Render the settings modal for the workflow."""
         from cjm_fasthtml_workflow_transcription_single_file.settings.components import settings_modal as create_settings_modal
-        from cjm_fasthtml_workflow_transcription_single_file.settings.schemas import WORKFLOW_SETTINGS_SCHEMA, get_settings_from_config
+        from cjm_fasthtml_workflow_transcription_single_file.settings.schemas import WORKFLOW_SETTINGS_SCHEMA, WorkflowSettings
 
-        # Get current settings from workflow config (including workflow-level settings)
-        current_values = get_settings_from_config(
+        # Get current settings from workflow config
+        settings = WorkflowSettings.from_configs(
             workflow.config.media,
             workflow.config.storage,
-            workflow.config  # Pass workflow config for GPU threshold etc.
+            workflow.config
         )
 
         return create_settings_modal(
             modal_id=SingleFileHtmlIds.SETTINGS_MODAL,
             schema=WORKFLOW_SETTINGS_SCHEMA,
-            current_values=current_values,
+            current_values=settings.to_dict(),
             save_url=settings_save.to(),
             target_id=SingleFileHtmlIds.SETTINGS_CONTAINER
         )
@@ -329,57 +329,29 @@ def init_router(
         from cjm_fasthtml_app_core.components.alerts import create_success_alert, create_error_alert
         from cjm_fasthtml_interactions.core.html_ids import InteractionHtmlIds
         from cjm_fasthtml_settings.core.utils import save_config, convert_form_data_to_config
-        from cjm_fasthtml_workflow_transcription_single_file.settings.schemas import WORKFLOW_SETTINGS_SCHEMA
+        from cjm_fasthtml_workflow_transcription_single_file.settings.schemas import WORKFLOW_SETTINGS_SCHEMA, WorkflowSettings
 
         try:
             form_data = await request.form()
 
-            # Use the library's convert function to properly handle form data based on schema
-            config = convert_form_data_to_config(form_data, WORKFLOW_SETTINGS_SCHEMA)
+            # Convert form data to config dict using schema
+            config_dict = convert_form_data_to_config(form_data, WORKFLOW_SETTINGS_SCHEMA)
 
-            # Extract values from converted config
-            directories = config.get("media_directories", [])
-            scan_audio = config.get("scan_audio", True)
-            scan_video = config.get("scan_video", True)
-            recursive_scan = config.get("recursive_scan", True)
-            items_per_page = config.get("items_per_page", 30)
-            default_view = config.get("default_view", "list")
-            auto_save = config.get("auto_save", True)
-            results_dir = config.get("results_directory", "transcription_results")
-            gpu_threshold = config.get("gpu_memory_threshold_percent", 45.0)
+            # Create WorkflowSettings from form data
+            settings = WorkflowSettings(**config_dict)
 
-            # Update media config (MediaLibrary and Scanner reference this same object)
-            workflow.config.media.directories = directories
-            workflow.config.media.scan_audio = scan_audio
-            workflow.config.media.scan_video = scan_video
-            workflow.config.media.recursive_scan = recursive_scan
-            workflow.config.media.items_per_page = items_per_page
-            workflow.config.media.default_view = default_view
+            # Apply settings to runtime config objects
+            settings.apply_to_configs(
+                workflow.config.media,
+                workflow.config.storage,
+                workflow.config
+            )
 
-            # Update storage config
-            workflow.config.storage.auto_save = auto_save
-            workflow.config.storage.results_directory = results_dir
-
-            # Update workflow-level config and ResourceManager threshold
-            workflow.config.gpu_memory_threshold_percent = gpu_threshold
-            workflow._resource_manager.gpu_memory_threshold_percent = gpu_threshold
+            # Update ResourceManager threshold separately (not part of config objects)
+            workflow._resource_manager.gpu_memory_threshold_percent = settings.gpu_memory_threshold_percent
 
             # Save to workflow-internal config directory for persistence across restarts
-            workflow_settings = {
-                # Media settings
-                "directories": directories,
-                "scan_audio": scan_audio,
-                "scan_video": scan_video,
-                "recursive_scan": recursive_scan,
-                "items_per_page": items_per_page,
-                "default_view": default_view,
-                # Storage settings
-                "auto_save": auto_save,
-                "results_directory": results_dir,
-                # Resource management settings
-                "gpu_memory_threshold_percent": gpu_threshold,
-            }
-            save_config("settings", workflow_settings, workflow.config.config_dir)
+            save_config("settings", settings.to_dict(), workflow.config.config_dir)
 
             # Re-mount directories
             if workflow._app:

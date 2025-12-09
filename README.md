@@ -78,53 +78,53 @@ graph LR
     components_processor --> core_config
     components_results --> core_html_ids
     components_results --> core_config
-    components_steps --> core_protocols
     components_steps --> core_html_ids
+    components_steps --> core_protocols
     components_steps --> core_config
     core_adapters --> core_protocols
-    core_config --> storage_config
     core_config --> media_config
+    core_config --> storage_config
     core_config --> core_html_ids
     media_components --> media_models
     media_components --> media_mounter
-    media_file_selection_pagination --> media_scanner
     media_file_selection_pagination --> media_models
-    media_library --> media_config
-    media_library --> media_models
+    media_file_selection_pagination --> media_scanner
     media_library --> media_mounter
-    media_library --> media_pagination
+    media_library --> media_models
     media_library --> media_file_selection_pagination
+    media_library --> media_pagination
+    media_library --> media_config
     media_library --> media_scanner
-    media_pagination --> media_components
-    media_pagination --> media_scanner
     media_pagination --> media_models
+    media_pagination --> media_scanner
+    media_pagination --> media_components
     media_pagination --> media_mounter
-    media_scanner --> media_utils
-    media_scanner --> media_config
     media_scanner --> media_models
+    media_scanner --> media_config
+    media_scanner --> media_utils
     settings_schemas --> media_config
     settings_schemas --> storage_config
     settings_schemas --> core_config
     storage_file_storage --> storage_config
-    workflow_job_handler --> components_results
-    workflow_job_handler --> core_config
     workflow_job_handler --> core_protocols
-    workflow_job_handler --> storage_file_storage
-    workflow_job_handler --> core_html_ids
     workflow_job_handler --> components_processor
-    workflow_routes --> components_results
-    workflow_routes --> components_steps
-    workflow_routes --> workflow_job_handler
-    workflow_routes --> workflow_workflow
-    workflow_routes --> core_html_ids
+    workflow_job_handler --> storage_file_storage
+    workflow_job_handler --> core_config
+    workflow_job_handler --> components_results
+    workflow_job_handler --> core_html_ids
     workflow_routes --> components_processor
-    workflow_workflow --> components_steps
-    workflow_workflow --> storage_file_storage
-    workflow_workflow --> core_html_ids
+    workflow_routes --> workflow_job_handler
+    workflow_routes --> components_steps
+    workflow_routes --> workflow_workflow
+    workflow_routes --> components_results
+    workflow_routes --> core_html_ids
     workflow_workflow --> workflow_job_handler
     workflow_workflow --> media_library
-    workflow_workflow --> core_config
+    workflow_workflow --> components_steps
+    workflow_workflow --> core_html_ids
     workflow_workflow --> core_adapters
+    workflow_workflow --> storage_file_storage
+    workflow_workflow --> core_config
 ```
 
 *51 cross-module dependencies detected*
@@ -1424,8 +1424,7 @@ from cjm_fasthtml_workflow_transcription_single_file.settings.schemas import (
     SCHEMA_FORMAT,
     WORKFLOW_SETTINGS_SCHEMA,
     WorkflowSettings,
-    dataclass_to_jsonschema,
-    get_settings_from_config
+    dataclass_to_jsonschema
 )
 ```
 
@@ -1474,15 +1473,6 @@ def to_dict(
     "Convert settings to a dictionary for serialization."
 ```
 
-``` python
-def get_settings_from_config(
-    media_config: MediaConfig,      # MediaConfig instance with media scanning settings
-    storage_config: StorageConfig,  # StorageConfig instance with result storage settings
-    workflow_config: Optional[SingleFileWorkflowConfig] = None  # Optional workflow config for additional settings
-) -> Dict[str, Any]:  # Dictionary of current settings values
-    "Extract settings values from config objects."
-```
-
 #### Classes
 
 ``` python
@@ -1493,7 +1483,7 @@ class WorkflowSettings:
     __schema_name__: ClassVar[str] = 'single_file_workflow'
     __schema_title__: ClassVar[str] = 'Single File Transcription Settings'
     __schema_description__: ClassVar[str] = 'Configure media scanning, storage, and workflow behavior'
-    media_directories: List[str] = field(...)
+    directories: List[str] = field(...)
     scan_audio: bool = field(...)
     scan_video: bool = field(...)
     recursive_scan: bool = field(...)

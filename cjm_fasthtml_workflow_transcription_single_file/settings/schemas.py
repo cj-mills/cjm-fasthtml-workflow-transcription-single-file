@@ -4,8 +4,7 @@
 
 # %% auto 0
 __all__ = ['SCHEMA_TITLE', 'SCHEMA_DESC', 'SCHEMA_MIN', 'SCHEMA_MAX', 'SCHEMA_ENUM', 'SCHEMA_MIN_LEN', 'SCHEMA_MAX_LEN',
-           'SCHEMA_PATTERN', 'SCHEMA_FORMAT', 'WORKFLOW_SETTINGS_SCHEMA', 'WorkflowSettings', 'dataclass_to_jsonschema',
-           'get_settings_from_config']
+           'SCHEMA_PATTERN', 'SCHEMA_FORMAT', 'WORKFLOW_SETTINGS_SCHEMA', 'WorkflowSettings', 'dataclass_to_jsonschema']
 
 # %% ../../nbs/settings/schemas.ipynb 3
 from dataclasses import dataclass, field, fields, MISSING
@@ -37,8 +36,8 @@ class WorkflowSettings:
     __schema_title__: ClassVar[str] = "Single File Transcription Settings"
     __schema_description__: ClassVar[str] = "Configure media scanning, storage, and workflow behavior"
     
-    # Media settings
-    media_directories: List[str] = field(
+    # Media settings (field names match MediaConfig for seamless config loading)
+    directories: List[str] = field(
         default_factory=list,
         metadata={
             SCHEMA_TITLE: "Media Directories",
@@ -212,7 +211,7 @@ def from_configs(
     """Create WorkflowSettings from runtime config objects."""
     return cls(
         # Media settings
-        media_directories=media_config.directories,
+        directories=media_config.directories,
         scan_audio=media_config.scan_audio,
         scan_video=media_config.scan_video,
         recursive_scan=media_config.recursive_scan,
@@ -235,7 +234,7 @@ def apply_to_configs(
 ) -> None:
     """Apply settings to runtime config objects."""
     # Media settings
-    media_config.directories = self.media_directories
+    media_config.directories = self.directories
     media_config.scan_audio = self.scan_audio
     media_config.scan_video = self.scan_video
     media_config.recursive_scan = self.recursive_scan
@@ -257,7 +256,7 @@ def to_dict(
 ) -> Dict[str, Any]:  # Dictionary of settings values
     """Convert settings to a dictionary for serialization."""
     return {
-        "media_directories": self.media_directories,
+        "directories": self.directories,
         "scan_audio": self.scan_audio,
         "scan_video": self.scan_video,
         "recursive_scan": self.recursive_scan,
@@ -267,13 +266,3 @@ def to_dict(
         "results_directory": self.results_directory,
         "gpu_memory_threshold_percent": self.gpu_memory_threshold_percent,
     }
-
-# %% ../../nbs/settings/schemas.ipynb 20
-def get_settings_from_config(
-    media_config: MediaConfig,      # MediaConfig instance with media scanning settings
-    storage_config: StorageConfig,  # StorageConfig instance with result storage settings
-    workflow_config: Optional[SingleFileWorkflowConfig] = None  # Optional workflow config for additional settings
-) -> Dict[str, Any]:  # Dictionary of current settings values
-    """Extract settings values from config objects."""
-    settings = WorkflowSettings.from_configs(media_config, storage_config, workflow_config)
-    return settings.to_dict()
