@@ -194,8 +194,7 @@ def dataclass_to_jsonschema(
     return schema
 
 # %% ../../nbs/settings/schemas.ipynb 13
-# Auto-generate schema from WorkflowSettings dataclass
-WORKFLOW_SETTINGS_SCHEMA = dataclass_to_jsonschema(WorkflowSettings)
+WORKFLOW_SETTINGS_SCHEMA = dataclass_to_jsonschema(WorkflowSettings) # Auto-generate schema from WorkflowSettings dataclass
 
 # %% ../../nbs/settings/schemas.ipynb 15
 from fastcore.basics import patch
