@@ -74,56 +74,56 @@ graph LR
     workflow_routes[workflow.routes<br/>Workflow Routes]
     workflow_workflow[workflow.workflow<br/>Single File Transcription Workflow]
 
-    components_processor --> core_config
     components_processor --> core_html_ids
-    components_results --> core_config
+    components_processor --> core_config
     components_results --> core_html_ids
+    components_results --> core_config
     components_steps --> core_protocols
-    components_steps --> core_config
     components_steps --> core_html_ids
+    components_steps --> core_config
     core_adapters --> core_protocols
-    core_config --> core_html_ids
-    core_config --> media_config
     core_config --> storage_config
-    media_components --> media_mounter
+    core_config --> media_config
+    core_config --> core_html_ids
     media_components --> media_models
-    media_file_selection_pagination --> media_models
+    media_components --> media_mounter
     media_file_selection_pagination --> media_scanner
-    media_library --> media_scanner
+    media_file_selection_pagination --> media_models
     media_library --> media_config
     media_library --> media_models
-    media_library --> media_file_selection_pagination
-    media_library --> media_pagination
     media_library --> media_mounter
-    media_pagination --> media_mounter
+    media_library --> media_pagination
+    media_library --> media_file_selection_pagination
+    media_library --> media_scanner
     media_pagination --> media_components
-    media_pagination --> media_models
     media_pagination --> media_scanner
+    media_pagination --> media_models
+    media_pagination --> media_mounter
     media_scanner --> media_utils
     media_scanner --> media_config
     media_scanner --> media_models
-    settings_schemas --> core_config
     settings_schemas --> media_config
     settings_schemas --> storage_config
+    settings_schemas --> core_config
     storage_file_storage --> storage_config
-    workflow_job_handler --> core_protocols
-    workflow_job_handler --> core_html_ids
-    workflow_job_handler --> components_processor
     workflow_job_handler --> components_results
     workflow_job_handler --> core_config
+    workflow_job_handler --> core_protocols
     workflow_job_handler --> storage_file_storage
+    workflow_job_handler --> core_html_ids
+    workflow_job_handler --> components_processor
+    workflow_routes --> components_results
+    workflow_routes --> components_steps
+    workflow_routes --> workflow_job_handler
+    workflow_routes --> workflow_workflow
     workflow_routes --> core_html_ids
     workflow_routes --> components_processor
-    workflow_routes --> workflow_workflow
-    workflow_routes --> components_steps
-    workflow_routes --> components_results
-    workflow_routes --> workflow_job_handler
-    workflow_workflow --> storage_file_storage
-    workflow_workflow --> media_library
-    workflow_workflow --> workflow_job_handler
     workflow_workflow --> components_steps
-    workflow_workflow --> core_config
+    workflow_workflow --> storage_file_storage
     workflow_workflow --> core_html_ids
+    workflow_workflow --> workflow_job_handler
+    workflow_workflow --> media_library
+    workflow_workflow --> core_config
     workflow_workflow --> core_adapters
 ```
 
@@ -1413,7 +1413,18 @@ class MediaScanner:
 
 ``` python
 from cjm_fasthtml_workflow_transcription_single_file.settings.schemas import (
+    SCHEMA_TITLE,
+    SCHEMA_DESC,
+    SCHEMA_MIN,
+    SCHEMA_MAX,
+    SCHEMA_ENUM,
+    SCHEMA_MIN_LEN,
+    SCHEMA_MAX_LEN,
+    SCHEMA_PATTERN,
+    SCHEMA_FORMAT,
     WORKFLOW_SETTINGS_SCHEMA,
+    WorkflowSettings,
+    dataclass_to_jsonschema,
     get_settings_from_config
 )
 ```
@@ -1421,18 +1432,91 @@ from cjm_fasthtml_workflow_transcription_single_file.settings.schemas import (
 #### Functions
 
 ``` python
+def _python_type_to_json_type(
+    python_type: type  # Python type annotation to convert
+) -> Dict[str, Any]:  # JSON schema type definition
+    "Convert Python type to JSON schema type."
+```
+
+``` python
+def dataclass_to_jsonschema(
+    cls: type  # Dataclass with field metadata
+) -> Dict[str, Any]:  # JSON schema dictionary
+    "Convert a dataclass to a JSON schema for form generation."
+```
+
+``` python
+def from_configs(
+    cls: WorkflowSettings,
+    media_config: MediaConfig,      # MediaConfig instance with media scanning settings
+    storage_config: StorageConfig,  # StorageConfig instance with result storage settings
+    workflow_config: Optional[SingleFileWorkflowConfig] = None  # Optional workflow config for additional settings
+) -> "WorkflowSettings":  # WorkflowSettings instance with values from configs
+    "Create WorkflowSettings from runtime config objects."
+```
+
+``` python
+@patch
+def apply_to_configs(
+    self: WorkflowSettings,
+    media_config: MediaConfig,      # MediaConfig instance to update
+    storage_config: StorageConfig,  # StorageConfig instance to update
+    workflow_config: Optional[SingleFileWorkflowConfig] = None  # Optional workflow config to update
+) -> None
+    "Apply settings to runtime config objects."
+```
+
+``` python
+@patch
+def to_dict(
+    self: WorkflowSettings
+) -> Dict[str, Any]:  # Dictionary of settings values
+    "Convert settings to a dictionary for serialization."
+```
+
+``` python
 def get_settings_from_config(
-    media_config,                            # MediaConfig instance with media scanning settings
-    storage_config,                          # StorageConfig instance with result storage settings
-    workflow_config=None                     # Optional SingleFileWorkflowConfig for additional settings
-) -> dict:                                   # Dictionary of current settings values
+    media_config: MediaConfig,      # MediaConfig instance with media scanning settings
+    storage_config: StorageConfig,  # StorageConfig instance with result storage settings
+    workflow_config: Optional[SingleFileWorkflowConfig] = None  # Optional workflow config for additional settings
+) -> Dict[str, Any]:  # Dictionary of current settings values
     "Extract settings values from config objects."
+```
+
+#### Classes
+
+``` python
+@dataclass
+class WorkflowSettings:
+    "User-configurable settings for single-file transcription workflow."
+    
+    __schema_name__: ClassVar[str] = 'single_file_workflow'
+    __schema_title__: ClassVar[str] = 'Single File Transcription Settings'
+    __schema_description__: ClassVar[str] = 'Configure media scanning, storage, and workflow behavior'
+    media_directories: List[str] = field(...)
+    scan_audio: bool = field(...)
+    scan_video: bool = field(...)
+    recursive_scan: bool = field(...)
+    items_per_page: int = field(...)
+    default_view: str = field(...)
+    auto_save: bool = field(...)
+    results_directory: str = field(...)
+    gpu_memory_threshold_percent: float = field(...)
 ```
 
 #### Variables
 
 ``` python
-WORKFLOW_SETTINGS_SCHEMA = {5 items}
+SCHEMA_TITLE = 'title'  # Display title for the field
+SCHEMA_DESC = 'description'  # Help text description
+SCHEMA_MIN = 'minimum'  # Minimum value for numbers
+SCHEMA_MAX = 'maximum'  # Maximum value for numbers
+SCHEMA_ENUM = 'enum'  # Allowed values for dropdowns
+SCHEMA_MIN_LEN = 'minLength'  # Minimum string length
+SCHEMA_MAX_LEN = 'maxLength'  # Maximum string length
+SCHEMA_PATTERN = 'pattern'  # Regex pattern for strings
+SCHEMA_FORMAT = 'format'  # String format (email, uri, date, etc.)
+WORKFLOW_SETTINGS_SCHEMA
 ```
 
 ### Step Components (`steps.ipynb`)
