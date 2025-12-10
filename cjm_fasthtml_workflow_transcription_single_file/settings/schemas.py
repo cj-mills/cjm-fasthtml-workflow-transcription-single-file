@@ -11,7 +11,7 @@ from typing import Dict, Any, List, Optional, ClassVar
 
 from fastcore.basics import patch
 
-from cjm_fasthtml_workflow_transcription_single_file.core.schemas import (
+from cjm_fasthtml_jsonschema.core.dataclass import (
     SCHEMA_TITLE, SCHEMA_DESC, SCHEMA_MIN, SCHEMA_MAX, SCHEMA_ENUM,
     SCHEMA_MIN_LEN, SCHEMA_MAX_LEN, SCHEMA_PATTERN, SCHEMA_FORMAT,
     dataclass_to_jsonschema

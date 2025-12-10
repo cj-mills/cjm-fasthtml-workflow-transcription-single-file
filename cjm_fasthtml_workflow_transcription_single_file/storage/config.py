@@ -9,7 +9,7 @@ __all__ = ['STORAGE_CONFIG_SCHEMA', 'StorageConfig']
 from dataclasses import dataclass, field
 from typing import ClassVar
 
-from cjm_fasthtml_workflow_transcription_single_file.core.schemas import (
+from cjm_fasthtml_jsonschema.core.dataclass import (
     SCHEMA_TITLE, SCHEMA_DESC,
     dataclass_to_jsonschema
 )

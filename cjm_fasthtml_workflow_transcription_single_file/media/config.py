@@ -9,7 +9,7 @@ __all__ = ['MEDIA_CONFIG_SCHEMA', 'MediaConfig']
 from dataclasses import dataclass, field
 from typing import List, ClassVar
 
-from cjm_fasthtml_workflow_transcription_single_file.core.schemas import (
+from cjm_fasthtml_jsonschema.core.dataclass import (
     SCHEMA_TITLE, SCHEMA_DESC, SCHEMA_MIN, SCHEMA_MAX, SCHEMA_ENUM,
     dataclass_to_jsonschema
 )

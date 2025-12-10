@@ -16,12 +16,11 @@ pip install cjm_fasthtml_workflow_transcription_single_file
     │   ├── processor.ipynb  # UI component for displaying transcription in-progress state
     │   ├── results.ipynb    # UI components for displaying transcription results and errors
     │   └── steps.ipynb      # UI components for workflow step rendering (plugin selection, file selection, confirmation)
-    ├── core/ (5)
+    ├── core/ (4)
     │   ├── adapters.ipynb   # Adapter implementations for integrating with plugin registries
     │   ├── config.ipynb     # Configuration dataclass for single-file transcription workflow
     │   ├── html_ids.ipynb   # Centralized HTML ID constants for single-file transcription workflow components
-    │   ├── protocols.ipynb  # Protocol definitions for external dependencies and plugin integration
-    │   └── schemas.ipynb    # Dataclass-to-JSON-schema conversion utilities for form generation
+    │   └── protocols.ipynb  # Protocol definitions for external dependencies and plugin integration
     ├── media/ (9)
     │   ├── components.ipynb                 # UI components for media browser views (grid, list, preview modal)
     │   ├── config.ipynb                     # Configuration for media file discovery and browser settings
@@ -44,7 +43,7 @@ pip install cjm_fasthtml_workflow_transcription_single_file
         ├── routes.ipynb       # Route initialization and handlers for the single-file transcription workflow
         └── workflow.ipynb     # Main workflow class orchestrating all subsystems for single-file transcription
 
-Total: 25 notebooks across 6 directories
+Total: 24 notebooks across 6 directories
 
 ## Module Dependencies
 
@@ -57,7 +56,6 @@ graph LR
     core_config[core.config<br/>Configuration]
     core_html_ids[core.html_ids<br/>HTML IDs]
     core_protocols[core.protocols<br/>Protocols]
-    core_schemas[core.schemas<br/>Schema Utilities]
     media_components[media.components<br/>Media Components]
     media_config[media.config<br/>Media Configuration]
     media_file_selection_pagination[media.file_selection_pagination<br/>File Selection Pagination]
@@ -80,59 +78,56 @@ graph LR
     components_processor --> core_config
     components_results --> core_html_ids
     components_results --> core_config
-    components_steps --> core_protocols
     components_steps --> core_html_ids
     components_steps --> core_config
+    components_steps --> core_protocols
     core_adapters --> core_protocols
-    core_config --> core_html_ids
-    core_config --> storage_config
     core_config --> media_config
-    media_components --> media_models
+    core_config --> storage_config
+    core_config --> core_html_ids
     media_components --> media_mounter
-    media_config --> core_schemas
+    media_components --> media_models
     media_file_selection_pagination --> media_models
     media_file_selection_pagination --> media_scanner
+    media_library --> media_config
+    media_library --> media_models
+    media_library --> media_mounter
     media_library --> media_scanner
     media_library --> media_file_selection_pagination
-    media_library --> media_models
     media_library --> media_pagination
-    media_library --> media_config
-    media_library --> media_mounter
     media_pagination --> media_components
+    media_pagination --> media_mounter
     media_pagination --> media_models
     media_pagination --> media_scanner
-    media_pagination --> media_mounter
+    media_scanner --> media_config
     media_scanner --> media_utils
     media_scanner --> media_models
-    media_scanner --> media_config
-    settings_schemas --> core_schemas
     settings_schemas --> core_config
     settings_schemas --> storage_config
     settings_schemas --> media_config
-    storage_config --> core_schemas
     storage_file_storage --> storage_config
     workflow_job_handler --> components_processor
-    workflow_job_handler --> core_protocols
     workflow_job_handler --> core_html_ids
-    workflow_job_handler --> core_config
-    workflow_job_handler --> components_results
     workflow_job_handler --> storage_file_storage
+    workflow_job_handler --> components_results
+    workflow_job_handler --> core_protocols
+    workflow_job_handler --> core_config
     workflow_routes --> components_processor
-    workflow_routes --> core_html_ids
     workflow_routes --> components_steps
     workflow_routes --> workflow_job_handler
-    workflow_routes --> components_results
+    workflow_routes --> core_html_ids
     workflow_routes --> workflow_workflow
+    workflow_routes --> components_results
     workflow_workflow --> core_html_ids
-    workflow_workflow --> components_steps
-    workflow_workflow --> workflow_job_handler
     workflow_workflow --> core_adapters
     workflow_workflow --> core_config
-    workflow_workflow --> storage_file_storage
+    workflow_workflow --> components_steps
+    workflow_workflow --> workflow_job_handler
     workflow_workflow --> media_library
+    workflow_workflow --> storage_file_storage
 ```
 
-*54 cross-module dependencies detected*
+*51 cross-module dependencies detected*
 
 ## CLI Reference
 
@@ -1414,57 +1409,6 @@ class MediaScanner:
             config: MediaConfig  # Media configuration with directories and filters
         )
         "Initialize the scanner."
-```
-
-### Schema Utilities (`schemas.ipynb`)
-
-> Dataclass-to-JSON-schema conversion utilities for form generation
-
-#### Import
-
-``` python
-from cjm_fasthtml_workflow_transcription_single_file.core.schemas import (
-    SCHEMA_TITLE,
-    SCHEMA_DESC,
-    SCHEMA_MIN,
-    SCHEMA_MAX,
-    SCHEMA_ENUM,
-    SCHEMA_MIN_LEN,
-    SCHEMA_MAX_LEN,
-    SCHEMA_PATTERN,
-    SCHEMA_FORMAT,
-    dataclass_to_jsonschema
-)
-```
-
-#### Functions
-
-``` python
-def _python_type_to_json_type(
-    python_type: type  # Python type annotation to convert
-) -> Dict[str, Any]:  # JSON schema type definition
-    "Convert Python type to JSON schema type."
-```
-
-``` python
-def dataclass_to_jsonschema(
-    cls: type  # Dataclass with field metadata
-) -> Dict[str, Any]:  # JSON schema dictionary
-    "Convert a dataclass to a JSON schema for form generation."
-```
-
-#### Variables
-
-``` python
-SCHEMA_TITLE = 'title'  # Display title for the field
-SCHEMA_DESC = 'description'  # Help text description
-SCHEMA_MIN = 'minimum'  # Minimum value for numbers
-SCHEMA_MAX = 'maximum'  # Maximum value for numbers
-SCHEMA_ENUM = 'enum'  # Allowed values for dropdowns
-SCHEMA_MIN_LEN = 'minLength'  # Minimum string length
-SCHEMA_MAX_LEN = 'maxLength'  # Maximum string length
-SCHEMA_PATTERN = 'pattern'  # Regex pattern for strings
-SCHEMA_FORMAT = 'format'  # String format (email, uri, date, etc.)
 ```
 
 ### Settings Schemas (`schemas.ipynb`)
