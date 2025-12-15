@@ -10,6 +10,7 @@ from typing import Dict, Any, List, Optional
 
 from cjm_fasthtml_plugins.core.registry import UnifiedPluginRegistry
 from .protocols import PluginInfo, PluginRegistryProtocol
+from cjm_plugin_system.utils.validation import extract_defaults
 
 # %% ../../nbs/core/adapters.ipynb 5
 class PluginRegistryAdapter:
@@ -119,11 +120,10 @@ class DefaultConfigPluginRegistryAdapter(PluginRegistryAdapter):
         if saved_config:
             return saved_config
 
-        # No saved config - get default values from schema
+        # No saved config - get default values from config dataclass
         plugin_meta = self._registry.get_plugin(plugin_id)
-        if plugin_meta and hasattr(plugin_meta, 'config_schema') and plugin_meta.config_schema:
-            default_config = get_default_values_from_schema(plugin_meta.config_schema)
-            return default_config
+        if plugin_meta and hasattr(plugin_meta, 'config_class') and plugin_meta.config_class is not None:
+            return extract_defaults(plugin_meta.config_class)
 
         # Fallback to empty dict
         return {}

@@ -28,6 +28,7 @@ from cjm_fasthtml_settings.core.utils import get_default_values_from_schema
 from ..core.config import SingleFileWorkflowConfig
 from ..core.html_ids import SingleFileHtmlIds
 from ..core.adapters import PluginRegistryAdapter, DefaultConfigPluginRegistryAdapter
+from ..core.state_store import InMemoryWorkflowStateStore
 from ..media.library import MediaLibrary
 from ..storage.file_storage import ResultStorage
 from cjm_fasthtml_workflow_transcription_single_file.components.steps import (
@@ -118,6 +119,9 @@ class SingleFileTranscriptionWorkflow:
 
         # Create workflow's plugin registry adapter
         self._plugin_adapter = PluginRegistryAdapter(self._plugin_registry)
+
+        # Create workflow state store (server-side storage for StepFlow wizard state)
+        self._state_store = InMemoryWorkflowStateStore()
 
         # Create StepFlow
         self._step_flow = self._create_step_flow()
@@ -441,9 +445,13 @@ def _create_step_flow(
         """Validate that a file has been selected."""
         return bool(state.get("file_path")) and bool(state.get("file_name"))
 
+    def validate_confirm(state: Dict[str, Any]) -> bool:
+        """Validate confirmation."""
+        return True
+
     async def on_complete(state: Dict[str, Any], request):
         """Handle workflow completion."""
-        return await start_transcription_job(
+        result = await start_transcription_job(
             state,
             request,
             config=workflow.config,
@@ -451,9 +459,14 @@ def _create_step_flow(
             transcription_manager=workflow._transcription_manager,
             plugin_registry=workflow._plugin_adapter,
         )
+        # Clear workflow state since we've successfully started the transcription
+        # This ensures "New Transcription" button starts fresh instead of resuming
+        workflow._state_store.clear_state(workflow.config.workflow_id, request.session)
+        return result
 
     return StepFlow(
         flow_id=self.config.workflow_id,
+        state_store=self._state_store,
         container_id=self.config.container_id,
         steps=[
             Step(
@@ -482,6 +495,7 @@ def _create_step_flow(
                 id="confirm",
                 title="Confirm",
                 render=render_confirm_step,
+                validate=validate_confirm,
                 data_loader=load_confirmation_data,
                 data_keys=[],
                 show_back=True,

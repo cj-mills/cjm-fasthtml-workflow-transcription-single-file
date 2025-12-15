@@ -70,7 +70,8 @@ def main():
             create_theme_persistence_script(),
         ],
         title="Single-File Transcription Workflow Demo",
-        htmlkw={'data-theme': 'light'}
+        htmlkw={'data-theme': 'light'},
+        secret_key="your-secret-key-here"
     )
 
     router = APIRouter(prefix="")

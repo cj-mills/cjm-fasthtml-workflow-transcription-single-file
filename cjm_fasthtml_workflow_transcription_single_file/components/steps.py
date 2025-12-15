@@ -31,7 +31,7 @@ from cjm_fasthtml_tailwind.utilities.flexbox_and_grid import flex_display, justi
 from cjm_fasthtml_tailwind.core.base import combine_classes
 
 from cjm_fasthtml_settings.components.forms import create_settings_form_container
-from cjm_fasthtml_settings.core.utils import get_default_values_from_schema
+from cjm_plugin_system.utils.validation import extract_defaults
 
 from ..core.config import SingleFileWorkflowConfig
 from ..core.html_ids import SingleFileHtmlIds
@@ -136,13 +136,13 @@ def _render_plugin_details_with_config(
 # %% ../../nbs/components/steps.ipynb 11
 def render_plugin_config_form(
     plugin_id: str, # ID of the plugin to render config for
-    plugin_registry, # UnifiedPluginRegistry with config_schema access
+    plugin_registry, # UnifiedPluginRegistry with config_class access
     save_url: str, # URL for saving the configuration
     reset_url: str, # URL for resetting to defaults
     alert_message: Optional[Any] = None, # Optional alert to display above the form
 ) -> FT: # Div containing the settings form with alert container
     """Render the plugin configuration form for the collapse content."""
-    # Get plugin metadata to access schema
+    # Get plugin metadata to access config_class and schema
     plugin_meta = plugin_registry.get_plugin(plugin_id)
     if not plugin_meta or not plugin_meta.config_schema:
         return Div(
@@ -150,13 +150,24 @@ def render_plugin_config_form(
               cls=combine_classes(text_dui.base_content.opacity(60), font_size.sm)),
             id=SingleFileHtmlIds.PLUGIN_CONFIG_CONTAINER
         )
-
+    
     schema = plugin_meta.config_schema
 
-    # Load saved config or use defaults
+    # print(schema)
+
+    # Load saved config
     saved_config = plugin_registry.load_plugin_config(plugin_id)
-    default_config = get_default_values_from_schema(schema)
+    # print(f"\n\nsaved_config:\n{saved_config}\n\n")
+    
+    # Get default values from config_class (preferred) or empty dict as fallback
+    if hasattr(plugin_meta, 'config_class') and plugin_meta.config_class is not None:
+        default_config = extract_defaults(plugin_meta.config_class)
+    else:
+        default_config = {}
+    
     current_values = {**default_config, **saved_config}
+
+    # print(f"\n\ncurrent_values:\n{current_values}\n\n")
 
     # Create settings form container
     settings_content = create_settings_form_container(
@@ -441,6 +452,11 @@ def render_file_selection(
     # IMPORTANT: Must explicitly set hx_target="this" to prevent inheriting
     # hx_target from parent StepFlow form (which targets the workflow container)
     # Pass selected file as query param so pagination can mark it as checked
+    #
+    # NOTE: hx_sync="closest form:abort" ensures that if the parent form submits
+    # (user clicks Continue/Back), any pending pagination requests are aborted.
+    # This prevents race conditions where a late-arriving pagination response
+    # could interfere with session state updates from form submission.
 
     table_container = Div(
         # Placeholder that will be replaced by pagination content
@@ -448,6 +464,7 @@ def render_file_selection(
         hx_trigger="load",
         hx_target="this",
         hx_swap="outerHTML",
+        # hx_sync="closest form:abort",  # Abort pagination requests when form submits
         id=SingleFileHtmlIds.FILE_SELECTION_TABLE,
         cls=combine_classes(
             overflow.x.auto,

@@ -9,7 +9,6 @@ __all__ = ['get_job_session_info', 'start_transcription_job', 'create_job_stream
 import asyncio
 from typing import Dict, Any
 from fasthtml.common import *
-from cjm_fasthtml_workflows.core.job_session import JobSessionManager
 
 from ..core.config import SingleFileWorkflowConfig
 from ..core.html_ids import SingleFileHtmlIds
@@ -22,37 +21,28 @@ from ..storage.file_storage import ResultStorage
 def get_job_session_info(
     job_id: str,  # Unique job identifier
     job,  # Job object from the manager
-    sess,  # FastHTML session object
     plugin_registry: PluginRegistryProtocol,  # Plugin registry for getting plugin info
 ) -> tuple[Dict[str, Any], Dict[str, Any]]:  # Tuple of (file_info, plugin_info) dictionaries
-    """Get file and plugin info from session with fallbacks."""
-    job_sess = JobSessionManager(sess)
-    job_metadata = job_sess.get_job_metadata(job_id, {})
+    """Get file and plugin info from job object and plugin registry."""
+    # File info from job attributes
+    file_info = {
+        "name": getattr(job, "file_name", "unknown"),
+        "path": getattr(job, "file_path", ""),
+    }
 
-    # File info with fallbacks
-    file_info = job_metadata.get("file_info", {})
-    if not file_info:
-        file_info = {
-            "name": getattr(job, "file_name", "unknown"),
-            "path": getattr(job, "file_path", ""),
-        }
-
-    # Plugin info with fallbacks
-    plugin_info = job_metadata.get("plugin_info", {})
-    if not plugin_info:
-        plugin_id = getattr(job, "plugin_id", "unknown")
-        plugin_obj = plugin_registry.get_plugin(plugin_id)
-        plugin_info = {
-            "id": plugin_id,
-            "title": plugin_obj.title if plugin_obj else plugin_id,
-            "supports_streaming": plugin_obj.supports_streaming if plugin_obj else False
-        }
+    # Plugin info from registry
+    plugin_id = getattr(job, "plugin_id", "unknown")
+    plugin_obj = plugin_registry.get_plugin(plugin_id)
+    plugin_info = {
+        "id": plugin_id,
+        "title": plugin_obj.title if plugin_obj else plugin_id,
+        "supports_streaming": plugin_obj.supports_streaming if plugin_obj else False
+    }
 
     return file_info, plugin_info
 
 # %% ../../nbs/workflow/job_handler.ipynb 7
 def _save_job_result_once(
-    sess,  # FastHTML session object
     job_id: str,  # Job identifier
     job,  # Job object
     data: Dict[str, Any],  # Transcription data containing text and metadata
@@ -73,8 +63,8 @@ def _save_job_result_once(
         return
 
     try:
-        # Get file and plugin info from session or fallback to job attributes
-        file_info, plugin_info = get_job_session_info(job_id, job, sess, plugin_registry)
+        # Get file and plugin info from job attributes and registry
+        file_info, plugin_info = get_job_session_info(job_id, job, plugin_registry)
 
         result_storage.save(
             job_id=job_id,
@@ -148,19 +138,8 @@ async def start_transcription_job(
         "supports_streaming": plugin_info_obj.supports_streaming if plugin_info_obj else False
     }
 
-    # Store job metadata in session for SSE polling
-    sess = request.session
-    job_sess = JobSessionManager(sess)
-    job_sess.store_job_metadata(job.id, {
-        "file_info": file_info,
-        "plugin_info": plugin_info
-    })
-
-    # Clear workflow state since we've successfully started the transcription
-    # This ensures "New Transcription" button starts fresh instead of resuming
-    from cjm_fasthtml_workflows.core.workflow_session import WorkflowSession
-    workflow_session = WorkflowSession(sess, config.workflow_id)
-    workflow_session.clear()
+    # Note: Workflow state is cleared by the workflow's on_complete handler
+    # after this function returns, via state_store.clear_state()
 
     # Return in-progress view
     return transcription_in_progress(
@@ -175,7 +154,6 @@ async def start_transcription_job(
 def create_job_stream_handler(
     job_id: str,  # Unique job identifier
     request,  # FastHTML request object
-    sess,  # FastHTML session object
     config: SingleFileWorkflowConfig,  # Workflow configuration
     router,  # Workflow router for generating route URLs
     stepflow_router: APIRouter,  # StepFlow router for generating stepflow URLs
@@ -209,10 +187,10 @@ def create_job_stream_handler(
 
                     if job.status == 'completed' and result and result.get('status') == 'success':
                         data = result.get('data', {})
-                        file_info, plugin_info = get_job_session_info(job_id, job, sess, plugin_registry)
+                        file_info, plugin_info = get_job_session_info(job_id, job, plugin_registry)
 
                         # Save result to disk (only once)
-                        _save_job_result_once(sess, job_id, job, data, plugin_registry, result_storage)
+                        _save_job_result_once(job_id, job, data, plugin_registry, result_storage)
 
                         results = transcription_results(
                             job_id=job_id,
@@ -228,7 +206,7 @@ def create_job_stream_handler(
                         yield sse_message(_create_sse_swap_message(results, container_id))
 
                     elif job.status == 'failed':
-                        file_info, _ = get_job_session_info(job_id, job, sess, plugin_registry)
+                        file_info, _ = get_job_session_info(job_id, job, plugin_registry)
                         error_msg = transcription_error(
                             f"Transcription failed: {job.error}",
                             file_info,

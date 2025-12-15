@@ -11,8 +11,6 @@ from typing import Optional
 from fasthtml.common import *
 from fasthtml.common import APIRouter
 
-from cjm_fasthtml_workflows.core.workflow_session import WorkflowSession
-
 from ..core.html_ids import SingleFileHtmlIds
 from ..components.processor import transcription_in_progress
 from ..components.results import transcription_results, transcription_error
@@ -47,7 +45,7 @@ def init_router(
 
             if recent_job.status == 'running':
                 file_info, plugin_info = get_job_session_info(
-                    recent_job.id, recent_job, sess, workflow._plugin_adapter
+                    recent_job.id, recent_job, workflow._plugin_adapter
                 )
                 return transcription_in_progress(
                     job_id=recent_job.id,
@@ -57,10 +55,10 @@ def init_router(
                     router=workflow._router,
                 )
 
-        # Priority 2: Check for in-progress workflow
-        workflow_session = WorkflowSession(sess, workflow.config.workflow_id)
+        # Priority 2: Check for in-progress workflow (via server-side state store)
+        workflow_state = workflow._state_store.get_state(workflow.config.workflow_id, sess)
         has_workflow_state = bool(
-            workflow_session.get("plugin_id") or workflow_session.get("file_path")
+            workflow_state.get("plugin_id") or workflow_state.get("file_path")
         )
 
         if has_workflow_state:
@@ -76,7 +74,7 @@ def init_router(
                 if result and result.get('status') == 'success':
                     data = result.get('data', {})
                     file_info, plugin_info = get_job_session_info(
-                        recent_job.id, recent_job, sess, workflow._plugin_adapter
+                        recent_job.id, recent_job, workflow._plugin_adapter
                     )
 
                     return transcription_results(
@@ -104,9 +102,8 @@ def init_router(
         success = await manager.cancel_job(job_id)
 
         if success:
-            # Reset workflow and return to plugin selection
-            workflow_session = WorkflowSession(sess, workflow.config.workflow_id)
-            workflow_session.clear()
+            # Reset workflow state and return to plugin selection
+            workflow._state_store.clear_state(workflow.config.workflow_id, sess)
             return workflow._stepflow_router.start(request, sess)
         else:
             return transcription_error(
@@ -122,8 +119,7 @@ def init_router(
         sess,  # FastHTML session object
     ):  # StepFlow start view
         """Reset transcription workflow and return to start."""
-        workflow_session = WorkflowSession(sess, workflow.config.workflow_id)
-        workflow_session.clear()
+        workflow._state_store.clear_state(workflow.config.workflow_id, sess)
         return workflow._stepflow_router.start(request, sess)
 
     @router
@@ -136,7 +132,6 @@ def init_router(
         stream_generator = create_job_stream_handler(
             job_id,
             request,
-            sess,
             config=workflow.config,
             router=workflow._router,
             stepflow_router=workflow._stepflow_router,
