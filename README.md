@@ -16,12 +16,11 @@ pip install cjm_fasthtml_workflow_transcription_single_file
     │   ├── processor.ipynb  # UI component for displaying transcription in-progress state
     │   ├── results.ipynb    # UI components for displaying transcription results and errors
     │   └── steps.ipynb      # UI components for workflow step rendering (plugin selection, file selection, confirmation)
-    ├── core/ (5)
-    │   ├── adapters.ipynb     # Adapter implementations for integrating with plugin registries
-    │   ├── config.ipynb       # Configuration dataclass for single-file transcription workflow
-    │   ├── html_ids.ipynb     # Centralized HTML ID constants for single-file transcription workflow components
-    │   ├── protocols.ipynb    # Protocol definitions for external dependencies and plugin integration
-    │   └── state_store.ipynb  # Server-side workflow state storage implementations
+    ├── core/ (4)
+    │   ├── adapters.ipynb   # Adapter implementations for integrating with plugin registries
+    │   ├── config.ipynb     # Configuration dataclass for single-file transcription workflow
+    │   ├── html_ids.ipynb   # Centralized HTML ID constants for single-file transcription workflow components
+    │   └── protocols.ipynb  # Protocol definitions for external dependencies and plugin integration
     ├── media/ (9)
     │   ├── components.ipynb                 # UI components for media browser views (grid, list, preview modal)
     │   ├── config.ipynb                     # Configuration for media file discovery and browser settings
@@ -44,7 +43,7 @@ pip install cjm_fasthtml_workflow_transcription_single_file
         ├── routes.ipynb       # Route initialization and handlers for the single-file transcription workflow
         └── workflow.ipynb     # Main workflow class orchestrating all subsystems for single-file transcription
 
-Total: 25 notebooks across 6 directories
+Total: 24 notebooks across 6 directories
 
 ## Module Dependencies
 
@@ -57,7 +56,6 @@ graph LR
     core_config[core.config<br/>Configuration]
     core_html_ids[core.html_ids<br/>HTML IDs]
     core_protocols[core.protocols<br/>Protocols]
-    core_state_store[core.state_store<br/>Workflow State Store]
     media_components[media.components<br/>Media Components]
     media_config[media.config<br/>Media Configuration]
     media_file_selection_pagination[media.file_selection_pagination<br/>File Selection Pagination]
@@ -80,57 +78,56 @@ graph LR
     components_processor --> core_config
     components_results --> core_html_ids
     components_results --> core_config
+    components_steps --> core_html_ids
     components_steps --> core_protocols
     components_steps --> core_config
-    components_steps --> core_html_ids
     core_adapters --> core_protocols
-    core_config --> media_config
     core_config --> core_html_ids
+    core_config --> media_config
     core_config --> storage_config
     media_components --> media_mounter
     media_components --> media_models
     media_file_selection_pagination --> media_models
     media_file_selection_pagination --> media_scanner
+    media_library --> media_pagination
+    media_library --> media_mounter
+    media_library --> media_models
+    media_library --> media_file_selection_pagination
     media_library --> media_scanner
     media_library --> media_config
-    media_library --> media_mounter
-    media_library --> media_file_selection_pagination
-    media_library --> media_models
-    media_library --> media_pagination
-    media_pagination --> media_mounter
     media_pagination --> media_components
+    media_pagination --> media_mounter
     media_pagination --> media_models
     media_pagination --> media_scanner
-    media_scanner --> media_config
     media_scanner --> media_utils
     media_scanner --> media_models
-    settings_schemas --> storage_config
+    media_scanner --> media_config
     settings_schemas --> media_config
     settings_schemas --> core_config
+    settings_schemas --> storage_config
     storage_file_storage --> storage_config
-    workflow_job_handler --> storage_file_storage
     workflow_job_handler --> core_protocols
-    workflow_job_handler --> components_processor
-    workflow_job_handler --> components_results
     workflow_job_handler --> core_html_ids
+    workflow_job_handler --> components_results
     workflow_job_handler --> core_config
+    workflow_job_handler --> storage_file_storage
+    workflow_job_handler --> components_processor
+    workflow_routes --> core_html_ids
+    workflow_routes --> workflow_workflow
     workflow_routes --> components_results
     workflow_routes --> workflow_job_handler
     workflow_routes --> components_steps
     workflow_routes --> components_processor
-    workflow_routes --> core_html_ids
-    workflow_routes --> workflow_workflow
-    workflow_workflow --> storage_file_storage
-    workflow_workflow --> core_adapters
-    workflow_workflow --> workflow_job_handler
     workflow_workflow --> components_steps
-    workflow_workflow --> core_state_store
     workflow_workflow --> core_html_ids
-    workflow_workflow --> core_config
     workflow_workflow --> media_library
+    workflow_workflow --> core_adapters
+    workflow_workflow --> core_config
+    workflow_workflow --> storage_file_storage
+    workflow_workflow --> workflow_job_handler
 ```
 
-*52 cross-module dependencies detected*
+*51 cross-module dependencies detected*
 
 ## CLI Reference
 
@@ -1480,76 +1477,6 @@ class WorkflowSettings:
 
 ``` python
 WORKFLOW_SETTINGS_SCHEMA  # Auto-generate schema from WorkflowSettings dataclass
-```
-
-### Workflow State Store (`state_store.ipynb`)
-
-> Server-side workflow state storage implementations
-
-#### Import
-
-``` python
-from cjm_fasthtml_workflow_transcription_single_file.core.state_store import (
-    get_session_id,
-    InMemoryWorkflowStateStore
-)
-```
-
-#### Functions
-
-``` python
-def get_session_id(
-    sess: Any,  # FastHTML session object
-    key: str = "_workflow_session_id"  # Session key for storing the ID
-) -> str:  # Stable session identifier
-    "Get or create a stable session identifier."
-```
-
-#### Classes
-
-``` python
-class InMemoryWorkflowStateStore:
-    def __init__(self):
-        """Initialize empty state storage."""
-        self._current_steps: Dict[str, str] = {}  # {flow_id:session_id -> step_id}
-    "In-memory workflow state storage for development and testing."
-    
-    def __init__(self):
-            """Initialize empty state storage."""
-            self._current_steps: Dict[str, str] = {}  # {flow_id:session_id -> step_id}
-        "Initialize empty state storage."
-    
-    def get_current_step(self,
-                             flow_id: str,  # Workflow identifier
-                             sess: Any  # FastHTML session object
-                            ) -> Optional[str]:  # Current step ID or None
-        "Get current step ID for a workflow."
-    
-    def set_current_step(self,
-                             flow_id: str,  # Workflow identifier
-                             sess: Any,  # FastHTML session object
-                             step_id: str  # Step ID to set as current
-                            ) -> None
-        "Set current step ID for a workflow."
-    
-    def get_state(self,
-                      flow_id: str,  # Workflow identifier
-                      sess: Any  # FastHTML session object
-                     ) -> Dict[str, Any]:  # Workflow state dictionary
-        "Get all workflow state."
-    
-    def update_state(self,
-                         flow_id: str,  # Workflow identifier
-                         sess: Any,  # FastHTML session object
-                         updates: Dict[str, Any]  # State updates to apply
-                        ) -> None
-        "Update workflow state with new values."
-    
-    def clear_state(self,
-                        flow_id: str,  # Workflow identifier
-                        sess: Any  # FastHTML session object
-                       ) -> None
-        "Clear all workflow state."
 ```
 
 ### Step Components (`steps.ipynb`)

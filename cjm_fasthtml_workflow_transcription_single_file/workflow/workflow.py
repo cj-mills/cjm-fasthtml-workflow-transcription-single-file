@@ -13,6 +13,7 @@ from fastcore.basics import patch
 
 from cjm_fasthtml_interactions.patterns.step_flow import Step, StepFlow
 from cjm_fasthtml_interactions.core.context import InteractionContext
+from cjm_fasthtml_interactions.core.state_store import InMemoryWorkflowStateStore
 from cjm_fasthtml_interactions.patterns.async_loading import AsyncLoadingContainer
 from cjm_fasthtml_sse.core import SSEBroadcastManager
 from cjm_fasthtml_workers.extensions.adapters import (
@@ -28,7 +29,6 @@ from cjm_fasthtml_settings.core.utils import get_default_values_from_schema
 from ..core.config import SingleFileWorkflowConfig
 from ..core.html_ids import SingleFileHtmlIds
 from ..core.adapters import PluginRegistryAdapter, DefaultConfigPluginRegistryAdapter
-from ..core.state_store import InMemoryWorkflowStateStore
 from ..media.library import MediaLibrary
 from ..storage.file_storage import ResultStorage
 from cjm_fasthtml_workflow_transcription_single_file.components.steps import (
