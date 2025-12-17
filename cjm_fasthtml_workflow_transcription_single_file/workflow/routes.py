@@ -11,6 +11,9 @@ from typing import Optional
 from fasthtml.common import *
 from fasthtml.common import APIRouter
 
+from cjm_fasthtml_file_browser.core.types import FileType
+from cjm_fasthtml_file_browser.components.preview import file_preview_modal
+
 from ..core.html_ids import SingleFileHtmlIds
 from ..components.processor import transcription_in_progress
 from ..components.results import transcription_results, transcription_error
@@ -263,25 +266,27 @@ def init_router(
     def media_preview(
         request,  # FastHTML request object
         idx: int = 0,  # Index of the file to preview
-        media_type: str = None,  # Optional filter by media type
-    ):  # Media preview modal or error Div
-        """Render media preview modal for a specific file."""
-        from cjm_fasthtml_workflow_transcription_single_file.media.components import media_preview_modal
-
+        file_type: str = None,  # Optional filter by file type
+    ):  # File preview modal or error Div
+        """Render file preview modal for a specific file."""
         # Get files (with optional filter)
-        files = workflow._media_library.scan()
-        if media_type and media_type != "all":
-            files = [f for f in files if f.media_type == media_type]
+        files = workflow._file_browser.scan()
+        if file_type and file_type != "all":
+            try:
+                target_type = FileType(file_type)
+                files = [f for f in files if f.file_type == target_type]
+            except ValueError:
+                pass  # Invalid file_type, use unfiltered list
 
         if idx < 0 or idx >= len(files):
             return Div("File not found")
 
-        media_file = files[idx]
-        media_url = workflow._media_library.get_url(media_file.path)
+        file_entry = files[idx]
+        file_url = workflow._file_browser.get_url(file_entry.path)
 
-        return media_preview_modal(
-            media_file=media_file,
-            media_url=media_url,
+        return file_preview_modal(
+            file=file_entry,
+            file_url=file_url,
             modal_id=SingleFileHtmlIds.MEDIA_PREVIEW_MODAL
         )
 
@@ -289,8 +294,8 @@ def init_router(
     def refresh_media(
         request,  # FastHTML request object
     ):  # JSON status response
-        """Refresh media file cache."""
-        workflow._media_library.clear_cache()
+        """Refresh file browser cache."""
+        workflow._file_browser.clear_cache()
         return {"status": "success", "message": "Cache cleared"}
 
     @router
@@ -350,10 +355,10 @@ def init_router(
 
             # Re-mount directories
             if workflow._app:
-                workflow._media_library.mount(workflow._app)
+                workflow._file_browser.mount(workflow._app)
 
             # Clear cache to pick up new directories
-            workflow._media_library.clear_cache()
+            workflow._file_browser.clear_cache()
 
             # Get the correct modal ID using the helper
             modal_dialog_id = InteractionHtmlIds.modal_dialog(SingleFileHtmlIds.SETTINGS_MODAL)

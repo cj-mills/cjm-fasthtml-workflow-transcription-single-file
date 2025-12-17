@@ -39,14 +39,14 @@ from ..core.protocols import PluginInfo, PluginRegistryProtocol
 
 # %% ../../nbs/components/steps.ipynb 5
 def _get_file_attr(
-    file_path: str, # Path to the file to look up
-    media_files: list, # List of MediaFile objects to search
-    attr: str, # Attribute name to retrieve from the file
-) -> str: # Attribute value or empty string if not found
+    file_path: str,  # Path to the file to look up
+    files: list,  # List of file info objects to search
+    attr: str,  # Attribute name to retrieve from the file
+) -> str:  # Attribute value or empty string if not found
     """Get an attribute from a file by path."""
     if not file_path:
         return ""
-    file = next((f for f in media_files if f.path == file_path), None)
+    file = next((f for f in files if f.path == file_path), None)
     return getattr(file, attr, "") if file else ""
 
 # %% ../../nbs/components/steps.ipynb 7
@@ -418,12 +418,12 @@ def render_plugin_selection(
 
 # %% ../../nbs/components/steps.ipynb 20
 def render_file_selection(
-    ctx: InteractionContext, # Interaction context with state and data
-    config: SingleFileWorkflowConfig, # Workflow configuration
-    file_selection_router: APIRouter, # Router for file selection pagination (or None)
-) -> FT: # File selection step UI component with paginated table
+    ctx: InteractionContext,  # Interaction context with state and data
+    config: SingleFileWorkflowConfig,  # Workflow configuration
+    file_selection_router: APIRouter,  # Router for file selection pagination (or None)
+) -> FT:  # File selection step UI component with paginated table
     """Render file selection step with paginated table view and preview capability."""
-    # media_files are objects with path, name, media_type, size_str, modified_str attributes
+    # media_files are objects with path, name, file_type, size_str, modified_str attributes
     media_files = ctx.get_data("media_files", [])
     selected_file = ctx.get("file_path")
 
@@ -485,7 +485,7 @@ def render_file_selection(
         Input(type="hidden", name="file_name", id="file_name",
               value=_get_file_attr(selected_file, media_files, "name")),
         Input(type="hidden", name="file_type", id="file_type",
-              value=_get_file_attr(selected_file, media_files, "media_type")),
+              value=_get_file_attr(selected_file, media_files, "file_type")),
         Input(type="hidden", name="file_size", id="file_size",
               value=_get_file_attr(selected_file, media_files, "size_str")),
 

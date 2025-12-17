@@ -21,16 +21,6 @@ pip install cjm_fasthtml_workflow_transcription_single_file
     │   ├── config.ipynb     # Configuration dataclass for single-file transcription workflow
     │   ├── html_ids.ipynb   # Centralized HTML ID constants for single-file transcription workflow components
     │   └── protocols.ipynb  # Protocol definitions for external dependencies and plugin integration
-    ├── media/ (9)
-    │   ├── components.ipynb                 # UI components for media browser views (grid, list, preview modal)
-    │   ├── config.ipynb                     # Configuration for media file discovery and browser settings
-    │   ├── file_selection_pagination.ipynb  # Factory function for creating paginated file selection table with radio buttons
-    │   ├── library.ipynb                    # Unified facade for media file discovery, mounting, and access
-    │   ├── models.ipynb                     # Data models for media files
-    │   ├── mounter.ipynb                    # Mounts media directories as static files for serving through the web server
-    │   ├── pagination.ipynb                 # Factory function for creating paginated media browser views
-    │   ├── scanner.ipynb                    # Scans directories for media files with caching support
-    │   └── utils.ipynb                      # Formatting utilities for media files
     ├── settings/ (2)
     │   ├── components.ipynb  # UI components for workflow settings modal and forms
     │   └── schemas.ipynb     # JSON schemas and utilities for workflow settings
@@ -43,7 +33,7 @@ pip install cjm_fasthtml_workflow_transcription_single_file
         ├── routes.ipynb       # Route initialization and handlers for the single-file transcription workflow
         └── workflow.ipynb     # Main workflow class orchestrating all subsystems for single-file transcription
 
-Total: 24 notebooks across 6 directories
+Total: 15 notebooks across 5 directories
 
 ## Module Dependencies
 
@@ -56,15 +46,6 @@ graph LR
     core_config[core.config<br/>Configuration]
     core_html_ids[core.html_ids<br/>HTML IDs]
     core_protocols[core.protocols<br/>Protocols]
-    media_components[media.components<br/>Media Components]
-    media_config[media.config<br/>Media Configuration]
-    media_file_selection_pagination[media.file_selection_pagination<br/>File Selection Pagination]
-    media_library[media.library<br/>Media Library]
-    media_models[media.models<br/>Media Models]
-    media_mounter[media.mounter<br/>Media Mounter]
-    media_pagination[media.pagination<br/>Media Pagination]
-    media_scanner[media.scanner<br/>Media Scanner]
-    media_utils[media.utils<br/>Media Utilities]
     settings_components[settings.components<br/>Settings Components]
     settings_schemas[settings.schemas<br/>Settings Schemas]
     storage_config[storage.config<br/>Storage Configuration]
@@ -79,55 +60,35 @@ graph LR
     components_results --> core_html_ids
     components_results --> core_config
     components_steps --> core_html_ids
-    components_steps --> core_protocols
     components_steps --> core_config
+    components_steps --> core_protocols
     core_adapters --> core_protocols
-    core_config --> core_html_ids
-    core_config --> media_config
     core_config --> storage_config
-    media_components --> media_mounter
-    media_components --> media_models
-    media_file_selection_pagination --> media_models
-    media_file_selection_pagination --> media_scanner
-    media_library --> media_pagination
-    media_library --> media_mounter
-    media_library --> media_models
-    media_library --> media_file_selection_pagination
-    media_library --> media_scanner
-    media_library --> media_config
-    media_pagination --> media_components
-    media_pagination --> media_mounter
-    media_pagination --> media_models
-    media_pagination --> media_scanner
-    media_scanner --> media_utils
-    media_scanner --> media_models
-    media_scanner --> media_config
-    settings_schemas --> media_config
+    core_config --> core_html_ids
     settings_schemas --> core_config
     settings_schemas --> storage_config
     storage_file_storage --> storage_config
     workflow_job_handler --> core_protocols
-    workflow_job_handler --> core_html_ids
     workflow_job_handler --> components_results
     workflow_job_handler --> core_config
     workflow_job_handler --> storage_file_storage
     workflow_job_handler --> components_processor
-    workflow_routes --> core_html_ids
-    workflow_routes --> workflow_workflow
+    workflow_job_handler --> core_html_ids
     workflow_routes --> components_results
     workflow_routes --> workflow_job_handler
-    workflow_routes --> components_steps
     workflow_routes --> components_processor
+    workflow_routes --> components_steps
+    workflow_routes --> workflow_workflow
+    workflow_routes --> core_html_ids
     workflow_workflow --> components_steps
-    workflow_workflow --> core_html_ids
-    workflow_workflow --> media_library
     workflow_workflow --> core_adapters
-    workflow_workflow --> core_config
     workflow_workflow --> storage_file_storage
     workflow_workflow --> workflow_job_handler
+    workflow_workflow --> core_html_ids
+    workflow_workflow --> core_config
 ```
 
-*51 cross-module dependencies detected*
+*31 cross-module dependencies detected*
 
 ## CLI Reference
 
@@ -237,85 +198,6 @@ class DefaultConfigPluginRegistryAdapter:
         "Load configuration for a plugin, using defaults if no saved config exists."
 ```
 
-### Media Components (`components.ipynb`)
-
-> UI components for media browser views (grid, list, preview modal)
-
-#### Import
-
-``` python
-from cjm_fasthtml_workflow_transcription_single_file.media.components import (
-    get_media_icon,
-    grid_view_content,
-    list_view_content,
-    media_preview_modal,
-    empty_media_content,
-    media_browser_controls
-)
-```
-
-#### Functions
-
-``` python
-def get_media_icon(
-    media_type: str  # "video" or "audio"
-) -> FT:  # SVG element with appropriate icon
-    "Get an SVG icon for the media type."
-```
-
-``` python
-def grid_view_content(
-    media_files: List[MediaFile],  # List of media files to display
-    mounter: MediaMounter,  # MediaMounter instance for URL generation
-    start_idx: int = 0,  # Starting index for item numbering
-    media_type: Optional[str] = None,  # Current filter type for maintaining state
-    preview_route_func = None,  # Function to generate preview route URL
-    modal_id: str = "sf-media-preview"  # ID for the preview modal
-) -> FT:  # Grid container with media cards
-    "Render media files as cards in a responsive grid layout."
-```
-
-``` python
-def list_view_content(
-    media_files: List[MediaFile],  # List of media files to display
-    mounter: MediaMounter,  # MediaMounter instance for URL generation
-    start_idx: int = 0,  # Starting index for item numbering
-    media_type: Optional[str] = None,  # Current filter type for maintaining state
-    preview_route_func = None,  # Function to generate preview route URL
-    modal_id: str = "sf-media-preview"  # ID for the preview modal
-) -> FT:  # Table with media file rows
-    "Render media files as rows in a table."
-```
-
-``` python
-def media_preview_modal(
-    media_file: MediaFile,  # MediaFile to preview
-    media_url: Optional[str],  # URL to the media file for playback
-    modal_id: str = "sf-media-preview"  # ID for the modal element
-) -> FT:  # Modal dialog with media preview
-    "Create a modal dialog for previewing media files with video/audio player."
-```
-
-``` python
-def empty_media_content(
-    message: str = "No media files found.",  # Message to display
-    action_url: Optional[str] = None,  # Optional URL for action button
-    action_text: str = "Configure Settings"  # Text for action button
-) -> FT:  # Empty state container
-    "Render empty state display when no media files are found."
-```
-
-``` python
-def media_browser_controls(
-    view_mode: str,  # Current view mode ("grid" or "list")
-    media_type_filter: Optional[str],  # Current media type filter
-    change_view_url_func,  # Function to generate URL for view change
-    change_filter_url_func,  # Function to generate URL for filter change
-    content_target_id: str  # ID of content container to target
-) -> FT:  # Controls bar element
-    "Render control bar for media browser with view mode toggle and media type filter."
-```
-
 ### Settings Components (`components.ipynb`)
 
 > UI components for workflow settings modal and forms
@@ -400,7 +282,7 @@ class SingleFileWorkflowConfig:
     config_dir: Path = field(...)  # Directory for workflow settings
     plugin_config_dir: Path = field(...)  # Directory for plugin configs
     plugin_category: str = 'transcription'  # Plugin category for this workflow
-    media: MediaConfig = field(...)  # Media scanning and display settings
+    media: BrowserConfig = field(...)  # File browser settings for media files
     storage: StorageConfig = field(...)  # Result storage settings
     
     def get_full_stepflow_prefix(self) -> str:  # Combined route_prefix + stepflow_prefix
@@ -436,55 +318,6 @@ class SingleFileWorkflowConfig:
 DEFAULT_WORKFLOW_CONFIG_DIR
 ```
 
-### Media Configuration (`config.ipynb`)
-
-> Configuration for media file discovery and browser settings
-
-#### Import
-
-``` python
-from cjm_fasthtml_workflow_transcription_single_file.media.config import (
-    MEDIA_CONFIG_SCHEMA,
-    MediaConfig
-)
-```
-
-#### Classes
-
-``` python
-@dataclass
-class MediaConfig:
-    "Configuration for media file discovery and browser display."
-    
-    __schema_name__: ClassVar[str] = 'media'
-    __schema_title__: ClassVar[str] = 'Media Settings'
-    __schema_description__: ClassVar[str] = 'Configure media file scanning and display'
-    directories: List[str] = field(...)
-    scan_audio: bool = field(...)
-    scan_video: bool = field(...)
-    audio_extensions: List[str] = field(...)
-    video_extensions: List[str] = field(...)
-    min_file_size_kb: int = field(...)
-    max_file_size_mb: int = field(...)
-    recursive_scan: bool = field(...)
-    include_hidden: bool = field(...)
-    follow_symlinks: bool = field(...)
-    exclude_patterns: List[str] = field(...)
-    cache_results: bool = field(...)
-    cache_duration_minutes: int = field(...)
-    max_results: int = field(...)
-    items_per_page: int = field(...)
-    default_view: str = field(...)
-    sort_by: str = field(...)
-    sort_descending: bool = field(...)
-```
-
-#### Variables
-
-``` python
-MEDIA_CONFIG_SCHEMA
-```
-
 ### Storage Configuration (`config.ipynb`)
 
 > Configuration for transcription result storage
@@ -516,51 +349,6 @@ class StorageConfig:
 
 ``` python
 STORAGE_CONFIG_SCHEMA
-```
-
-### File Selection Pagination (`file_selection_pagination.ipynb`)
-
-> Factory function for creating paginated file selection table with
-> radio buttons
-
-#### Import
-
-``` python
-from cjm_fasthtml_workflow_transcription_single_file.media.file_selection_pagination import (
-    create_file_selection_pagination
-)
-```
-
-#### Functions
-
-``` python
-def _escape_js(
-    s: str  # String to escape
-) -> str:  # Escaped string safe for JavaScript
-    "Escape a string for use in JavaScript."
-```
-
-``` python
-def _render_file_row(
-    file: MediaFile,  # MediaFile to render
-    idx: int,  # Global index of this file (across all pages)
-    selected_file: Optional[str],  # Currently selected file path (if any)
-    preview_url_func: Optional[Callable[[int], str]],  # Function to generate preview URL
-    preview_target_id: Optional[str]  # Target ID for preview modal
-) -> FT:  # Table row element
-    "Render a single file row in the selection table."
-```
-
-``` python
-def create_file_selection_pagination(
-    pagination_id: str,  # Unique identifier for this pagination instance
-    scanner: MediaScanner,  # MediaScanner instance for loading files
-    items_per_page: int = 30,  # Number of items per page
-    content_id: Optional[str] = None,  # HTML ID for content area
-    preview_url_func: Optional[Callable[[int], str]] = None,  # Function that takes file index and returns preview URL
-    preview_target_id: Optional[str] = None  # HTML ID to target for preview modal
-) -> Pagination:  # Configured Pagination instance for file selection
-    "Create a Pagination instance for file selection with radio buttons."
 ```
 
 ### Result Storage (`file_storage.ipynb`)
@@ -786,316 +574,6 @@ def create_job_stream_handler(
     "Create an SSE stream generator for monitoring job completion."
 ```
 
-### Media Library (`library.ipynb`)
-
-> Unified facade for media file discovery, mounting, and access
-
-#### Import
-
-``` python
-from cjm_fasthtml_workflow_transcription_single_file.media.library import (
-    MediaLibrary
-)
-```
-
-#### Functions
-
-``` python
-@patch
-def mount(
-    self: MediaLibrary,
-    app  # FastHTML/Starlette application instance
-) -> None
-    "Mount media directories to app for static file serving."
-```
-
-``` python
-@patch
-def scan(
-    self: MediaLibrary,
-    force_refresh: bool = False  # Force a fresh scan, ignoring cache
-) -> List[MediaFile]:  # List of MediaFile objects
-    "Scan for media files."
-```
-
-``` python
-@patch
-def get_transcribable_files(
-    self: MediaLibrary
-) -> List[MediaFile]:  # List of MediaFile objects with media_type 'audio' or 'video'
-    "Get files suitable for transcription (audio and video only)."
-```
-
-``` python
-@patch
-def get_url(
-    self: MediaLibrary,
-    file_path: str  # Full path to the media file
-) -> Optional[str]:  # URL path to access the file, or None if not in a mounted directory
-    "Get URL for a media file."
-```
-
-``` python
-@patch
-def clear_cache(
-    self: MediaLibrary
-) -> None
-    "Clear the scan cache."
-```
-
-``` python
-@patch
-def get_summary(
-    self: MediaLibrary
-) -> dict:  # Dictionary with file counts, sizes, and breakdowns
-    "Get summary statistics for scanned files."
-```
-
-``` python
-@patch
-def create_pagination(
-    self: MediaLibrary,
-    pagination_id: str,  # Unique identifier for this pagination instance
-    content_id: str,  # HTML ID for the content area
-    preview_route_func = None,  # Optional function to generate preview route URL
-    modal_id: str = "sf-media-preview"  # ID for the preview modal
-):  # Configured Pagination instance
-    "Create a pagination instance for browsing media files."
-```
-
-``` python
-@patch
-def get_pagination_router(
-    self: MediaLibrary,
-    prefix: str  # URL prefix for pagination routes
-) -> Optional[APIRouter]:  # APIRouter for pagination, or None if pagination not created
-    "Get the pagination router for registration with the app."
-```
-
-``` python
-@patch
-def create_file_selection_pagination(
-    self: MediaLibrary,
-    pagination_id: str,  # Unique identifier for this pagination instance
-    content_id: str,  # HTML ID for the content area
-    preview_url_func = None,  # Function that takes file index and returns preview URL
-    preview_target_id: str = None  # HTML ID to target for preview modal
-):  # Configured Pagination instance for file selection
-    "Create a pagination instance for file selection table with radio buttons."
-```
-
-``` python
-@patch
-def get_file_selection_router(
-    self: MediaLibrary,
-    prefix: str  # URL prefix for pagination routes
-) -> Optional[APIRouter]:  # APIRouter for file selection pagination, or None if not created
-    "Get the file selection pagination router."
-```
-
-#### Classes
-
-``` python
-class MediaLibrary:
-    def __init__(
-        self,
-        config: MediaConfig  # Media configuration with directories and settings
-    )
-    "Unified interface for media scanning, mounting, and browsing."
-    
-    def __init__(
-            self,
-            config: MediaConfig  # Media configuration with directories and settings
-        )
-        "Initialize the media library."
-    
-    def pagination(self):
-            """Access to the pagination instance."""
-            return self._pagination
-    
-        @property
-        def pagination_router(self) -> Optional[APIRouter]
-        "Access to the pagination instance."
-    
-    def pagination_router(self) -> Optional[APIRouter]:
-            """Access to the pagination router."""
-            return self._pagination_router
-    
-        @property
-        def file_selection_pagination(self)
-        "Access to the pagination router."
-    
-    def file_selection_pagination(self):
-            """Access to the file selection pagination instance."""
-            return getattr(self, '_file_selection_pagination', None)
-    
-        @property
-        def file_selection_router(self) -> Optional[APIRouter]
-        "Access to the file selection pagination instance."
-    
-    def file_selection_router(self) -> Optional[APIRouter]
-        "Access to the file selection pagination router."
-```
-
-### Media Models (`models.ipynb`)
-
-> Data models for media files
-
-#### Import
-
-``` python
-from cjm_fasthtml_workflow_transcription_single_file.media.models import (
-    MediaFile
-)
-```
-
-#### Classes
-
-``` python
-@dataclass
-class MediaFile:
-    "Represents a discovered media file for display and processing."
-    
-    path: str  # Full path to the file
-    name: str  # Display name of the file
-    extension: str  # File extension (without dot)
-    size: int  # Size in bytes
-    size_str: str  # Human-readable size (e.g., "15.2 MB")
-    modified: float  # Modification timestamp
-    modified_str: str  # Human-readable modification date
-    media_type: str  # 'video' or 'audio'
-    directory: str  # Parent directory path
-```
-
-### Media Mounter (`mounter.ipynb`)
-
-> Mounts media directories as static files for serving through the web
-> server
-
-#### Import
-
-``` python
-from cjm_fasthtml_workflow_transcription_single_file.media.mounter import (
-    MediaMounter
-)
-```
-
-#### Functions
-
-``` python
-@patch
-def mount(
-    self: MediaMounter,
-    app,  # FastHTML/Starlette application instance
-    directories: List[str]  # List of directory paths to mount
-) -> None
-    "Mount directories to app for static file serving."
-```
-
-``` python
-@patch
-def get_url(
-    self: MediaMounter,
-    file_path: str  # Full path to the media file
-) -> Optional[str]:  # URL to access the file, or None if not in a mounted directory
-    "Get URL for a file based on mounted directories."
-```
-
-``` python
-@patch
-def is_mounted(
-    self: MediaMounter,
-    directory: str  # Directory path to check
-) -> bool:  # True if the directory is mounted
-    "Check if a directory is currently mounted."
-```
-
-``` python
-@patch
-def get_mounted_directories(
-    self: MediaMounter
-) -> List[str]:  # List of mounted directory paths
-    "Get list of currently mounted directories."
-```
-
-``` python
-@patch
-def unmount_all(
-    self: MediaMounter
-) -> None
-    "Remove all mounts from this instance."
-```
-
-``` python
-@patch
-def _mount_directory(
-    self: MediaMounter, 
-    app,  # FastHTML/Starlette application instance
-    directory: str  # Directory path to mount
-) -> None
-    "Mount a single directory."
-```
-
-``` python
-@patch
-def _generate_prefix(
-    self: MediaMounter, 
-    directory: str  # Directory path
-) -> str:  # Route prefix string (e.g., "sf_media_abc12345")
-    "Generate a unique route prefix for a directory using MD5 hash."
-```
-
-``` python
-@patch
-def _remove_existing_mounts(
-    self: MediaMounter, 
-    app  # FastHTML/Starlette application instance
-) -> None
-    "Remove existing mounts matching this mounter's prefix pattern."
-```
-
-#### Classes
-
-``` python
-class MediaMounter:
-    def __init__(self):
-        """Initialize the mounter with empty state."""
-        self._mounted: Dict[str, str] = {}  # directory -> route_prefix
-    "Mounts directories for static file serving with instance-level state."
-    
-    def __init__(self):
-            """Initialize the mounter with empty state."""
-            self._mounted: Dict[str, str] = {}  # directory -> route_prefix
-        "Initialize the mounter with empty state."
-```
-
-### Media Pagination (`pagination.ipynb`)
-
-> Factory function for creating paginated media browser views
-
-#### Import
-
-``` python
-from cjm_fasthtml_workflow_transcription_single_file.media.pagination import (
-    create_media_pagination
-)
-```
-
-#### Functions
-
-``` python
-def create_media_pagination(
-    pagination_id: str,  # Unique identifier for this pagination instance
-    scanner: MediaScanner,  # MediaScanner instance for loading files
-    mounter: MediaMounter,  # MediaMounter instance for URL generation
-    items_per_page: int = 30,  # Number of items per page
-    content_id: Optional[str] = None,  # HTML ID for content area
-    preview_route_func = None,  # Function to generate preview route URL
-    modal_id: str = "sf-media-preview"  # ID for the preview modal
-) -> Pagination:  # Configured Pagination instance
-    "Create a Pagination instance for media browsing."
-```
-
 ### Processor Component (`processor.ipynb`)
 
 > UI component for displaying transcription in-progress state
@@ -1318,96 +796,6 @@ def _export_transcription(
     "Format transcription for export."
 ```
 
-### Media Scanner (`scanner.ipynb`)
-
-> Scans directories for media files with caching support
-
-#### Import
-
-``` python
-from cjm_fasthtml_workflow_transcription_single_file.media.scanner import (
-    MediaScanner
-)
-```
-
-#### Functions
-
-``` python
-@patch
-def _is_cache_valid(
-    self: MediaScanner
-) -> bool:  # True if cache exists and hasn't expired
-    "Check if cache is still valid."
-```
-
-``` python
-@patch
-def clear_cache(
-    self: MediaScanner
-) -> None
-    "Clear the scan cache."
-```
-
-``` python
-@patch
-def _update_cache(
-    self: MediaScanner, 
-    files: List[MediaFile]  # List of scanned MediaFile objects
-) -> None
-    "Update cache with new scan results."
-```
-
-``` python
-@patch
-def _scan_directories(
-    self: MediaScanner
-) -> List[MediaFile]:  # List of MediaFile objects matching the configuration
-    "Perform actual directory scan."
-```
-
-``` python
-@patch
-def _sort_files(
-    self: MediaScanner,
-    files: List[MediaFile]  # Files to sort
-) -> List[MediaFile]:  # Sorted files
-    "Sort files according to configuration."
-```
-
-``` python
-@patch
-def scan(
-    self: MediaScanner, 
-    force_refresh: bool = False  # Force a fresh scan, ignoring cache
-) -> List[MediaFile]:  # List of MediaFile objects
-    "Scan for media files, using cache if valid."
-```
-
-``` python
-@patch
-def get_summary(
-    self: MediaScanner
-) -> Dict[str, Any]:  # Dictionary with total count, size, and breakdowns by type/extension
-    "Get summary statistics for scanned files."
-```
-
-#### Classes
-
-``` python
-class MediaScanner:
-    def __init__(
-        self,
-        config: MediaConfig  # Media configuration with directories and filters
-    )
-    "Scans directories for media files with instance-level caching."
-    
-    def __init__(
-            self,
-            config: MediaConfig  # Media configuration with directories and filters
-        )
-        "Initialize the scanner."
-```
-
 ### Settings Schemas (`schemas.ipynb`)
 
 > JSON schemas and utilities for workflow settings
@@ -1426,7 +814,7 @@ from cjm_fasthtml_workflow_transcription_single_file.settings.schemas import (
 ``` python
 def from_configs(
     cls: WorkflowSettings,
-    media_config: MediaConfig,      # MediaConfig instance with media scanning settings
+    browser_config: BrowserConfig,  # BrowserConfig instance with file browser settings
     storage_config: StorageConfig,  # StorageConfig instance with result storage settings
     workflow_config: Optional[SingleFileWorkflowConfig] = None  # Optional workflow config for additional settings
 ) -> "WorkflowSettings":  # WorkflowSettings instance with values from configs
@@ -1437,7 +825,7 @@ def from_configs(
 @patch
 def apply_to_configs(
     self: WorkflowSettings,
-    media_config: MediaConfig,      # MediaConfig instance to update
+    browser_config: BrowserConfig,  # BrowserConfig instance to update
     storage_config: StorageConfig,  # StorageConfig instance to update
     workflow_config: Optional[SingleFileWorkflowConfig] = None  # Optional workflow config to update
 ) -> None
@@ -1461,10 +849,9 @@ class WorkflowSettings:
     
     __schema_name__: ClassVar[str] = 'single_file_workflow'
     __schema_title__: ClassVar[str] = 'Single File Transcription Settings'
-    __schema_description__: ClassVar[str] = 'Configure media scanning, storage, and workflow behavior'
+    __schema_description__: ClassVar[str] = 'Configure file scanning, storage, and workflow behavior'
     directories: List[str] = field(...)
-    scan_audio: bool = field(...)
-    scan_video: bool = field(...)
+    enabled_types: List[str] = field(...)
     recursive_scan: bool = field(...)
     items_per_page: int = field(...)
     default_view: str = field(...)
@@ -1500,10 +887,10 @@ from cjm_fasthtml_workflow_transcription_single_file.components.steps import (
 
 ``` python
 def _get_file_attr(
-    file_path: str, # Path to the file to look up
-    media_files: list, # List of MediaFile objects to search
-    attr: str, # Attribute name to retrieve from the file
-) -> str: # Attribute value or empty string if not found
+    file_path: str,  # Path to the file to look up
+    files: list,  # List of file info objects to search
+    attr: str,  # Attribute name to retrieve from the file
+) -> str:  # Attribute value or empty string if not found
     "Get an attribute from a file by path."
 ```
 
@@ -1576,10 +963,10 @@ def render_plugin_selection(
 
 ``` python
 def render_file_selection(
-    ctx: InteractionContext, # Interaction context with state and data
-    config: SingleFileWorkflowConfig, # Workflow configuration
-    file_selection_router: APIRouter, # Router for file selection pagination (or None)
-) -> FT: # File selection step UI component with paginated table
+    ctx: InteractionContext,  # Interaction context with state and data
+    config: SingleFileWorkflowConfig,  # Workflow configuration
+    file_selection_router: APIRouter,  # Router for file selection pagination (or None)
+) -> FT:  # File selection step UI component with paginated table
     "Render file selection step with paginated table view and preview capability."
 ```
 
@@ -1589,44 +976,6 @@ def render_confirmation(
     plugin_registry: PluginRegistryProtocol, # Plugin registry adapter for getting plugin info
 ) -> FT: # Confirmation step UI component showing selected plugin and file
     "Render confirmation step showing selected plugin and file."
-```
-
-### Media Utilities (`utils.ipynb`)
-
-> Formatting utilities for media files
-
-#### Import
-
-``` python
-from cjm_fasthtml_workflow_transcription_single_file.media.utils import (
-    format_file_size,
-    format_timestamp,
-    matches_patterns
-)
-```
-
-#### Functions
-
-``` python
-def format_file_size(
-    size_bytes: int  # Size in bytes
-) -> str:  # Human-readable size string (e.g., "15.2 MB")
-    "Format file size in human-readable format."
-```
-
-``` python
-def format_timestamp(
-    timestamp: float  # Unix timestamp
-) -> str:  # Human-readable date string
-    "Format timestamp to human-readable date with relative time for recent files."
-```
-
-``` python
-def matches_patterns(
-    path: str,  # File path to check
-    patterns: List[str]  # List of glob patterns to match against
-) -> bool:  # True if path matches any pattern
-    "Check if path matches any of the exclude patterns."
 ```
 
 ### Single File Transcription Workflow (`workflow.ipynb`)
@@ -1710,7 +1059,7 @@ def _on_job_completed(
 def _create_preview_route_func(
     self: SingleFileTranscriptionWorkflow,
 ):  # Function that generates preview route URLs
-    "Create a function that generates preview route URLs (with optional media_type)."
+    "Create a function that generates preview route URLs (with optional file_type)."
 ```
 
 ``` python
@@ -1750,7 +1099,7 @@ class SingleFileTranscriptionWorkflow:
     Self-contained single-file transcription workflow.
     
     Creates and manages internal UnifiedPluginRegistry, ResourceManager,
-    TranscriptionJobManager, SSEBroadcastManager, MediaLibrary, ResultStorage,
+    TranscriptionJobManager, SSEBroadcastManager, FileBrowser, ResultStorage,
     StepFlow (plugin → file → confirm wizard), and APIRouter.
     """
     
@@ -1782,16 +1131,16 @@ class SingleFileTranscriptionWorkflow:
             return self._plugin_adapter
         
         @property
-        def media_library(self) -> MediaLibrary
+        def file_browser(self) -> FileBrowser
         "Access to plugin registry adapter."
     
-    def media_library(self) -> MediaLibrary:
-            """Access to internal media library."""
-            return self._media_library
+    def file_browser(self) -> FileBrowser:
+            """Access to internal file browser."""
+            return self._file_browser
         
         @property
         def result_storage(self) -> ResultStorage
-        "Access to internal media library."
+        "Access to internal file browser."
     
     def result_storage(self) -> ResultStorage:
             """Access to internal result storage."""

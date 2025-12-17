@@ -14,7 +14,7 @@ This demo showcases the self-contained single-file transcription workflow:
    - File selection step (paginated media browser)
    - Confirmation step (review and start transcription)
 
-3. Media Library:
+3. File Browser:
    - Directory scanning for audio/video files
    - Paginated browsing with grid/list views
    - File preview modal with media player
@@ -87,7 +87,7 @@ def main():
     # - ResourceManager (GPU/CPU availability)
     # - TranscriptionJobManager (background job execution)
     # - SSEBroadcastManager (event streaming)
-    # - MediaLibrary (file discovery and browsing)
+    # - FileBrowser (file discovery and browsing)
     # - ResultStorage (transcription persistence)
     #
     # Configuration is automatically loaded from saved settings files
@@ -126,7 +126,7 @@ def main():
             # Get current plugin status
             all_plugins = single_file_workflow.plugin_registry.get_all_plugins()
             configured_plugins = single_file_workflow.plugin_registry.get_configured_plugins()
-            media_files = single_file_workflow.media_library.scan()
+            media_files = single_file_workflow.file_browser.scan()
 
             return Div(
                 H1("Single-File Transcription Workflow Demo",
@@ -296,9 +296,9 @@ def main():
     print("\n Library Components:")
     print("  - SingleFileTranscriptionWorkflow - Main workflow orchestrator")
     print("  - SingleFileWorkflowConfig - Workflow configuration")
-    print("  - MediaConfig - Media scanning settings")
+    print("  - BrowserConfig - File browser settings")
     print("  - StorageConfig - Result storage settings")
-    print("  - MediaLibrary - File discovery and browsing")
+    print("  - FileBrowser - File discovery and browsing")
     print("  - ResultStorage - Transcription persistence")
     print("  - PluginRegistryAdapter - Plugin integration")
     print("  - StepFlow integration - 3-step wizard")

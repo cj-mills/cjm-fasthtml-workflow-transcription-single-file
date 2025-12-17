@@ -10,8 +10,9 @@ from pathlib import Path
 from dataclasses import dataclass, field, fields
 from typing import Optional, List, Dict, Any
 
+from cjm_fasthtml_file_browser.core.config import BrowserConfig
+
 from .html_ids import SingleFileHtmlIds
-from ..media.config import MediaConfig
 from ..storage.config import StorageConfig
 
 # %% ../../nbs/core/config.ipynb 5
@@ -60,7 +61,7 @@ class SingleFileWorkflowConfig:
     plugin_category: str = "transcription"  # Plugin category for this workflow
 
     # Internal subsystem configurations
-    media: MediaConfig = field(default_factory=MediaConfig)  # Media scanning and display settings
+    media: BrowserConfig = field(default_factory=BrowserConfig)  # File browser settings for media files
     storage: StorageConfig = field(default_factory=StorageConfig)  # Result storage settings
 
     def get_full_stepflow_prefix(self) -> str:  # Combined route_prefix + stepflow_prefix
@@ -84,18 +85,18 @@ class SingleFileWorkflowConfig:
         saved_config = load_config("settings", effective_config_dir) or {}
         
         # Get field names for each config class
-        media_fields = {f.name for f in fields(MediaConfig)}
+        browser_fields = {f.name for f in fields(BrowserConfig)}
         storage_fields = {f.name for f in fields(StorageConfig)}
         workflow_fields = {f.name for f in fields(cls) if f.name not in ("media", "storage")}
         
         # Distribute saved config values to appropriate destinations
-        media_kwargs = {}
+        browser_kwargs = {}
         storage_kwargs = {}
         workflow_kwargs = {}
         
         for key, value in saved_config.items():
-            if key in media_fields:
-                media_kwargs[key] = value
+            if key in browser_fields:
+                browser_kwargs[key] = value
             elif key in storage_fields:
                 storage_kwargs[key] = value
             elif key in workflow_fields:
@@ -103,22 +104,22 @@ class SingleFileWorkflowConfig:
         
         # Apply overrides (take precedence over saved values)
         for key, value in overrides.items():
-            if key == "media" and isinstance(value, MediaConfig):
-                media_kwargs = {}
+            if key == "media" and isinstance(value, BrowserConfig):
+                browser_kwargs = {}
                 workflow_kwargs["media"] = value
             elif key == "storage" and isinstance(value, StorageConfig):
                 storage_kwargs = {}
                 workflow_kwargs["storage"] = value
-            elif key in media_fields:
-                media_kwargs[key] = value
+            elif key in browser_fields:
+                browser_kwargs[key] = value
             elif key in storage_fields:
                 storage_kwargs[key] = value
             elif key in workflow_fields:
                 workflow_kwargs[key] = value
         
         # Build nested configs if we have values and they weren't directly overridden
-        if media_kwargs and "media" not in workflow_kwargs:
-            workflow_kwargs["media"] = MediaConfig(**media_kwargs)
+        if browser_kwargs and "media" not in workflow_kwargs:
+            workflow_kwargs["media"] = BrowserConfig(**browser_kwargs)
         if storage_kwargs and "storage" not in workflow_kwargs:
             workflow_kwargs["storage"] = StorageConfig(**storage_kwargs)
         

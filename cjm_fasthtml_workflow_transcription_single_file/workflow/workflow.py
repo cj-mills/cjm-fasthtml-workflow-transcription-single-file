@@ -26,10 +26,13 @@ from cjm_fasthtml_plugins.core.registry import UnifiedPluginRegistry
 from cjm_transcription_plugin_system.plugin_interface import TranscriptionPlugin
 from cjm_fasthtml_settings.core.utils import get_default_values_from_schema
 
+from cjm_fasthtml_file_browser.core.file_browser import FileBrowser
+from cjm_fasthtml_file_browser.core.models import FileEntry
+from cjm_fasthtml_file_browser.core.types import FileType
+
 from ..core.config import SingleFileWorkflowConfig
 from ..core.html_ids import SingleFileHtmlIds
 from ..core.adapters import PluginRegistryAdapter, DefaultConfigPluginRegistryAdapter
-from ..media.library import MediaLibrary
 from ..storage.file_storage import ResultStorage
 from cjm_fasthtml_workflow_transcription_single_file.components.steps import (
     render_plugin_selection,
@@ -43,7 +46,7 @@ class SingleFileTranscriptionWorkflow:
     """Self-contained single-file transcription workflow.
 
     Creates and manages internal UnifiedPluginRegistry, ResourceManager,
-    TranscriptionJobManager, SSEBroadcastManager, MediaLibrary, ResultStorage,
+    TranscriptionJobManager, SSEBroadcastManager, FileBrowser, ResultStorage,
     StepFlow (plugin → file → confirm wizard), and APIRouter.
     """
 
@@ -111,8 +114,8 @@ class SingleFileTranscriptionWorkflow:
             on_job_completed_callback=self._on_job_completed
         )
 
-        # Create internal MediaLibrary
-        self._media_library = MediaLibrary(self.config.media)
+        # Create internal FileBrowser for media file discovery
+        self._file_browser = FileBrowser(self.config.media)
 
         # Create internal ResultStorage
         self._result_storage = ResultStorage(self.config.storage)
@@ -133,24 +136,26 @@ class SingleFileTranscriptionWorkflow:
         )
 
         # Create media pagination and router (for grid/list browser view)
-        self._media_library.create_pagination(
+        self._file_browser.create_pagination(
             pagination_id=f"{self.config.workflow_id}_media",
             content_id=SingleFileHtmlIds.MEDIA_BROWSER_CONTENT,
             preview_route_func=self._create_preview_route_func(),
             modal_id=SingleFileHtmlIds.MEDIA_PREVIEW_MODAL
         )
-        self._media_router = self._media_library.get_pagination_router(
+        self._media_router = self._file_browser.get_pagination_router(
             prefix=self.config.get_full_media_prefix()
         )
 
         # Create file selection pagination and router (for file selection step table)
-        self._media_library.create_file_selection_pagination(
+        # Filter to only show audio/video files for transcription
+        self._file_browser.create_file_selection_pagination(
             pagination_id=f"{self.config.workflow_id}_file_select",
             content_id=SingleFileHtmlIds.FILE_SELECTION_TABLE,
             preview_url_func=self._create_preview_url_func(),
-            preview_target_id=SingleFileHtmlIds.MEDIA_PREVIEW_WRAPPER
+            preview_target_id=SingleFileHtmlIds.MEDIA_PREVIEW_WRAPPER,
+            file_type_filter=[FileType.AUDIO, FileType.VIDEO]
         )
-        self._file_selection_router = self._media_library.get_file_selection_router(
+        self._file_selection_router = self._file_browser.get_file_selection_router(
             prefix=f"{self.config.route_prefix}/file_select"
         )
 
@@ -177,9 +182,9 @@ class SingleFileTranscriptionWorkflow:
         return self._plugin_adapter
     
     @property
-    def media_library(self) -> MediaLibrary:
-        """Access to internal media library."""
-        return self._media_library
+    def file_browser(self) -> FileBrowser:
+        """Access to internal file browser."""
+        return self._file_browser
     
     @property
     def result_storage(self) -> ResultStorage:
@@ -204,7 +209,7 @@ def setup(
 ) -> None:
     """Initialize workflow with FastHTML app. Must be called after app creation."""
     self._app = app
-    self._media_library.mount(app)
+    self._file_browser.mount(app)
 
 # %% ../../nbs/workflow/workflow.ipynb 9
 @patch
@@ -212,7 +217,7 @@ def cleanup(
     self: SingleFileTranscriptionWorkflow,
 ) -> None:
     """Clean up workflow resources. Mirrors PluginInterface.cleanup() for future plugin system compatibility."""
-    self._media_library.clear_cache()
+    self._file_browser.clear_cache()
     self._app = None
 
 # %% ../../nbs/workflow/workflow.ipynb 10
@@ -351,13 +356,13 @@ def _on_job_completed(
 def _create_preview_route_func(
     self: SingleFileTranscriptionWorkflow,
 ):  # Function that generates preview route URLs
-    """Create a function that generates preview route URLs (with optional media_type)."""
+    """Create a function that generates preview route URLs (with optional file_type)."""
     route_prefix = self.config.route_prefix
 
-    def preview_route_func(idx: int, media_type: Optional[str] = None) -> str:
+    def preview_route_func(idx: int, file_type: Optional[str] = None) -> str:
         url = f"{route_prefix}/media_preview?idx={idx}"
-        if media_type:
-            url += f"&media_type={media_type}"
+        if file_type:
+            url += f"&file_type={file_type}"
         return url
 
     return preview_route_func
@@ -390,22 +395,22 @@ def _create_step_flow(
         return {"plugins": plugins}
 
     def load_media_files(request) -> Dict[str, Any]:
-        """Load available media files from internal MediaLibrary."""
-        files = workflow._media_library.get_transcribable_files()
-        # Convert MediaFile to the format expected by the step
-        from cjm_fasthtml_workflow_transcription_single_file.media.models import MediaFile
-        media_infos = []
+        """Load available media files from internal FileBrowser."""
+        # Get only audio/video files for transcription
+        files = workflow._file_browser.get_files_by_type([FileType.AUDIO, FileType.VIDEO])
+        # Convert FileEntry to the format expected by the step
+        file_infos = []
         for f in files:
             # Create a simple object with the expected attributes
-            class MediaFileInfo:
-                def __init__(self, media_file: MediaFile):
-                    self.path = media_file.path
-                    self.name = media_file.name
-                    self.media_type = media_file.media_type
-                    self.size_str = media_file.size_str
-                    self.modified_str = media_file.modified_str
-            media_infos.append(MediaFileInfo(f))
-        return {"media_files": media_infos}
+            class FileInfo:
+                def __init__(self, file_entry: FileEntry):
+                    self.path = file_entry.path
+                    self.name = file_entry.name
+                    self.file_type = file_entry.file_type.value  # Convert enum to string
+                    self.size_str = file_entry.size_str
+                    self.modified_str = file_entry.modified_str
+            file_infos.append(FileInfo(f))
+        return {"media_files": file_infos}
 
     def load_confirmation_data(request) -> Dict[str, Any]:
         """Load data for confirmation step."""
@@ -429,7 +434,7 @@ def _create_step_flow(
         return render_file_selection(
             ctx,
             config=workflow.config,
-            file_selection_router=workflow._media_library.file_selection_router,
+            file_selection_router=workflow._file_browser.file_selection_router,
         )
 
     def render_confirm_step(ctx: InteractionContext):

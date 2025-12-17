@@ -16,8 +16,9 @@ from cjm_fasthtml_jsonschema.core.dataclass import (
     SCHEMA_MIN_LEN, SCHEMA_MAX_LEN, SCHEMA_PATTERN, SCHEMA_FORMAT,
     dataclass_to_jsonschema
 )
+from cjm_fasthtml_file_browser.core.config import BrowserConfig
+
 from ..core.config import SingleFileWorkflowConfig
-from ..media.config import MediaConfig
 from ..storage.config import StorageConfig
 
 # %% ../../nbs/settings/schemas.ipynb 5
@@ -28,9 +29,9 @@ class WorkflowSettings:
     # Class-level schema metadata (ClassVar excludes these from dataclass fields)
     __schema_name__: ClassVar[str] = "single_file_workflow"
     __schema_title__: ClassVar[str] = "Single File Transcription Settings"
-    __schema_description__: ClassVar[str] = "Configure media scanning, storage, and workflow behavior"
+    __schema_description__: ClassVar[str] = "Configure file scanning, storage, and workflow behavior"
     
-    # Media settings (field names match MediaConfig for seamless config loading)
+    # File browser settings (field names match BrowserConfig for seamless config loading)
     directories: List[str] = field(
         default_factory=list,
         metadata={
@@ -38,18 +39,11 @@ class WorkflowSettings:
             SCHEMA_DESC: "Directories to scan for media files"
         }
     )
-    scan_audio: bool = field(
-        default=True,
+    enabled_types: List[str] = field(
+        default_factory=lambda: ["audio", "video"],
         metadata={
-            SCHEMA_TITLE: "Scan Audio Files",
-            SCHEMA_DESC: "Include audio files in scan results"
-        }
-    )
-    scan_video: bool = field(
-        default=True,
-        metadata={
-            SCHEMA_TITLE: "Scan Video Files",
-            SCHEMA_DESC: "Include video files in scan results"
+            SCHEMA_TITLE: "Enabled File Types",
+            SCHEMA_DESC: "File types to include in scan (audio, video)"
         }
     )
     recursive_scan: bool = field(
@@ -111,19 +105,18 @@ WORKFLOW_SETTINGS_SCHEMA = dataclass_to_jsonschema(WorkflowSettings) # Auto-gene
 @patch(cls_method=True)
 def from_configs(
     cls: WorkflowSettings,
-    media_config: MediaConfig,      # MediaConfig instance with media scanning settings
+    browser_config: BrowserConfig,  # BrowserConfig instance with file browser settings
     storage_config: StorageConfig,  # StorageConfig instance with result storage settings
     workflow_config: Optional[SingleFileWorkflowConfig] = None  # Optional workflow config for additional settings
 ) -> "WorkflowSettings":  # WorkflowSettings instance with values from configs
     """Create WorkflowSettings from runtime config objects."""
     return cls(
-        # Media settings
-        directories=media_config.directories,
-        scan_audio=media_config.scan_audio,
-        scan_video=media_config.scan_video,
-        recursive_scan=media_config.recursive_scan,
-        items_per_page=media_config.items_per_page,
-        default_view=media_config.default_view,
+        # File browser settings
+        directories=browser_config.directories,
+        enabled_types=browser_config.enabled_types,
+        recursive_scan=browser_config.recursive_scan,
+        items_per_page=browser_config.items_per_page,
+        default_view=browser_config.default_view,
         # Storage settings
         auto_save=storage_config.auto_save,
         results_directory=storage_config.results_directory,
@@ -135,18 +128,17 @@ def from_configs(
 @patch
 def apply_to_configs(
     self: WorkflowSettings,
-    media_config: MediaConfig,      # MediaConfig instance to update
+    browser_config: BrowserConfig,  # BrowserConfig instance to update
     storage_config: StorageConfig,  # StorageConfig instance to update
     workflow_config: Optional[SingleFileWorkflowConfig] = None  # Optional workflow config to update
 ) -> None:
     """Apply settings to runtime config objects."""
-    # Media settings
-    media_config.directories = self.directories
-    media_config.scan_audio = self.scan_audio
-    media_config.scan_video = self.scan_video
-    media_config.recursive_scan = self.recursive_scan
-    media_config.items_per_page = self.items_per_page
-    media_config.default_view = self.default_view
+    # File browser settings
+    browser_config.directories = self.directories
+    browser_config.enabled_types = self.enabled_types
+    browser_config.recursive_scan = self.recursive_scan
+    browser_config.items_per_page = self.items_per_page
+    browser_config.default_view = self.default_view
     
     # Storage settings
     storage_config.auto_save = self.auto_save
@@ -164,8 +156,7 @@ def to_dict(
     """Convert settings to a dictionary for serialization."""
     return {
         "directories": self.directories,
-        "scan_audio": self.scan_audio,
-        "scan_video": self.scan_video,
+        "enabled_types": self.enabled_types,
         "recursive_scan": self.recursive_scan,
         "items_per_page": self.items_per_page,
         "default_view": self.default_view,
