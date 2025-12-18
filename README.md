@@ -55,13 +55,13 @@ graph LR
     workflow_routes[workflow.routes<br/>Workflow Routes]
     workflow_workflow[workflow.workflow<br/>Single File Transcription Workflow]
 
-    components_processor --> core_html_ids
     components_processor --> core_config
-    components_results --> core_html_ids
+    components_processor --> core_html_ids
     components_results --> core_config
-    components_steps --> core_html_ids
-    components_steps --> core_config
+    components_results --> core_html_ids
     components_steps --> core_protocols
+    components_steps --> core_config
+    components_steps --> core_html_ids
     core_adapters --> core_protocols
     core_config --> storage_config
     core_config --> core_html_ids
@@ -69,23 +69,23 @@ graph LR
     settings_schemas --> storage_config
     storage_file_storage --> storage_config
     workflow_job_handler --> core_protocols
-    workflow_job_handler --> components_results
-    workflow_job_handler --> core_config
     workflow_job_handler --> storage_file_storage
-    workflow_job_handler --> components_processor
+    workflow_job_handler --> components_results
     workflow_job_handler --> core_html_ids
+    workflow_job_handler --> core_config
+    workflow_job_handler --> components_processor
     workflow_routes --> components_results
     workflow_routes --> workflow_job_handler
-    workflow_routes --> components_processor
-    workflow_routes --> components_steps
-    workflow_routes --> workflow_workflow
     workflow_routes --> core_html_ids
+    workflow_routes --> components_steps
+    workflow_routes --> components_processor
+    workflow_routes --> workflow_workflow
     workflow_workflow --> components_steps
     workflow_workflow --> core_adapters
-    workflow_workflow --> storage_file_storage
-    workflow_workflow --> workflow_job_handler
-    workflow_workflow --> core_html_ids
     workflow_workflow --> core_config
+    workflow_workflow --> storage_file_storage
+    workflow_workflow --> core_html_ids
+    workflow_workflow --> workflow_job_handler
 ```
 
 *31 cross-module dependencies detected*
@@ -779,6 +779,122 @@ from cjm_fasthtml_workflow_transcription_single_file.workflow.routes import (
 ```
 
 #### Functions
+
+``` python
+def _handle_current_status(
+    workflow: "SingleFileTranscriptionWorkflow",  # The workflow instance
+    request,  # FastHTML request object
+    sess,  # FastHTML session object
+):  # Appropriate UI component based on current state
+    "Return current transcription status - determines what to show."
+```
+
+``` python
+async def _handle_cancel_job(
+    workflow: "SingleFileTranscriptionWorkflow",  # The workflow instance
+    request,  # FastHTML request object
+    sess,  # FastHTML session object
+    job_id: str,  # ID of the job to cancel
+):  # StepFlow start view or error component
+    "Cancel a running transcription job."
+```
+
+``` python
+def _handle_reset(
+    workflow: "SingleFileTranscriptionWorkflow",  # The workflow instance
+    request,  # FastHTML request object
+    sess,  # FastHTML session object
+):  # StepFlow start view
+    "Reset transcription workflow and return to start."
+```
+
+``` python
+def _handle_stream_job(
+    workflow: "SingleFileTranscriptionWorkflow",  # The workflow instance
+    request,  # FastHTML request object
+    sess,  # FastHTML session object
+    job_id: str,  # ID of the job to monitor
+):  # EventStream for SSE updates
+    "SSE endpoint for monitoring job completion."
+```
+
+``` python
+def _handle_export(
+    workflow: "SingleFileTranscriptionWorkflow",  # The workflow instance
+    request,  # FastHTML request object
+    job_id: str,  # ID of the job to export
+    format: str = "txt",  # Export format (txt, srt, vtt)
+):  # Response with file download
+    "Export transcription in specified format."
+```
+
+``` python
+def _handle_plugin_details(
+    workflow: "SingleFileTranscriptionWorkflow",  # The workflow instance
+    request,  # FastHTML request object
+    plugin_id: str,  # ID of the plugin to show details for
+    save_url: str,  # URL for saving plugin configuration
+    reset_url: str,  # URL for resetting plugin configuration
+):  # Plugin details component or empty Div
+    "Get plugin details for display in workflow."
+```
+
+``` python
+async def _handle_save_plugin_config(
+    workflow: "SingleFileTranscriptionWorkflow",  # The workflow instance
+    request,  # FastHTML request object
+    plugin_id: str,  # ID of the plugin to save config for
+    save_url: str,  # URL for saving plugin configuration
+    reset_url: str,  # URL for resetting plugin configuration
+):  # Updated config form or error alert
+    "Save plugin configuration from the collapse form."
+```
+
+``` python
+def _handle_reset_plugin_config(
+    workflow: "SingleFileTranscriptionWorkflow",  # The workflow instance
+    request,  # FastHTML request object
+    plugin_id: str,  # ID of the plugin to reset config for
+    save_url: str,  # URL for saving plugin configuration
+    reset_url: str,  # URL for resetting plugin configuration
+):  # Updated config form with defaults or empty Div
+    "Reset plugin configuration to defaults."
+```
+
+``` python
+def _handle_media_preview(
+    workflow: "SingleFileTranscriptionWorkflow",  # The workflow instance
+    request,  # FastHTML request object
+    idx: int = 0,  # Index of the file to preview
+    file_type: str = None,  # Optional filter by file type
+):  # File preview modal or error Div
+    "Render file preview modal for a specific file."
+```
+
+``` python
+def _handle_refresh_media(
+    workflow: "SingleFileTranscriptionWorkflow",  # The workflow instance
+    request,  # FastHTML request object
+):  # JSON status response
+    "Refresh file browser cache."
+```
+
+``` python
+def _handle_settings_modal(
+    workflow: "SingleFileTranscriptionWorkflow",  # The workflow instance
+    request,  # FastHTML request object
+    save_url: str,  # URL for saving settings
+):  # Settings modal component
+    "Render the settings modal for the workflow."
+```
+
+``` python
+async def _handle_settings_save(
+    workflow: "SingleFileTranscriptionWorkflow",  # The workflow instance
+    request,  # FastHTML request object
+):  # Success alert with modal close script or error alert
+    "Save workflow settings."
+```
 
 ``` python
 def init_router(

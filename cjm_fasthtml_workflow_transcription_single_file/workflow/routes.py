@@ -25,7 +25,371 @@ from cjm_fasthtml_workflow_transcription_single_file.workflow.job_handler import
 
 from .workflow import SingleFileTranscriptionWorkflow
 
+# %% ../../nbs/workflow/routes.ipynb 4
+def _handle_current_status(
+    workflow: "SingleFileTranscriptionWorkflow",  # The workflow instance
+    request,  # FastHTML request object
+    sess,  # FastHTML session object
+):  # Appropriate UI component based on current state
+    """Return current transcription status - determines what to show."""
+    manager = workflow._transcription_manager
+    all_jobs = manager.get_all_jobs()
+
+    # Priority 1: Check for running jobs
+    if all_jobs:
+        sorted_jobs = sorted(all_jobs, key=lambda j: j.created_at, reverse=True)
+        recent_job = sorted_jobs[0]
+
+        if recent_job.status == 'running':
+            file_info, plugin_info = get_job_session_info(
+                recent_job.id, recent_job, workflow._plugin_adapter
+            )
+            return transcription_in_progress(
+                job_id=recent_job.id,
+                plugin_info=plugin_info,
+                file_info=file_info,
+                config=workflow.config,
+                router=workflow._router,
+            )
+
+    # Priority 2: Check for in-progress workflow (via server-side state store)
+    workflow_state = workflow._state_store.get_state(workflow.config.workflow_id, sess)
+    has_workflow_state = bool(
+        workflow_state.get("plugin_id") or workflow_state.get("file_path")
+    )
+
+    if has_workflow_state:
+        # Resume in-progress workflow
+        return workflow._stepflow_router.start(request, sess)
+
+    # Priority 3: Show completed job results
+    if all_jobs:
+        recent_job = sorted(all_jobs, key=lambda j: j.created_at, reverse=True)[0]
+
+        if recent_job.status == 'completed':
+            result = manager.get_job_result(recent_job.id)
+            if result and result.get('status') == 'success':
+                data = result.get('data', {})
+                file_info, plugin_info = get_job_session_info(
+                    recent_job.id, recent_job, workflow._plugin_adapter
+                )
+
+                return transcription_results(
+                    job_id=recent_job.id,
+                    transcription_text=data.get('text', ''),
+                    metadata=data.get('metadata', {}),
+                    file_info=file_info,
+                    plugin_info=plugin_info,
+                    config=workflow.config,
+                    router=workflow._router,
+                    stepflow_router=workflow._stepflow_router,
+                )
+
+    # Priority 4: Start fresh
+    return workflow._stepflow_router.start(request, sess)
+
 # %% ../../nbs/workflow/routes.ipynb 5
+async def _handle_cancel_job(
+    workflow: "SingleFileTranscriptionWorkflow",  # The workflow instance
+    request,  # FastHTML request object
+    sess,  # FastHTML session object
+    job_id: str,  # ID of the job to cancel
+):  # StepFlow start view or error component
+    """Cancel a running transcription job."""
+    manager = workflow._transcription_manager
+    success = await manager.cancel_job(job_id)
+
+    if success:
+        # Reset workflow state and return to plugin selection
+        workflow._state_store.clear_state(workflow.config.workflow_id, sess)
+        return workflow._stepflow_router.start(request, sess)
+    else:
+        return transcription_error(
+            f"Failed to cancel job {job_id}",
+            None,
+            config=workflow.config,
+            stepflow_router=workflow._stepflow_router,
+        )
+
+# %% ../../nbs/workflow/routes.ipynb 6
+def _handle_reset(
+    workflow: "SingleFileTranscriptionWorkflow",  # The workflow instance
+    request,  # FastHTML request object
+    sess,  # FastHTML session object
+):  # StepFlow start view
+    """Reset transcription workflow and return to start."""
+    workflow._state_store.clear_state(workflow.config.workflow_id, sess)
+    return workflow._stepflow_router.start(request, sess)
+
+# %% ../../nbs/workflow/routes.ipynb 7
+def _handle_stream_job(
+    workflow: "SingleFileTranscriptionWorkflow",  # The workflow instance
+    request,  # FastHTML request object
+    sess,  # FastHTML session object
+    job_id: str,  # ID of the job to monitor
+):  # EventStream for SSE updates
+    """SSE endpoint for monitoring job completion."""
+    stream_generator = create_job_stream_handler(
+        job_id,
+        request,
+        config=workflow.config,
+        router=workflow._router,
+        stepflow_router=workflow._stepflow_router,
+        transcription_manager=workflow._transcription_manager,
+        plugin_registry=workflow._plugin_adapter,
+        result_storage=workflow._result_storage,
+    )
+    return EventStream(stream_generator())
+
+# %% ../../nbs/workflow/routes.ipynb 8
+def _handle_export(
+    workflow: "SingleFileTranscriptionWorkflow",  # The workflow instance
+    request,  # FastHTML request object
+    job_id: str,  # ID of the job to export
+    format: str = "txt",  # Export format (txt, srt, vtt)
+):  # Response with file download
+    """Export transcription in specified format."""
+    manager = workflow._transcription_manager
+    job = manager.get_job(job_id)
+    result = manager.get_job_result(job_id)
+
+    if not job or not result:
+        return Response("Job not found", status_code=404)
+
+    transcription_text = result.get("data", {}).get("text", "")
+    file_name = getattr(job, "file_name", "transcription")
+
+    # Format the transcription
+    content = _export_transcription(transcription_text, format, file_name)
+
+    # Create filename
+    base_name = Path(file_name).stem
+    filename = f"{base_name}_transcription.{format}"
+
+    return Response(
+        content=content,
+        media_type="application/octet-stream",
+        headers={
+            "Content-Disposition": f"attachment; filename={filename}"
+        }
+    )
+
+# %% ../../nbs/workflow/routes.ipynb 9
+def _handle_plugin_details(
+    workflow: "SingleFileTranscriptionWorkflow",  # The workflow instance
+    request,  # FastHTML request object
+    plugin_id: str,  # ID of the plugin to show details for
+    save_url: str,  # URL for saving plugin configuration
+    reset_url: str,  # URL for resetting plugin configuration
+):  # Plugin details component or empty Div
+    """Get plugin details for display in workflow."""
+    if plugin_id and plugin_id.strip():
+        return render_plugin_details_route(
+            plugin_id,
+            workflow._plugin_adapter,
+            workflow._plugin_registry,
+            save_url,
+            reset_url
+        )
+    else:
+        return Div()
+
+# %% ../../nbs/workflow/routes.ipynb 10
+async def _handle_save_plugin_config(
+    workflow: "SingleFileTranscriptionWorkflow",  # The workflow instance
+    request,  # FastHTML request object
+    plugin_id: str,  # ID of the plugin to save config for
+    save_url: str,  # URL for saving plugin configuration
+    reset_url: str,  # URL for resetting plugin configuration
+):  # Updated config form or error alert
+    """Save plugin configuration from the collapse form."""
+    from cjm_fasthtml_app_core.components.alerts import create_success_alert, create_error_alert
+    from cjm_fasthtml_settings.core.utils import convert_form_data_to_config
+    from cjm_fasthtml_workflow_transcription_single_file.components.steps import render_plugin_config_form
+
+    if not plugin_id:
+        return create_error_alert("No plugin selected")
+
+    try:
+        # Get plugin metadata to access schema
+        plugin_meta = workflow._plugin_registry.get_plugin(plugin_id)
+        if not plugin_meta or not plugin_meta.config_schema:
+            return create_error_alert("Plugin schema not found")
+
+        form_data = await request.form()
+        config = convert_form_data_to_config(form_data, plugin_meta.config_schema)
+
+        # Save configuration via the registry
+        if workflow._plugin_registry.save_plugin_config(plugin_id, config):
+            return render_plugin_config_form(
+                plugin_id=plugin_id,
+                plugin_registry=workflow._plugin_registry,
+                save_url=save_url,
+                reset_url=reset_url,
+                alert_message=create_success_alert("Plugin configuration saved!")
+            )
+        else:
+            return create_error_alert("Failed to save plugin configuration")
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return create_error_alert(f"Error saving configuration: {str(e)}")
+
+# %% ../../nbs/workflow/routes.ipynb 11
+def _handle_reset_plugin_config(
+    workflow: "SingleFileTranscriptionWorkflow",  # The workflow instance
+    request,  # FastHTML request object
+    plugin_id: str,  # ID of the plugin to reset config for
+    save_url: str,  # URL for saving plugin configuration
+    reset_url: str,  # URL for resetting plugin configuration
+):  # Updated config form with defaults or empty Div
+    """Reset plugin configuration to defaults."""
+    from cjm_fasthtml_app_core.components.alerts import create_success_alert
+    from cjm_fasthtml_settings.core.utils import get_default_values_from_schema
+    from cjm_fasthtml_workflow_transcription_single_file.components.steps import render_plugin_config_form
+
+    if not plugin_id:
+        return Div()
+
+    # Get plugin metadata to access schema
+    plugin_meta = workflow._plugin_registry.get_plugin(plugin_id)
+    if not plugin_meta or not plugin_meta.config_schema:
+        return Div()
+
+    # Get default values and save them
+    default_values = get_default_values_from_schema(plugin_meta.config_schema)
+    workflow._plugin_registry.save_plugin_config(plugin_id, default_values)
+
+    return render_plugin_config_form(
+        plugin_id=plugin_id,
+        plugin_registry=workflow._plugin_registry,
+        save_url=save_url,
+        reset_url=reset_url,
+        alert_message=create_success_alert("Configuration reset to defaults")
+    )
+
+# %% ../../nbs/workflow/routes.ipynb 12
+def _handle_media_preview(
+    workflow: "SingleFileTranscriptionWorkflow",  # The workflow instance
+    request,  # FastHTML request object
+    idx: int = 0,  # Index of the file to preview
+    file_type: str = None,  # Optional filter by file type
+):  # File preview modal or error Div
+    """Render file preview modal for a specific file."""
+    # Get files (with optional filter)
+    files = workflow._file_browser.scan()
+    if file_type and file_type != "all":
+        try:
+            target_type = FileType(file_type)
+            files = [f for f in files if f.file_type == target_type]
+        except ValueError:
+            pass  # Invalid file_type, use unfiltered list
+
+    if idx < 0 or idx >= len(files):
+        return Div("File not found")
+
+    file_entry = files[idx]
+    file_url = workflow._file_browser.get_url(file_entry.path)
+
+    return file_preview_modal(
+        file=file_entry,
+        file_url=file_url,
+        modal_id=SingleFileHtmlIds.MEDIA_PREVIEW_MODAL
+    )
+
+# %% ../../nbs/workflow/routes.ipynb 13
+def _handle_refresh_media(
+    workflow: "SingleFileTranscriptionWorkflow",  # The workflow instance
+    request,  # FastHTML request object
+):  # JSON status response
+    """Refresh file browser cache."""
+    workflow._file_browser.clear_cache()
+    return {"status": "success", "message": "Cache cleared"}
+
+# %% ../../nbs/workflow/routes.ipynb 14
+def _handle_settings_modal(
+    workflow: "SingleFileTranscriptionWorkflow",  # The workflow instance
+    request,  # FastHTML request object
+    save_url: str,  # URL for saving settings
+):  # Settings modal component
+    """Render the settings modal for the workflow."""
+    from cjm_fasthtml_workflow_transcription_single_file.settings.components import settings_modal as create_settings_modal
+    from cjm_fasthtml_workflow_transcription_single_file.settings.schemas import WORKFLOW_SETTINGS_SCHEMA, WorkflowSettings
+
+    # Get current settings from workflow config
+    settings = WorkflowSettings.from_configs(
+        workflow.config.media,
+        workflow.config.storage,
+        workflow.config
+    )
+
+    return create_settings_modal(
+        modal_id=SingleFileHtmlIds.SETTINGS_MODAL,
+        schema=WORKFLOW_SETTINGS_SCHEMA,
+        current_values=settings.to_dict(),
+        save_url=save_url,
+        target_id=SingleFileHtmlIds.SETTINGS_CONTAINER
+    )
+
+# %% ../../nbs/workflow/routes.ipynb 15
+async def _handle_settings_save(
+    workflow: "SingleFileTranscriptionWorkflow",  # The workflow instance
+    request,  # FastHTML request object
+):  # Success alert with modal close script or error alert
+    """Save workflow settings."""
+    from cjm_fasthtml_app_core.components.alerts import create_success_alert, create_error_alert
+    from cjm_fasthtml_interactions.core.html_ids import InteractionHtmlIds
+    from cjm_fasthtml_settings.core.utils import save_config, convert_form_data_to_config
+    from cjm_fasthtml_workflow_transcription_single_file.settings.schemas import WORKFLOW_SETTINGS_SCHEMA, WorkflowSettings
+
+    try:
+        form_data = await request.form()
+
+        # Convert form data to config dict using schema
+        config_dict = convert_form_data_to_config(form_data, WORKFLOW_SETTINGS_SCHEMA)
+
+        # Create WorkflowSettings from form data
+        settings = WorkflowSettings(**config_dict)
+
+        # Apply settings to runtime config objects
+        settings.apply_to_configs(
+            workflow.config.media,
+            workflow.config.storage,
+            workflow.config
+        )
+
+        # Update ResourceManager threshold separately (not part of config objects)
+        workflow._resource_manager.gpu_memory_threshold_percent = settings.gpu_memory_threshold_percent
+
+        # Save to workflow-internal config directory for persistence across restarts
+        save_config("settings", settings.to_dict(), workflow.config.config_dir)
+
+        # Re-mount directories
+        if workflow._app:
+            workflow._file_browser.mount(workflow._app)
+
+        # Clear cache to pick up new directories
+        workflow._file_browser.clear_cache()
+
+        # Get the correct modal ID using the helper
+        modal_dialog_id = InteractionHtmlIds.modal_dialog(SingleFileHtmlIds.SETTINGS_MODAL)
+
+        return Div(
+            create_success_alert("Settings saved successfully"),
+            Script(f"document.getElementById('{modal_dialog_id}').close()"),
+            id=SingleFileHtmlIds.SETTINGS_CONTAINER
+        )
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return Div(
+            create_error_alert(f"Failed to save settings: {str(e)}"),
+            id=SingleFileHtmlIds.SETTINGS_CONTAINER
+        )
+
+# %% ../../nbs/workflow/routes.ipynb 16
 def init_router(
     workflow: SingleFileTranscriptionWorkflow,  # The workflow instance providing access to config and dependencies
 ) -> APIRouter:  # Configured APIRouter with all workflow routes
@@ -33,353 +397,65 @@ def init_router(
     router = APIRouter(prefix=workflow.config.route_prefix)
 
     @router
-    def current_status(
-        request,  # FastHTML request object
-        sess,  # FastHTML session object
-    ):  # Appropriate UI component based on current state
-        """Return current transcription status - determines what to show."""
-        manager = workflow._transcription_manager
-        all_jobs = manager.get_all_jobs()
-
-        # Priority 1: Check for running jobs
-        if all_jobs:
-            sorted_jobs = sorted(all_jobs, key=lambda j: j.created_at, reverse=True)
-            recent_job = sorted_jobs[0]
-
-            if recent_job.status == 'running':
-                file_info, plugin_info = get_job_session_info(
-                    recent_job.id, recent_job, workflow._plugin_adapter
-                )
-                return transcription_in_progress(
-                    job_id=recent_job.id,
-                    plugin_info=plugin_info,
-                    file_info=file_info,
-                    config=workflow.config,
-                    router=workflow._router,
-                )
-
-        # Priority 2: Check for in-progress workflow (via server-side state store)
-        workflow_state = workflow._state_store.get_state(workflow.config.workflow_id, sess)
-        has_workflow_state = bool(
-            workflow_state.get("plugin_id") or workflow_state.get("file_path")
-        )
-
-        if has_workflow_state:
-            # Resume in-progress workflow
-            return workflow._stepflow_router.start(request, sess)
-
-        # Priority 3: Show completed job results
-        if all_jobs:
-            recent_job = sorted(all_jobs, key=lambda j: j.created_at, reverse=True)[0]
-
-            if recent_job.status == 'completed':
-                result = manager.get_job_result(recent_job.id)
-                if result and result.get('status') == 'success':
-                    data = result.get('data', {})
-                    file_info, plugin_info = get_job_session_info(
-                        recent_job.id, recent_job, workflow._plugin_adapter
-                    )
-
-                    return transcription_results(
-                        job_id=recent_job.id,
-                        transcription_text=data.get('text', ''),
-                        metadata=data.get('metadata', {}),
-                        file_info=file_info,
-                        plugin_info=plugin_info,
-                        config=workflow.config,
-                        router=workflow._router,
-                        stepflow_router=workflow._stepflow_router,
-                    )
-
-        # Priority 4: Start fresh
-        return workflow._stepflow_router.start(request, sess)
+    def current_status(request, sess):
+        return _handle_current_status(workflow, request, sess)
 
     @router
-    async def cancel_job(
-        request,  # FastHTML request object
-        sess,  # FastHTML session object
-        job_id: str,  # ID of the job to cancel
-    ):  # StepFlow start view or error component
-        """Cancel a running transcription job."""
-        manager = workflow._transcription_manager
-        success = await manager.cancel_job(job_id)
-
-        if success:
-            # Reset workflow state and return to plugin selection
-            workflow._state_store.clear_state(workflow.config.workflow_id, sess)
-            return workflow._stepflow_router.start(request, sess)
-        else:
-            return transcription_error(
-                f"Failed to cancel job {job_id}",
-                None,
-                config=workflow.config,
-                stepflow_router=workflow._stepflow_router,
-            )
+    async def cancel_job(request, sess, job_id: str):
+        return await _handle_cancel_job(workflow, request, sess, job_id)
 
     @router
-    def reset(
-        request,  # FastHTML request object
-        sess,  # FastHTML session object
-    ):  # StepFlow start view
-        """Reset transcription workflow and return to start."""
-        workflow._state_store.clear_state(workflow.config.workflow_id, sess)
-        return workflow._stepflow_router.start(request, sess)
+    def reset(request, sess):
+        return _handle_reset(workflow, request, sess)
 
     @router
-    def stream_job(
-        request,  # FastHTML request object
-        sess,  # FastHTML session object
-        job_id: str,  # ID of the job to monitor
-    ):  # EventStream for SSE updates
-        """SSE endpoint for monitoring job completion."""
-        stream_generator = create_job_stream_handler(
-            job_id,
-            request,
-            config=workflow.config,
-            router=workflow._router,
-            stepflow_router=workflow._stepflow_router,
-            transcription_manager=workflow._transcription_manager,
-            plugin_registry=workflow._plugin_adapter,
-            result_storage=workflow._result_storage,
-        )
-        return EventStream(stream_generator())
+    def stream_job(request, sess, job_id: str):
+        return _handle_stream_job(workflow, request, sess, job_id)
 
     @router
-    def export(
-        request,  # FastHTML request object
-        job_id: str,  # ID of the job to export
-        format: str = "txt",  # Export format (txt, srt, vtt)
-    ):  # Response with file download
-        """Export transcription in specified format."""
-        manager = workflow._transcription_manager
-        job = manager.get_job(job_id)
-        result = manager.get_job_result(job_id)
+    def export(request, job_id: str, format: str = "txt"):
+        return _handle_export(workflow, request, job_id, format)
 
-        if not job or not result:
-            return Response("Job not found", status_code=404)
-
-        transcription_text = result.get("data", {}).get("text", "")
-        file_name = getattr(job, "file_name", "transcription")
-
-        # Format the transcription
-        content = _export_transcription(transcription_text, format, file_name)
-
-        # Create filename
-        base_name = Path(file_name).stem
-        filename = f"{base_name}_transcription.{format}"
-
-        return Response(
-            content=content,
-            media_type="application/octet-stream",
-            headers={
-                "Content-Disposition": f"attachment; filename={filename}"
-            }
+    @router
+    def plugin_details(request, plugin_id: str = ""):
+        return _handle_plugin_details(
+            workflow, request, plugin_id,
+            save_plugin_config.to(), reset_plugin_config.to()
         )
 
     @router
-    def plugin_details(
-        request,  # FastHTML request object
-        plugin_id: str = "",  # ID of the plugin to show details for
-    ):  # Plugin details component or empty Div
-        """Get plugin details for display in workflow."""
-        if plugin_id and plugin_id.strip():
-            return render_plugin_details_route(
-                plugin_id,
-                workflow._plugin_adapter,
-                workflow._plugin_registry,
-                save_plugin_config.to(),
-                reset_plugin_config.to()
-            )
-        else:
-            return Div()
-
-    @router
-    async def save_plugin_config(
-        request,  # FastHTML request object
-        plugin_id: str = "",  # ID of the plugin to save config for
-    ):  # Updated config form or error alert
-        """Save plugin configuration from the collapse form."""
-        from cjm_fasthtml_app_core.components.alerts import create_success_alert, create_error_alert
-        from cjm_fasthtml_settings.core.utils import convert_form_data_to_config
-        from cjm_fasthtml_workflow_transcription_single_file.components.steps import render_plugin_config_form
-
-        if not plugin_id:
-            return create_error_alert("No plugin selected")
-
-        try:
-            # Get plugin metadata to access schema
-            plugin_meta = workflow._plugin_registry.get_plugin(plugin_id)
-            if not plugin_meta or not plugin_meta.config_schema:
-                return create_error_alert("Plugin schema not found")
-
-            form_data = await request.form()
-            config = convert_form_data_to_config(form_data, plugin_meta.config_schema)
-
-            # Save configuration via the registry
-            if workflow._plugin_registry.save_plugin_config(plugin_id, config):
-                return render_plugin_config_form(
-                    plugin_id=plugin_id,
-                    plugin_registry=workflow._plugin_registry,
-                    save_url=save_plugin_config.to(),
-                    reset_url=reset_plugin_config.to(),
-                    alert_message=create_success_alert("Plugin configuration saved!")
-                )
-            else:
-                return create_error_alert("Failed to save plugin configuration")
-
-        except Exception as e:
-            import traceback
-            traceback.print_exc()
-            return create_error_alert(f"Error saving configuration: {str(e)}")
-
-    @router
-    def reset_plugin_config(
-        request,  # FastHTML request object
-        plugin_id: str = "",  # ID of the plugin to reset config for
-    ):  # Updated config form with defaults or empty Div
-        """Reset plugin configuration to defaults."""
-        from cjm_fasthtml_app_core.components.alerts import create_success_alert
-        from cjm_fasthtml_settings.core.utils import get_default_values_from_schema
-        from cjm_fasthtml_workflow_transcription_single_file.components.steps import render_plugin_config_form
-
-        if not plugin_id:
-            return Div()
-
-        # Get plugin metadata to access schema
-        plugin_meta = workflow._plugin_registry.get_plugin(plugin_id)
-        if not plugin_meta or not plugin_meta.config_schema:
-            return Div()
-
-        # Get default values and save them
-        default_values = get_default_values_from_schema(plugin_meta.config_schema)
-        workflow._plugin_registry.save_plugin_config(plugin_id, default_values)
-
-        return render_plugin_config_form(
-            plugin_id=plugin_id,
-            plugin_registry=workflow._plugin_registry,
-            save_url=save_plugin_config.to(),
-            reset_url=reset_plugin_config.to(),
-            alert_message=create_success_alert("Configuration reset to defaults")
+    async def save_plugin_config(request, plugin_id: str = ""):
+        return await _handle_save_plugin_config(
+            workflow, request, plugin_id,
+            save_plugin_config.to(), reset_plugin_config.to()
         )
 
     @router
-    def media_preview(
-        request,  # FastHTML request object
-        idx: int = 0,  # Index of the file to preview
-        file_type: str = None,  # Optional filter by file type
-    ):  # File preview modal or error Div
-        """Render file preview modal for a specific file."""
-        # Get files (with optional filter)
-        files = workflow._file_browser.scan()
-        if file_type and file_type != "all":
-            try:
-                target_type = FileType(file_type)
-                files = [f for f in files if f.file_type == target_type]
-            except ValueError:
-                pass  # Invalid file_type, use unfiltered list
-
-        if idx < 0 or idx >= len(files):
-            return Div("File not found")
-
-        file_entry = files[idx]
-        file_url = workflow._file_browser.get_url(file_entry.path)
-
-        return file_preview_modal(
-            file=file_entry,
-            file_url=file_url,
-            modal_id=SingleFileHtmlIds.MEDIA_PREVIEW_MODAL
+    def reset_plugin_config(request, plugin_id: str = ""):
+        return _handle_reset_plugin_config(
+            workflow, request, plugin_id,
+            save_plugin_config.to(), reset_plugin_config.to()
         )
 
     @router
-    def refresh_media(
-        request,  # FastHTML request object
-    ):  # JSON status response
-        """Refresh file browser cache."""
-        workflow._file_browser.clear_cache()
-        return {"status": "success", "message": "Cache cleared"}
+    def media_preview(request, idx: int = 0, file_type: str = None):
+        return _handle_media_preview(workflow, request, idx, file_type)
 
     @router
-    def settings_modal(
-        request,  # FastHTML request object
-    ):  # Settings modal component
-        """Render the settings modal for the workflow."""
-        from cjm_fasthtml_workflow_transcription_single_file.settings.components import settings_modal as create_settings_modal
-        from cjm_fasthtml_workflow_transcription_single_file.settings.schemas import WORKFLOW_SETTINGS_SCHEMA, WorkflowSettings
-
-        # Get current settings from workflow config
-        settings = WorkflowSettings.from_configs(
-            workflow.config.media,
-            workflow.config.storage,
-            workflow.config
-        )
-
-        return create_settings_modal(
-            modal_id=SingleFileHtmlIds.SETTINGS_MODAL,
-            schema=WORKFLOW_SETTINGS_SCHEMA,
-            current_values=settings.to_dict(),
-            save_url=settings_save.to(),
-            target_id=SingleFileHtmlIds.SETTINGS_CONTAINER
-        )
+    def refresh_media(request):
+        return _handle_refresh_media(workflow, request)
 
     @router
-    async def settings_save(
-        request,  # FastHTML request object
-    ):  # Success alert with modal close script or error alert
-        """Save workflow settings."""
-        from cjm_fasthtml_app_core.components.alerts import create_success_alert, create_error_alert
-        from cjm_fasthtml_interactions.core.html_ids import InteractionHtmlIds
-        from cjm_fasthtml_settings.core.utils import save_config, convert_form_data_to_config
-        from cjm_fasthtml_workflow_transcription_single_file.settings.schemas import WORKFLOW_SETTINGS_SCHEMA, WorkflowSettings
+    def settings_modal(request):
+        return _handle_settings_modal(workflow, request, settings_save.to())
 
-        try:
-            form_data = await request.form()
-
-            # Convert form data to config dict using schema
-            config_dict = convert_form_data_to_config(form_data, WORKFLOW_SETTINGS_SCHEMA)
-
-            # Create WorkflowSettings from form data
-            settings = WorkflowSettings(**config_dict)
-
-            # Apply settings to runtime config objects
-            settings.apply_to_configs(
-                workflow.config.media,
-                workflow.config.storage,
-                workflow.config
-            )
-
-            # Update ResourceManager threshold separately (not part of config objects)
-            workflow._resource_manager.gpu_memory_threshold_percent = settings.gpu_memory_threshold_percent
-
-            # Save to workflow-internal config directory for persistence across restarts
-            save_config("settings", settings.to_dict(), workflow.config.config_dir)
-
-            # Re-mount directories
-            if workflow._app:
-                workflow._file_browser.mount(workflow._app)
-
-            # Clear cache to pick up new directories
-            workflow._file_browser.clear_cache()
-
-            # Get the correct modal ID using the helper
-            modal_dialog_id = InteractionHtmlIds.modal_dialog(SingleFileHtmlIds.SETTINGS_MODAL)
-
-            return Div(
-                create_success_alert("Settings saved successfully"),
-                Script(f"document.getElementById('{modal_dialog_id}').close()"),
-                id=SingleFileHtmlIds.SETTINGS_CONTAINER
-            )
-
-        except Exception as e:
-            import traceback
-            traceback.print_exc()
-            return Div(
-                create_error_alert(f"Failed to save settings: {str(e)}"),
-                id=SingleFileHtmlIds.SETTINGS_CONTAINER
-            )
+    @router
+    async def settings_save(request):
+        return await _handle_settings_save(workflow, request)
 
     return router
 
-# %% ../../nbs/workflow/routes.ipynb 6
+# %% ../../nbs/workflow/routes.ipynb 17
 def _export_transcription(
     text: str,  # Transcription text
     format: str,  # Export format (txt, srt, vtt)
