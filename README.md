@@ -55,37 +55,37 @@ graph LR
     workflow_routes[workflow.routes<br/>Workflow Routes]
     workflow_workflow[workflow.workflow<br/>Single File Transcription Workflow]
 
-    components_processor --> core_config
     components_processor --> core_html_ids
-    components_results --> core_config
+    components_processor --> core_config
     components_results --> core_html_ids
+    components_results --> core_config
+    components_steps --> core_html_ids
     components_steps --> core_protocols
     components_steps --> core_config
-    components_steps --> core_html_ids
     core_adapters --> core_protocols
-    core_config --> storage_config
     core_config --> core_html_ids
-    settings_schemas --> core_config
+    core_config --> storage_config
     settings_schemas --> storage_config
+    settings_schemas --> core_config
     storage_file_storage --> storage_config
-    workflow_job_handler --> core_protocols
-    workflow_job_handler --> storage_file_storage
-    workflow_job_handler --> components_results
     workflow_job_handler --> core_html_ids
-    workflow_job_handler --> core_config
+    workflow_job_handler --> components_results
+    workflow_job_handler --> core_protocols
+    workflow_job_handler --> workflow_workflow
     workflow_job_handler --> components_processor
-    workflow_routes --> components_results
-    workflow_routes --> workflow_job_handler
+    workflow_job_handler --> core_config
+    workflow_job_handler --> storage_file_storage
     workflow_routes --> core_html_ids
-    workflow_routes --> components_steps
-    workflow_routes --> components_processor
+    workflow_routes --> components_results
     workflow_routes --> workflow_workflow
-    workflow_workflow --> components_steps
-    workflow_workflow --> core_adapters
-    workflow_workflow --> core_config
-    workflow_workflow --> storage_file_storage
+    workflow_routes --> components_processor
+    workflow_routes --> workflow_job_handler
+    workflow_routes --> components_steps
     workflow_workflow --> core_html_ids
-    workflow_workflow --> workflow_job_handler
+    workflow_workflow --> core_adapters
+    workflow_workflow --> components_steps
+    workflow_workflow --> storage_file_storage
+    workflow_workflow --> core_config
 ```
 
 *31 cross-module dependencies detected*
@@ -547,29 +547,16 @@ def _create_sse_swap_message(
 async def start_transcription_job(
     state: Dict[str, Any],  # Workflow state containing plugin_id, file_path, file_name, etc.
     request,  # FastHTML request object
-    config: SingleFileWorkflowConfig,  # Workflow configuration
-    router,  # Workflow router for generating route URLs
-    transcription_manager,  # Manager for starting transcription jobs
-    plugin_registry: PluginRegistryProtocol,  # Plugin registry for getting plugin info
+    workflow: SingleFileTranscriptionWorkflow,  # Workflow instance providing config and dependencies
 ):  # transcription_in_progress component showing job status
-    """
-    Handle workflow completion by starting the transcription job.
-    
-    Called by StepFlow's `on_complete` handler when the user confirms
-    and clicks "Start Transcription".
-    """
+    "Start a transcription job and return the in-progress UI component."
 ```
 
 ``` python
 def create_job_stream_handler(
     job_id: str,  # Unique job identifier
     request,  # FastHTML request object
-    config: SingleFileWorkflowConfig,  # Workflow configuration
-    router,  # Workflow router for generating route URLs
-    stepflow_router: APIRouter,  # StepFlow router for generating stepflow URLs
-    transcription_manager,  # Manager for getting job status
-    plugin_registry: PluginRegistryProtocol,  # Plugin registry for getting plugin info
-    result_storage: ResultStorage,  # Storage for saving transcription results
+    workflow: SingleFileTranscriptionWorkflow,  # Workflow instance providing config and dependencies
 ):  # Async generator for SSE streaming
     "Create an SSE stream generator for monitoring job completion."
 ```

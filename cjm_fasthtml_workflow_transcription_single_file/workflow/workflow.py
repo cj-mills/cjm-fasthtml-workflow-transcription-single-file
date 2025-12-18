@@ -39,7 +39,6 @@ from cjm_fasthtml_workflow_transcription_single_file.components.steps import (
     render_file_selection,
     render_confirmation,
 )
-from .job_handler import start_transcription_job
 
 # %% ../../nbs/workflow/workflow.ipynb 5
 class SingleFileTranscriptionWorkflow:
@@ -456,14 +455,8 @@ def _create_step_flow(
 
     async def on_complete(state: Dict[str, Any], request):
         """Handle workflow completion."""
-        result = await start_transcription_job(
-            state,
-            request,
-            config=workflow.config,
-            router=workflow._router,
-            transcription_manager=workflow._transcription_manager,
-            plugin_registry=workflow._plugin_adapter,
-        )
+        from cjm_fasthtml_workflow_transcription_single_file.workflow.job_handler import start_transcription_job
+        result = await start_transcription_job(state, request, workflow)
         # Clear workflow state since we've successfully started the transcription
         # This ensures "New Transcription" button starts fresh instead of resuming
         workflow._state_store.clear_state(workflow.config.workflow_id, request.session)

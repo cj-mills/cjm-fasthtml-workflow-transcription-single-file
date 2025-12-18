@@ -129,16 +129,7 @@ def _handle_stream_job(
     job_id: str,  # ID of the job to monitor
 ):  # EventStream for SSE updates
     """SSE endpoint for monitoring job completion."""
-    stream_generator = create_job_stream_handler(
-        job_id,
-        request,
-        config=workflow.config,
-        router=workflow._router,
-        stepflow_router=workflow._stepflow_router,
-        transcription_manager=workflow._transcription_manager,
-        plugin_registry=workflow._plugin_adapter,
-        result_storage=workflow._result_storage,
-    )
+    stream_generator = create_job_stream_handler(job_id, request, workflow)
     return EventStream(stream_generator())
 
 # %% ../../nbs/workflow/routes.ipynb 8

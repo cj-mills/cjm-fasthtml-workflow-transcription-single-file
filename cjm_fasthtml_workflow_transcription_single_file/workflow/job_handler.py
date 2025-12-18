@@ -16,6 +16,7 @@ from ..components.processor import transcription_in_progress
 from ..components.results import transcription_results, transcription_error
 from ..core.protocols import PluginRegistryProtocol
 from ..storage.file_storage import ResultStorage
+from .workflow import SingleFileTranscriptionWorkflow
 
 # %% ../../nbs/workflow/job_handler.ipynb 5
 def get_job_session_info(
@@ -101,29 +102,22 @@ def _create_sse_swap_message(
 async def start_transcription_job(
     state: Dict[str, Any],  # Workflow state containing plugin_id, file_path, file_name, etc.
     request,  # FastHTML request object
-    config: SingleFileWorkflowConfig,  # Workflow configuration
-    router,  # Workflow router for generating route URLs
-    transcription_manager,  # Manager for starting transcription jobs
-    plugin_registry: PluginRegistryProtocol,  # Plugin registry for getting plugin info
+    workflow: SingleFileTranscriptionWorkflow,  # Workflow instance providing config and dependencies
 ):  # transcription_in_progress component showing job status
-    """Handle workflow completion by starting the transcription job.
-    
-    Called by StepFlow's `on_complete` handler when the user confirms
-    and clicks "Start Transcription".
-    """
+    """Start a transcription job and return the in-progress UI component."""
     plugin_id = state.get("plugin_id")
     file_path = state.get("file_path")
     file_name = state.get("file_name")
 
     # Start the transcription job via the internal manager
-    job = await transcription_manager.start_transcription(
+    job = await workflow.transcription_manager.start_transcription(
         plugin_id=plugin_id,
         file_path=file_path,
         file_name=file_name
     )
 
     # Get plugin info for display
-    plugin_info_obj = plugin_registry.get_plugin(plugin_id)
+    plugin_info_obj = workflow.plugin_registry.get_plugin(plugin_id)
 
     file_info = {
         "name": file_name,
@@ -146,51 +140,46 @@ async def start_transcription_job(
         job_id=job.id,
         plugin_info=plugin_info,
         file_info=file_info,
-        config=config,
-        router=router,
+        config=workflow.config,
+        router=workflow.router,
     )
 
 # %% ../../nbs/workflow/job_handler.ipynb 14
 def create_job_stream_handler(
     job_id: str,  # Unique job identifier
     request,  # FastHTML request object
-    config: SingleFileWorkflowConfig,  # Workflow configuration
-    router,  # Workflow router for generating route URLs
-    stepflow_router: APIRouter,  # StepFlow router for generating stepflow URLs
-    transcription_manager,  # Manager for getting job status
-    plugin_registry: PluginRegistryProtocol,  # Plugin registry for getting plugin info
-    result_storage: ResultStorage,  # Storage for saving transcription results
+    workflow: SingleFileTranscriptionWorkflow,  # Workflow instance providing config and dependencies
 ):  # Async generator for SSE streaming
     """Create an SSE stream generator for monitoring job completion."""
-    poll_interval = config.sse_poll_interval
-    container_id = config.container_id
+    poll_interval = workflow.config.sse_poll_interval
+    container_id = workflow.config.container_id
     # Build URL using router's .to() method for proper route generation
-    stepflow_start_url = stepflow_router.start.to()
+    stepflow_start_url = workflow.stepflow_router.start.to()
 
     async def job_stream():
         try:
             # Check if job exists
-            job = transcription_manager.get_job(job_id)
+            job = workflow.transcription_manager.get_job(job_id)
             if not job:
                 yield sse_message(Div("Job not found"))
                 return
 
             # Poll for completion
             while True:
-                job = transcription_manager.get_job(job_id)
+                job = workflow.transcription_manager.get_job(job_id)
                 if not job:
                     break
 
                 # Check if job finished
                 if job.status in ['completed', 'failed', 'cancelled']:
-                    result = transcription_manager.get_job_result(job_id)
+                    result = workflow.transcription_manager.get_job_result(job_id)
 
                     if job.status == 'completed' and result and result.get('status') == 'success':
                         data = result.get('data', {})
-                        file_info, plugin_info = get_job_session_info(job_id, job, plugin_registry)
+                        file_info, plugin_info = get_job_session_info(job_id, job, workflow.plugin_registry)
 
                         # Save result to disk (only once)
-                        _save_job_result_once(job_id, job, data, plugin_registry, result_storage)
+                        _save_job_result_once(job_id, job, data, workflow.plugin_registry, workflow.result_storage)
 
                         results = transcription_results(
                             job_id=job_id,
@@ -198,20 +187,20 @@ def create_job_stream_handler(
                             metadata=data.get('metadata', {}),
                             file_info=file_info,
                             plugin_info=plugin_info,
-                            config=config,
-                            router=router,
-                            stepflow_router=stepflow_router,
+                            config=workflow.config,
+                            router=workflow.router,
+                            stepflow_router=workflow.stepflow_router,
                         )
 
                         yield sse_message(_create_sse_swap_message(results, container_id))
 
                     elif job.status == 'failed':
-                        file_info, _ = get_job_session_info(job_id, job, plugin_registry)
+                        file_info, _ = get_job_session_info(job_id, job, workflow.plugin_registry)
                         error_msg = transcription_error(
                             f"Transcription failed: {job.error}",
                             file_info,
-                            config=config,
-                            stepflow_router=stepflow_router,
+                            config=workflow.config,
+                            stepflow_router=workflow.stepflow_router,
                         )
                         yield sse_message(_create_sse_swap_message(error_msg, container_id))
 
