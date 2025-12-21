@@ -22,7 +22,6 @@ from cjm_fasthtml_workers.extensions.adapters import (
 )
 from cjm_transcription_job_manager.core.manager import TranscriptionJobManager
 from cjm_fasthtml_resources.core.manager import ResourceManager
-from cjm_fasthtml_plugins.core.registry import UnifiedPluginRegistry
 from cjm_transcription_plugin_system.plugin_interface import TranscriptionPlugin
 from cjm_fasthtml_settings.core.utils import get_default_values_from_schema
 
@@ -30,6 +29,7 @@ from cjm_fasthtml_file_browser.core.file_browser import FileBrowser
 from cjm_fasthtml_file_browser.core.models import FileEntry
 from cjm_fasthtml_file_browser.core.types import FileType
 
+from ..core.registry import UnifiedPluginRegistry
 from ..core.config import SingleFileWorkflowConfig
 from ..core.html_ids import SingleFileHtmlIds
 from ..core.adapters import PluginRegistryAdapter, DefaultConfigPluginRegistryAdapter

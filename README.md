@@ -16,11 +16,12 @@ pip install cjm_fasthtml_workflow_transcription_single_file
     │   ├── processor.ipynb  # UI component for displaying transcription in-progress state
     │   ├── results.ipynb    # UI components for displaying transcription results and errors
     │   └── steps.ipynb      # UI components for workflow step rendering (plugin selection, file selection, confirmation)
-    ├── core/ (4)
+    ├── core/ (5)
     │   ├── adapters.ipynb   # Adapter implementations for integrating with plugin registries
     │   ├── config.ipynb     # Configuration dataclass for single-file transcription workflow
     │   ├── html_ids.ipynb   # Centralized HTML ID constants for single-file transcription workflow components
-    │   └── protocols.ipynb  # Protocol definitions for external dependencies and plugin integration
+    │   ├── protocols.ipynb  # Protocol definitions for external dependencies and plugin integration
+    │   └── registry.ipynb   # Unified plugin registry for managing multiple domain-specific plugin systems with configuration persistence
     ├── settings/ (2)
     │   ├── components.ipynb  # UI components for workflow settings modal and forms
     │   └── schemas.ipynb     # JSON schemas and utilities for workflow settings
@@ -33,7 +34,7 @@ pip install cjm_fasthtml_workflow_transcription_single_file
         ├── routes.ipynb       # Route initialization and handlers for the single-file transcription workflow
         └── workflow.ipynb     # Main workflow class orchestrating all subsystems for single-file transcription
 
-Total: 15 notebooks across 5 directories
+Total: 16 notebooks across 5 directories
 
 ## Module Dependencies
 
@@ -46,6 +47,7 @@ graph LR
     core_config[core.config<br/>Configuration]
     core_html_ids[core.html_ids<br/>HTML IDs]
     core_protocols[core.protocols<br/>Protocols]
+    core_registry[core.registry<br/>Registry]
     settings_components[settings.components<br/>Settings Components]
     settings_schemas[settings.schemas<br/>Settings Schemas]
     storage_config[storage.config<br/>Storage Configuration]
@@ -55,40 +57,42 @@ graph LR
     workflow_routes[workflow.routes<br/>Workflow Routes]
     workflow_workflow[workflow.workflow<br/>Single File Transcription Workflow]
 
-    components_processor --> core_html_ids
     components_processor --> core_config
-    components_results --> core_html_ids
+    components_processor --> core_html_ids
     components_results --> core_config
-    components_steps --> core_html_ids
-    components_steps --> core_protocols
+    components_results --> core_html_ids
     components_steps --> core_config
+    components_steps --> core_protocols
+    components_steps --> core_html_ids
     core_adapters --> core_protocols
-    core_config --> core_html_ids
+    core_adapters --> core_registry
     core_config --> storage_config
+    core_config --> core_html_ids
     settings_schemas --> storage_config
     settings_schemas --> core_config
     storage_file_storage --> storage_config
-    workflow_job_handler --> core_html_ids
-    workflow_job_handler --> components_results
-    workflow_job_handler --> core_protocols
-    workflow_job_handler --> workflow_workflow
-    workflow_job_handler --> components_processor
     workflow_job_handler --> core_config
+    workflow_job_handler --> workflow_workflow
+    workflow_job_handler --> components_results
+    workflow_job_handler --> components_processor
+    workflow_job_handler --> core_protocols
+    workflow_job_handler --> core_html_ids
     workflow_job_handler --> storage_file_storage
-    workflow_routes --> core_html_ids
-    workflow_routes --> components_results
     workflow_routes --> workflow_workflow
+    workflow_routes --> components_results
     workflow_routes --> components_processor
-    workflow_routes --> workflow_job_handler
     workflow_routes --> components_steps
-    workflow_workflow --> core_html_ids
-    workflow_workflow --> core_adapters
-    workflow_workflow --> components_steps
+    workflow_routes --> workflow_job_handler
+    workflow_routes --> core_html_ids
     workflow_workflow --> storage_file_storage
+    workflow_workflow --> components_steps
     workflow_workflow --> core_config
+    workflow_workflow --> core_adapters
+    workflow_workflow --> core_registry
+    workflow_workflow --> core_html_ids
 ```
 
-*31 cross-module dependencies detected*
+*33 cross-module dependencies detected*
 
 ## CLI Reference
 
@@ -711,6 +715,143 @@ class ResultStorageProtocol(Protocol):
             result_id: Any  # Implementation-specific identifier
         ) -> bool:  # True if deletion successful, False otherwise
         "Delete a transcription result."
+```
+
+### Registry (`registry.ipynb`)
+
+> Unified plugin registry for managing multiple domain-specific plugin
+> systems with configuration persistence
+
+#### Import
+
+``` python
+from cjm_fasthtml_workflow_transcription_single_file.core.registry import (
+    T,
+    PluginMetadata,
+    UnifiedPluginRegistry
+)
+```
+
+#### Classes
+
+``` python
+@dataclass
+class PluginMetadata:
+    "Metadata describing a plugin for display and configuration management."
+    
+    name: str  # Internal plugin identifier
+    category: str  # Plugin category string (application-defined)
+    title: str  # Display title for the plugin
+    config_schema: Dict[str, Any]  # JSON Schema for plugin configuration
+    config_dataclass: Optional[Type]  # Configuration dataclass type (if available)
+    description: Optional[str]  # Plugin description
+    version: Optional[str]  # Plugin version
+    is_configured: bool = False  # Whether the plugin has saved configuration
+    
+    def get_unique_id(self) -> str:  # String in format 'category_name'
+        "Generate unique ID for this plugin."
+```
+
+``` python
+class UnifiedPluginRegistry:
+    def __init__(self, 
+                 config_dir: Optional[Path] = None  # Directory for plugin configuration files (default: 'configs')
+                )
+    "Unified registry for multiple domain-specific plugin systems with configuration persistence."
+    
+    def __init__(self,
+                     config_dir: Optional[Path] = None  # Directory for plugin configuration files (default: 'configs')
+                    )
+        "Initialize the unified plugin registry."
+    
+    def register_plugin_manager(
+            self,
+            category: str,  # Category name (e.g., "transcription", "llm")
+            manager: Any,  # Domain-specific plugin manager
+            display_name: Optional[str] = None,  # Display name for UI
+            auto_discover: bool = True  # Automatically discover plugins?
+        ) -> List[PluginMetadata]:  # List of discovered plugin metadata
+        "Register a domain-specific plugin manager."
+    
+    def register_plugin_system(
+            self,
+            category: str,  # Category name (e.g., "transcription", "llm")
+            plugin_interface: Type,  # Plugin interface class (e.g., TranscriptionPlugin)
+            display_name: Optional[str] = None,  # Display name for UI
+            auto_discover: bool = True  # Automatically discover plugins?
+        ) -> List[PluginMetadata]:  # List of discovered plugin metadata
+        "Create and register a plugin system in one step. This is a convenience method that creates a PluginManager with the
+specified interface and registers it with the registry."
+    
+    def get_manager(
+            self,
+            category: str,  # Category name
+            manager_type: Optional[Type[T]] = None  # Optional type hint for IDE autocomplete
+        ) -> Optional[T]:  # Plugin manager instance
+        "Get plugin manager for a specific category."
+    
+    def get_categories(self) -> List[str]:  # Sorted list of category names
+            """Get all registered categories."""
+            return sorted(self._categories.keys())
+        
+        def get_category_display_name(self, 
+                                       category: str  # Category name
+                                      ) -> str:  # Display name or category name if not set
+        "Get all registered categories."
+    
+    def get_category_display_name(self,
+                                       category: str  # Category name
+                                      ) -> str:  # Display name or category name if not set
+        "Get display name for a category."
+    
+    def get_plugin(self,
+                       unique_id: str  # Plugin unique identifier (format: 'category_name')
+                      ) -> Optional[PluginMetadata]:  # Plugin metadata if found, None otherwise
+        "Get plugin metadata by unique ID."
+    
+    def get_plugins_by_category(self,
+                                    category: str  # Category name
+                                   ) -> List[PluginMetadata]:  # List of plugin metadata for the category
+        "Get all plugins in a category."
+    
+    def get_all_plugins(self) -> List[PluginMetadata]:  # List of all plugin metadata
+            """Get all plugins across all categories."""
+            return list(self._plugins.values())
+        
+        def get_categories_with_plugins(self) -> List[str]:  # Sorted list of categories with plugins
+        "Get all plugins across all categories."
+    
+    def get_categories_with_plugins(self) -> List[str]:  # Sorted list of categories with plugins
+            """Get categories that have registered plugins."""
+            categories = set(p.category for p in self._plugins.values())
+            return sorted(categories)
+        
+        def load_plugin_config(self, 
+                              unique_id: str  # Plugin unique identifier
+                             ) -> Dict[str, Any]:  # Configuration dictionary (empty if no config exists)
+        "Get categories that have registered plugins."
+    
+    def load_plugin_config(self,
+                              unique_id: str  # Plugin unique identifier
+                             ) -> Dict[str, Any]:  # Configuration dictionary (empty if no config exists)
+        "Load saved configuration for a plugin."
+    
+    def save_plugin_config(self,
+                              unique_id: str,  # Plugin unique identifier
+                              config: Dict[str, Any]  # Configuration dictionary to save
+                             ) -> bool:  # True if save succeeded, False otherwise
+        "Save configuration for a plugin."
+    
+    def delete_plugin_config(self,
+                                unique_id: str  # Plugin unique identifier
+                               ) -> bool:  # True if deletion succeeded, False otherwise
+        "Delete saved configuration for a plugin."
+```
+
+#### Variables
+
+``` python
+T
 ```
 
 ### Results Components (`results.ipynb`)

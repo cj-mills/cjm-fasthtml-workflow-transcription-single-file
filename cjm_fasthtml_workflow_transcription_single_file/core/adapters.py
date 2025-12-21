@@ -8,7 +8,7 @@ __all__ = ['PluginRegistryAdapter', 'DefaultConfigPluginRegistryAdapter']
 # %% ../../nbs/core/adapters.ipynb 3
 from typing import Dict, Any, List, Optional
 
-from cjm_fasthtml_plugins.core.registry import UnifiedPluginRegistry
+from .registry import UnifiedPluginRegistry
 from .protocols import PluginInfo, PluginRegistryProtocol
 from cjm_plugin_system.utils.validation import extract_defaults
 
