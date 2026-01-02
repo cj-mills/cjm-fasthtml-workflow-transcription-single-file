@@ -16,23 +16,18 @@ from cjm_fasthtml_interactions.core.context import InteractionContext
 from cjm_fasthtml_interactions.core.state_store import InMemoryWorkflowStateStore
 from cjm_fasthtml_interactions.patterns.async_loading import AsyncLoadingContainer
 from cjm_fasthtml_sse.core import SSEBroadcastManager
-from cjm_fasthtml_workers.extensions.adapters import (
-    ResourceManagerAdapter,
-    SSEBroadcasterAdapter,
-)
-from cjm_transcription_job_manager.core.manager import TranscriptionJobManager
-from cjm_fasthtml_resources.core.manager import ResourceManager
-from cjm_transcription_plugin_system.plugin_interface import TranscriptionPlugin
-from cjm_fasthtml_settings.core.utils import get_default_values_from_schema
+
+from cjm_plugin_system.core.manager import PluginManager
+from cjm_plugin_system.core.metadata import PluginMeta
 
 from cjm_fasthtml_file_browser.core.file_browser import FileBrowser
 from cjm_fasthtml_file_browser.core.models import FileEntry
 from cjm_fasthtml_file_browser.core.types import FileType
 
-from ..core.registry import UnifiedPluginRegistry
 from ..core.config import SingleFileWorkflowConfig
 from ..core.html_ids import SingleFileHtmlIds
-from ..core.adapters import PluginRegistryAdapter, DefaultConfigPluginRegistryAdapter
+from ..core.adapters import PluginRegistryAdapter
+from ..core.job_tracker import TranscriptionJobTracker, TranscriptionJob
 from ..storage.file_storage import ResultStorage
 from cjm_fasthtml_workflow_transcription_single_file.components.steps import (
     render_plugin_selection,
@@ -44,8 +39,8 @@ from cjm_fasthtml_workflow_transcription_single_file.components.steps import (
 class SingleFileTranscriptionWorkflow:
     """Self-contained single-file transcription workflow.
 
-    Creates and manages internal UnifiedPluginRegistry, ResourceManager,
-    TranscriptionJobManager, SSEBroadcastManager, FileBrowser, ResultStorage,
+    Receives a PluginManager from the host application and creates internal
+    TranscriptionJobTracker, SSEBroadcastManager, FileBrowser, ResultStorage,
     StepFlow (plugin → file → confirm wizard), and APIRouter.
     """
 
@@ -58,10 +53,11 @@ class SingleFileTranscriptionWorkflow:
 
     def __init__(
         self,
+        plugin_manager: PluginManager,  # PluginManager from host application
         config: Optional[SingleFileWorkflowConfig] = None,  # Explicit config (bypasses auto-loading)
         **config_overrides  # Override specific config values
     ):
-        """Initialize the workflow with auto-loaded or explicit configuration."""
+        """Initialize the workflow with injected PluginManager."""
         # Build configuration: explicit config takes precedence, otherwise auto-load with overrides
         if config is not None:
             self.config = config
@@ -69,48 +65,16 @@ class SingleFileTranscriptionWorkflow:
             self.config = SingleFileWorkflowConfig.from_saved_config(**config_overrides)
         
         self._app = None  # Set in setup()
-
-        # Create internal UnifiedPluginRegistry with workflow-specific config directory
-        # This gives the workflow its own isolated plugin configurations
-        self._plugin_registry = UnifiedPluginRegistry(
-            config_dir=self.config.plugin_config_dir
-        )
-
-        # Register transcription plugin system with auto-discovery
-        self._plugin_registry.register_plugin_system(
-            category=self.config.plugin_category,
-            plugin_interface=TranscriptionPlugin,
-            display_name="Transcription",
-            auto_discover=True
-        )
-
-        # Ensure all discovered plugins have a config file (using defaults if needed)
-        # This allows the worker to load plugins that haven't been explicitly configured
-        self._ensure_plugin_configs_exist()
-
-        # Create internal ResourceManager with workflow-specific threshold
-        self._resource_manager = ResourceManager(
-            gpu_memory_threshold_percent=self.config.gpu_memory_threshold_percent
-        )
+        
+        # Store the injected PluginManager
+        self._plugin_manager = plugin_manager
 
         # Create internal SSE manager for this workflow
         self._sse_manager = SSEBroadcastManager()
 
-        # Create internal adapters for TranscriptionJobManager
-        # Use custom plugin adapter that provides default config values for unconfigured plugins
-        plugin_adapter = DefaultConfigPluginRegistryAdapter(
-            self._plugin_registry,
-            category=self.config.plugin_category
-        )
-        resource_adapter = ResourceManagerAdapter(self._resource_manager)
-        sse_adapter = SSEBroadcasterAdapter(self._sse_manager)
-
-        # Create internal TranscriptionJobManager with workflow-specific callback
-        self._transcription_manager = TranscriptionJobManager(
-            plugin_registry=plugin_adapter,
-            resource_manager=resource_adapter,
-            event_broadcaster=sse_adapter,
-            on_job_completed_callback=self._on_job_completed
+        # Create internal job tracker with completion callback
+        self._job_tracker = TranscriptionJobTracker(
+            on_job_completed=self._on_job_completed
         )
 
         # Create internal FileBrowser for media file discovery
@@ -119,8 +83,12 @@ class SingleFileTranscriptionWorkflow:
         # Create internal ResultStorage
         self._result_storage = ResultStorage(self.config.storage)
 
-        # Create workflow's plugin registry adapter
-        self._plugin_adapter = PluginRegistryAdapter(self._plugin_registry)
+        # Create workflow's plugin registry adapter (adapts PluginManager to PluginRegistryProtocol)
+        self._plugin_adapter = PluginRegistryAdapter(
+            self._plugin_manager,
+            self.config,
+            category=self.config.plugin_category
+        )
 
         # Create workflow state store (server-side storage for StepFlow wizard state)
         self._state_store = InMemoryWorkflowStateStore()
@@ -162,18 +130,24 @@ class SingleFileTranscriptionWorkflow:
     def create_and_setup(
         cls,
         app,  # FastHTML application instance
+        plugin_manager: PluginManager,  # PluginManager from host application
         config: Optional[SingleFileWorkflowConfig] = None,  # Explicit config (bypasses auto-loading)
         **config_overrides  # Override specific config values
     ) -> "SingleFileTranscriptionWorkflow":  # Configured and setup workflow instance
         """Create, configure, and setup a workflow in one call."""
-        workflow = cls(config=config, **config_overrides)
+        workflow = cls(plugin_manager=plugin_manager, config=config, **config_overrides)
         workflow.setup(app)
         return workflow
 
     @property
-    def transcription_manager(self) -> TranscriptionJobManager:
-        """Access to internal transcription manager."""
-        return self._transcription_manager
+    def job_tracker(self) -> TranscriptionJobTracker:
+        """Access to internal job tracker."""
+        return self._job_tracker
+    
+    @property
+    def plugin_manager(self) -> PluginManager:
+        """Access to plugin manager."""
+        return self._plugin_manager
     
     @property
     def plugin_registry(self) -> PluginRegistryAdapter:
@@ -219,30 +193,6 @@ def cleanup(
     self._file_browser.clear_cache()
     self._app = None
 
-# %% ../../nbs/workflow/workflow.ipynb 10
-@patch
-def _ensure_plugin_configs_exist(
-    self: SingleFileTranscriptionWorkflow,
-) -> None:
-    """Ensure all discovered plugins have config files.
-    
-    For plugins without saved config files, creates a config file with
-    default values from the plugin's schema. Required because workers
-    only load plugins that have config files.
-    """
-    plugins = self._plugin_registry.get_plugins_by_category(self.config.plugin_category)
-
-    for plugin_meta in plugins:
-        if not plugin_meta.is_configured:
-            # Get default config from schema
-            if hasattr(plugin_meta, 'config_schema') and plugin_meta.config_schema:
-                default_config = get_default_values_from_schema(plugin_meta.config_schema)
-                # Save the default config to create a config file
-                self._plugin_registry.save_plugin_config(
-                    plugin_meta.get_unique_id(),
-                    default_config
-                )
-
 # %% ../../nbs/workflow/workflow.ipynb 11
 @patch
 def get_routers(
@@ -269,9 +219,8 @@ def render_entry_point(
     which determines what to show (running job, workflow in progress,
     completed job, or fresh start).
     """
-    # Check if there are any discovered plugins (configured or not)
-    # Plugins can use default config values even without saved .json files
-    plugins = self._plugin_adapter.get_all_plugins()
+    # Check if there are any discovered plugins in this category
+    plugins = self._plugin_manager.get_discovered_by_category(self.config.plugin_category)
 
     if not plugins:
         # No plugins discovered at all - show message with optional redirect
@@ -308,32 +257,32 @@ def render_entry_point(
 def _on_job_completed(
     self: SingleFileTranscriptionWorkflow,
     job_id: str,  # The completed job's ID
-    manager,  # The TranscriptionJobManager instance
+    tracker: TranscriptionJobTracker,  # The job tracker instance
 ) -> None:
     """Workflow-specific completion handling. Auto-saves results if enabled."""
     if not self._result_storage.should_auto_save():
         return
 
-    job = manager.get_job(job_id)
-    result = manager.get_job_result(job_id)
+    job = tracker.get_job(job_id)
+    result = tracker.get_job_result(job_id)
 
     if not job or not result:
         return
 
     # Check if already saved (via job metadata)
-    if hasattr(job, 'metadata') and job.metadata and job.metadata.get('saved_to_disk'):
+    if job.metadata and job.metadata.get('saved_to_disk'):
         return
 
     try:
         data = result.get('data', {})
-        plugin_info = self._plugin_adapter.get_plugin(job.plugin_id)
+        plugin_meta = self._plugin_manager.get_plugin_meta(job.plugin_name)
 
         self._result_storage.save(
             job_id=job_id,
             file_path=job.file_path,
             file_name=job.file_name,
-            plugin_id=job.plugin_id,
-            plugin_name=plugin_info.title if plugin_info else job.plugin_id,
+            plugin_id=job.plugin_name,
+            plugin_name=plugin_meta.name if plugin_meta else job.plugin_name,
             text=data.get('text', ''),
             metadata=data.get('metadata', {})
         )
@@ -423,7 +372,7 @@ def _create_step_flow(
             plugin_registry=workflow._plugin_adapter,
             settings_modal_url=workflow._router.settings_modal.to(),
             plugin_details_url=workflow._router.plugin_details.to(),
-            raw_plugin_registry=workflow._plugin_registry,
+            plugin_manager=workflow._plugin_manager,
             save_plugin_config_url=workflow._router.save_plugin_config.to(),
             reset_plugin_config_url=workflow._router.reset_plugin_config.to(),
         )
@@ -456,6 +405,9 @@ def _create_step_flow(
     async def on_complete(state: Dict[str, Any], request):
         """Handle workflow completion."""
         from cjm_fasthtml_workflow_transcription_single_file.workflow.job_handler import start_transcription_job
+        # Save configuration via the plugin manager
+        workflow._plugin_manager.update_plugin_config(state["plugin_id"], 
+                                                      self._plugin_adapter.get_plugin_config(state["plugin_id"]))
         result = await start_transcription_job(state, request, workflow)
         # Clear workflow state since we've successfully started the transcription
         # This ensures "New Transcription" button starts fresh instead of resuming

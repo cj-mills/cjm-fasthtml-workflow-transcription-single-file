@@ -31,6 +31,7 @@ from cjm_fasthtml_tailwind.utilities.flexbox_and_grid import flex_display, justi
 from cjm_fasthtml_tailwind.core.base import combine_classes
 
 from cjm_fasthtml_settings.components.forms import create_settings_form_container
+from cjm_plugin_system.core.manager import PluginManager
 from cjm_plugin_system.utils.validation import extract_defaults
 
 from ..core.config import SingleFileWorkflowConfig
@@ -87,7 +88,7 @@ def _render_plugin_details_with_config(
     plugin_id: str, # ID of the plugin to display details for
     plugins: List[PluginInfo], # List of available plugins
     plugin_registry: PluginRegistryProtocol, # Plugin registry adapter for getting plugin config
-    raw_plugin_registry, # UnifiedPluginRegistry for config_schema access
+    plugin_manager: Optional[PluginManager], # PluginManager for config_schema access
     save_url: str, # URL for saving plugin configuration
     reset_url: str, # URL for resetting plugin configuration
 ) -> Optional[FT]: # Plugin details with config collapse, or None if not found
@@ -96,8 +97,8 @@ def _render_plugin_details_with_config(
     if not plugin:
         return None
 
-    # If we don't have the raw registry or URLs, fall back to basic content
-    if not raw_plugin_registry or not save_url or not reset_url:
+    # If we don't have the plugin manager or URLs, fall back to basic content
+    if not plugin_manager or not save_url or not reset_url:
         return _render_plugin_details_content(plugin_id, plugins, plugin_registry)
 
     config = plugin_registry.get_plugin_config(plugin_id)
@@ -127,7 +128,8 @@ def _render_plugin_details_with_config(
         # Plugin configuration collapse
         _render_plugin_config_collapse(
             plugin_id=plugin_id,
-            plugin_registry=raw_plugin_registry,
+            plugin_registry=plugin_registry,
+            plugin_manager=plugin_manager,
             save_url=save_url,
             reset_url=reset_url,
         )
@@ -136,14 +138,15 @@ def _render_plugin_details_with_config(
 # %% ../../nbs/components/steps.ipynb 11
 def render_plugin_config_form(
     plugin_id: str, # ID of the plugin to render config for
-    plugin_registry, # UnifiedPluginRegistry with config_class access
+    plugin_registry: PluginRegistryProtocol, # Plugin registry adapter for getting plugins and config
+    plugin_manager: PluginManager, # PluginManager for config_schema access
     save_url: str, # URL for saving the configuration
     reset_url: str, # URL for resetting to defaults
     alert_message: Optional[Any] = None, # Optional alert to display above the form
 ) -> FT: # Div containing the settings form with alert container
     """Render the plugin configuration form for the collapse content."""
-    # Get plugin metadata to access config_class and schema
-    plugin_meta = plugin_registry.get_plugin(plugin_id)
+    # Get plugin metadata to access config_schema
+    plugin_meta = plugin_manager.get_plugin_meta(plugin_id)
     if not plugin_meta or not plugin_meta.config_schema:
         return Div(
             P("No configuration schema available for this plugin.",
@@ -153,21 +156,17 @@ def render_plugin_config_form(
     
     schema = plugin_meta.config_schema
 
-    # print(schema)
-
-    # Load saved config
-    saved_config = plugin_registry.load_plugin_config(plugin_id)
-    # print(f"\n\nsaved_config:\n{saved_config}\n\n")
+    # Load saved config from plugin manager
+    saved_config = plugin_registry.get_plugin_config(plugin_id) or {}
     
-    # Get default values from config_class (preferred) or empty dict as fallback
-    if hasattr(plugin_meta, 'config_class') and plugin_meta.config_class is not None:
-        default_config = extract_defaults(plugin_meta.config_class)
-    else:
-        default_config = {}
+    # Get default values from schema (embedded in manifest)
+    default_config = {}
+    if schema.get("properties"):
+        for prop_name, prop_def in schema["properties"].items():
+            if "default" in prop_def:
+                default_config[prop_name] = prop_def["default"]
     
     current_values = {**default_config, **saved_config}
-
-    # print(f"\n\ncurrent_values:\n{current_values}\n\n")
 
     # Create settings form container
     settings_content = create_settings_form_container(
@@ -206,13 +205,14 @@ def render_plugin_config_form(
 # %% ../../nbs/components/steps.ipynb 13
 def _render_plugin_config_collapse(
     plugin_id: str, # ID of the plugin to render config for
-    plugin_registry, # UnifiedPluginRegistry with config_schema access
+    plugin_registry: PluginRegistryProtocol, # Plugin registry adapter for getting plugins and config
+    plugin_manager: PluginManager, # PluginManager for config_schema access
     save_url: str, # URL for saving the configuration
     reset_url: str, # URL for resetting to defaults
 ) -> FT: # Collapse component with plugin configuration form
     """Render a collapse component containing the plugin configuration form."""
     # Get plugin metadata to check if schema exists
-    plugin_meta = plugin_registry.get_plugin(plugin_id)
+    plugin_meta = plugin_manager.get_plugin_meta(plugin_id)
     if not plugin_meta or not plugin_meta.config_schema:
         return Div()  # No config schema, no collapse needed
 
@@ -226,6 +226,7 @@ def _render_plugin_config_collapse(
             render_plugin_config_form(
                 plugin_id=plugin_id,
                 plugin_registry=plugin_registry,
+                plugin_manager=plugin_manager,
                 save_url=save_url,
                 reset_url=reset_url,
             ),
@@ -245,7 +246,7 @@ def _render_plugin_config_collapse(
 def render_plugin_details_route(
     plugin_id: str, # ID of the plugin to display details for
     plugin_registry: PluginRegistryProtocol, # Plugin registry adapter for getting plugins and config
-    raw_plugin_registry, # UnifiedPluginRegistry for config_schema access
+    plugin_manager: PluginManager, # PluginManager for config_schema access
     save_url: str, # URL for saving plugin configuration
     reset_url: str, # URL for resetting plugin configuration to defaults
 ) -> FT: # Plugin details with info card and config collapse
@@ -282,7 +283,8 @@ def render_plugin_details_route(
         # Plugin configuration collapse
         _render_plugin_config_collapse(
             plugin_id=plugin_id,
-            plugin_registry=raw_plugin_registry,
+            plugin_registry=plugin_registry,
+            plugin_manager=plugin_manager,
             save_url=save_url,
             reset_url=reset_url,
         )
@@ -295,7 +297,7 @@ def render_plugin_selection(
     plugin_registry: PluginRegistryProtocol, # Plugin registry adapter for getting plugin config
     settings_modal_url: str, # URL for the settings modal route
     plugin_details_url: str, # URL for the plugin details route
-    raw_plugin_registry=None, # UnifiedPluginRegistry for config_schema access (optional)
+    plugin_manager: Optional[PluginManager] = None, # PluginManager for config_schema access
     save_plugin_config_url: str = "", # URL for saving plugin configuration
     reset_plugin_config_url: str = "", # URL for resetting plugin configuration
 ) -> FT: # Plugin selection step UI component
@@ -404,7 +406,7 @@ def render_plugin_selection(
                 selected_plugin_id,
                 plugins,
                 plugin_registry,
-                raw_plugin_registry,
+                plugin_manager,
                 save_plugin_config_url,
                 reset_plugin_config_url
             ) if selected_plugin_id else None,

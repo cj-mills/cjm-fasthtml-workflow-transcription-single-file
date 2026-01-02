@@ -3,33 +3,39 @@
 This demo showcases the self-contained single-file transcription workflow:
 
 1. SingleFileTranscriptionWorkflow:
-   - Fully self-contained workflow with internal plugin registry
-   - Resource management for GPU/CPU availability checks
-   - Background job management with SSE streaming
+   - Receives PluginManager from host application (dependency injection)
+   - Internal job tracking with TranscriptionJobTracker
    - Media file discovery, mounting, and browsing
    - Result storage and persistence
 
-2. StepFlow Integration:
+2. PluginManager:
+   - Discovers plugins from JSON manifests in ~/.cjm/plugins/
+   - Process-isolated plugin execution via RemotePluginProxy
+   - Resource-aware scheduling (optional SafetyScheduler/QueueScheduler)
+   - Hot-reloadable plugin configuration
+
+3. StepFlow Integration:
    - Plugin selection step (shows all discovered transcription plugins)
    - File selection step (paginated media browser)
    - Confirmation step (review and start transcription)
 
-3. File Browser:
+4. File Browser:
    - Directory scanning for audio/video files
    - Paginated browsing with grid/list views
    - File preview modal with media player
    - Configurable file filters and sorting
 
-4. Result Storage:
+5. Result Storage:
    - Auto-save transcription results to JSON
    - Configurable results directory
    - Export to multiple formats (TXT, SRT, VTT)
 
 Run without transcription plugins installed to test the "no plugins" scenario,
-then install plugins (e.g., cjm-transcription-plugin-*) to test full functionality.
+then install plugins (e.g., via cjm-ctl install-all) to test full functionality.
 """
 
 from pathlib import Path
+import atexit
 
 
 def main():
@@ -57,6 +63,10 @@ def main():
     print("Initializing cjm-fasthtml-workflow-transcription-single-file Demo")
     print("="*70)
 
+    # Import plugin system components
+    from cjm_plugin_system.core.manager import PluginManager
+    from cjm_plugin_system.core.scheduling import QueueScheduler, SafetyScheduler
+
     # Import workflow components
     from cjm_fasthtml_workflow_transcription_single_file.workflow.workflow import SingleFileTranscriptionWorkflow
 
@@ -81,11 +91,50 @@ def main():
 
     print("  FastHTML app created successfully")
 
+    # Create the PluginManager (host application responsibility)
+    # Using QueueScheduler to wait for resources when busy
+    print("\n[1/3] Creating PluginManager...")
+    # plugin_manager = PluginManager(scheduler=QueueScheduler(timeout=300.0))
+    plugin_manager = PluginManager(scheduler=SafetyScheduler())
+
+    # Discover plugins from JSON manifests
+    plugin_manager.discover_manifests()
+
+    # Get discovered transcription plugins
+    transcription_plugins = plugin_manager.get_discovered_by_category("transcription")
+    print(f"  Discovered {len(transcription_plugins)} transcription plugins")
+
+    # Load discovered transcription plugins
+    for meta in transcription_plugins:
+        try:
+            success = plugin_manager.load_plugin(meta)
+            status = "loaded" if success else "failed"
+            print(f"    - {meta.name}: {status}")
+        except Exception as e:
+            print(f"    - {meta.name}: error - {e}")
+
+    # Optionally load system monitor for resource-aware scheduling
+    monitors = plugin_manager.get_discovered_by_category("system_monitor")
+    if monitors:
+        try:
+            plugin_manager.load_plugin(monitors[0])
+            plugin_manager.register_system_monitor(monitors[0].name)
+            print(f"  System monitor registered: {monitors[0].name}")
+        except Exception as e:
+            print(f"  System monitor failed to load: {e}")
+
+    # Register cleanup on exit
+    def cleanup_plugins():
+        print("\n[Cleanup] Unloading all plugins...")
+        plugin_manager.unload_all()
+        print("[Cleanup] Done")
+
+    atexit.register(cleanup_plugins)
+
     # Create the single-file transcription workflow using the convenience method
-    # The workflow is fully self-contained and manages its own:
-    # - UnifiedPluginRegistry (discovers transcription plugins)
-    # - ResourceManager (GPU/CPU availability)
-    # - TranscriptionJobManager (background job execution)
+    # The workflow receives the PluginManager from the host application and
+    # creates its own internal:
+    # - TranscriptionJobTracker (lightweight job state tracking)
     # - SSEBroadcastManager (event streaming)
     # - FileBrowser (file discovery and browsing)
     # - ResultStorage (transcription persistence)
@@ -93,10 +142,11 @@ def main():
     # Configuration is automatically loaded from saved settings files
     # (configs/workflows/single_file/settings.json) with dataclass defaults
     # for any missing values. Only route-specific overrides needed here.
-    print("\n[1/2] Creating and setting up SingleFileTranscriptionWorkflow...")
+    print("\n[2/3] Creating and setting up SingleFileTranscriptionWorkflow...")
 
     single_file_workflow = SingleFileTranscriptionWorkflow.create_and_setup(
         app,
+        plugin_manager=plugin_manager,
         route_prefix="/workflow",
         no_plugins_redirect="/",  # Redirect to home if no plugins configured
     )
@@ -105,17 +155,15 @@ def main():
 
     # Store workflow in app.state for access from routes
     app.state.single_file_workflow = single_file_workflow
+    app.state.plugin_manager = plugin_manager
 
     # Check plugin status
-    plugins = single_file_workflow.plugin_registry.get_configured_plugins()
-    all_plugins = single_file_workflow.plugin_registry.get_all_plugins()
-    print(f"\n  Discovered plugins: {len(all_plugins)}")
-    print(f"  Configured plugins: {len(plugins)}")
+    plugins = single_file_workflow.plugin_registry.get_all_plugins()
+    print(f"\n  Available plugins: {len(plugins)}")
 
-    if all_plugins:
-        for plugin in all_plugins:
-            status = "configured" if plugin.is_configured else "not configured"
-            print(f"    - {plugin.title} ({status})")
+    if plugins:
+        for plugin in plugins:
+            print(f"    - {plugin.title}")
 
     # Define routes
     @router
@@ -125,7 +173,6 @@ def main():
         def home_content():
             # Get current plugin status
             all_plugins = single_file_workflow.plugin_registry.get_all_plugins()
-            configured_plugins = single_file_workflow.plugin_registry.get_configured_plugins()
             media_files = single_file_workflow.file_browser.scan()
 
             return Div(
@@ -144,7 +191,7 @@ def main():
                     ),
                     Div(
                         Span("", cls=combine_classes(font_size._2xl, m.r(3))),
-                        Span("Media file discovery with paginated browsing"),
+                        Span("Process-isolated plugin execution"),
                         cls=combine_classes(m.b(3))
                     ),
                     Div(
@@ -169,19 +216,10 @@ def main():
                 Div(
                     Span(
                         Span(f"{len(all_plugins)}", cls=str(font_weight.bold)),
-                        " Discovered",
+                        " Plugins",
                         cls=combine_classes(
                             badge,
                             badge_colors.info if all_plugins else badge_colors.warning,
-                            m.r(2)
-                        )
-                    ),
-                    Span(
-                        Span(f"{len(configured_plugins)}", cls=str(font_weight.bold)),
-                        " Configured",
-                        cls=combine_classes(
-                            badge,
-                            badge_colors.success if configured_plugins else badge_colors.error,
                             m.r(2)
                         )
                     ),
@@ -203,19 +241,14 @@ def main():
                         href="/workflow",
                         cls=combine_classes(btn, btn_colors.primary, btn_sizes.lg, m.r(2))
                     ),
-                    A(
-                        "View Workflow Settings",
-                        href="/workflow/settings",
-                        cls=combine_classes(btn, btn_colors.secondary, btn_sizes.lg)
-                    ) if hasattr(single_file_workflow, 'settings_url') else None,
                 ),
 
                 # Info message if no plugins
                 Div(
                     Div(
                         Span("Info: ", cls=str(font_weight.bold)),
-                        "No transcription plugins discovered. Install a plugin package ",
-                        "(e.g., ", Code("pip install cjm-transcription-plugin-*"), ") ",
+                        "No transcription plugins discovered. Install plugins using ",
+                        Code("cjm-ctl install-all --config plugins.yaml"), " ",
                         "and restart the demo to enable transcription.",
                         cls=combine_classes(alert, alert_colors.info, m.t(8))
                     )
@@ -275,7 +308,7 @@ def main():
     )
 
     # Register all routes
-    print("\n[2/2] Registering routes...")
+    print("\n[3/3] Registering routes...")
     register_routes(
         app,
         router,
@@ -294,13 +327,12 @@ def main():
     print("Demo App Ready!")
     print("="*70)
     print("\n Library Components:")
+    print("  - PluginManager - Plugin discovery and lifecycle")
     print("  - SingleFileTranscriptionWorkflow - Main workflow orchestrator")
-    print("  - SingleFileWorkflowConfig - Workflow configuration")
-    print("  - BrowserConfig - File browser settings")
-    print("  - StorageConfig - Result storage settings")
+    print("  - TranscriptionJobTracker - Job state tracking")
+    print("  - PluginRegistryAdapter - Plugin integration bridge")
     print("  - FileBrowser - File discovery and browsing")
     print("  - ResultStorage - Transcription persistence")
-    print("  - PluginRegistryAdapter - Plugin integration")
     print("  - StepFlow integration - 3-step wizard")
     print("="*70 + "\n")
 

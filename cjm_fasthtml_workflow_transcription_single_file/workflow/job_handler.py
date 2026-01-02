@@ -10,8 +10,11 @@ import asyncio
 from typing import Dict, Any
 from fasthtml.common import *
 
+from cjm_plugin_system.core.manager import PluginManager
+
 from ..core.config import SingleFileWorkflowConfig
 from ..core.html_ids import SingleFileHtmlIds
+from ..core.job_tracker import TranscriptionJob, TranscriptionJobTracker
 from ..components.processor import transcription_in_progress
 from ..components.results import transcription_results, transcription_error
 from ..core.protocols import PluginRegistryProtocol
@@ -21,23 +24,22 @@ from .workflow import SingleFileTranscriptionWorkflow
 # %% ../../nbs/workflow/job_handler.ipynb 5
 def get_job_session_info(
     job_id: str,  # Unique job identifier
-    job,  # Job object from the manager
-    plugin_registry: PluginRegistryProtocol,  # Plugin registry for getting plugin info
+    job: TranscriptionJob,  # Job object from the tracker
+    plugin_manager: PluginManager,  # Plugin manager for getting plugin info
 ) -> tuple[Dict[str, Any], Dict[str, Any]]:  # Tuple of (file_info, plugin_info) dictionaries
-    """Get file and plugin info from job object and plugin registry."""
+    """Get file and plugin info from job object and plugin manager."""
     # File info from job attributes
     file_info = {
-        "name": getattr(job, "file_name", "unknown"),
-        "path": getattr(job, "file_path", ""),
+        "name": job.file_name,
+        "path": job.file_path,
     }
 
-    # Plugin info from registry
-    plugin_id = getattr(job, "plugin_id", "unknown")
-    plugin_obj = plugin_registry.get_plugin(plugin_id)
+    # Plugin info from plugin manager
+    plugin_meta = plugin_manager.get_plugin_meta(job.plugin_name)
     plugin_info = {
-        "id": plugin_id,
-        "title": plugin_obj.title if plugin_obj else plugin_id,
-        "supports_streaming": plugin_obj.supports_streaming if plugin_obj else False
+        "id": job.plugin_name,
+        "title": plugin_meta.name if plugin_meta else job.plugin_name,
+        "supports_streaming": False  # Could check from manifest if needed
     }
 
     return file_info, plugin_info
@@ -45,34 +47,34 @@ def get_job_session_info(
 # %% ../../nbs/workflow/job_handler.ipynb 7
 def _save_job_result_once(
     job_id: str,  # Job identifier
-    job,  # Job object
+    job: TranscriptionJob,  # Job object
     data: Dict[str, Any],  # Transcription data containing text and metadata
-    plugin_registry: PluginRegistryProtocol,  # Plugin registry for getting plugin info
+    plugin_manager: PluginManager,  # Plugin manager for getting plugin info
     result_storage: ResultStorage,  # Storage for saving transcription results
 ) -> None:
     """Save transcription result to disk, ensuring it's only saved once per job.
     
     Called from the SSE stream handler as a fallback. The primary save mechanism
-    is the workflow's `_on_job_completed` callback called by TranscriptionJobManager.
+    is the workflow's `_on_job_completed` callback called by TranscriptionJobTracker.
     """
     # Skip if auto-save is disabled
     if not result_storage.should_auto_save():
         return
 
     # Check if job metadata indicates it's already been saved
-    if hasattr(job, 'metadata') and job.metadata and job.metadata.get('saved_to_disk'):
+    if job.metadata and job.metadata.get('saved_to_disk'):
         return
 
     try:
-        # Get file and plugin info from job attributes and registry
-        file_info, plugin_info = get_job_session_info(job_id, job, plugin_registry)
+        # Get file and plugin info from job and plugin manager
+        file_info, plugin_info = get_job_session_info(job_id, job, plugin_manager)
 
         result_storage.save(
             job_id=job_id,
-            file_path=file_info.get("path", getattr(job, "file_path", "")),
-            file_name=file_info.get("name", getattr(job, "file_name", "")),
-            plugin_id=plugin_info.get("id", getattr(job, "plugin_id", "")),
-            plugin_name=plugin_info.get("title", getattr(job, "plugin_id", "")),
+            file_path=file_info.get("path", job.file_path),
+            file_name=file_info.get("name", job.file_name),
+            plugin_id=plugin_info.get("id", job.plugin_name),
+            plugin_name=plugin_info.get("title", job.plugin_name),
             text=data.get('text', ''),
             metadata=data.get('metadata', {}),
             additional_info={}
@@ -105,19 +107,52 @@ async def start_transcription_job(
     workflow: SingleFileTranscriptionWorkflow,  # Workflow instance providing config and dependencies
 ):  # transcription_in_progress component showing job status
     """Start a transcription job and return the in-progress UI component."""
-    plugin_id = state.get("plugin_id")
+    # Note: UI uses plugin_id, internal API uses plugin_name
+    plugin_name = state.get("plugin_id")
     file_path = state.get("file_path")
     file_name = state.get("file_name")
 
-    # Start the transcription job via the internal manager
-    job = await workflow.transcription_manager.start_transcription(
-        plugin_id=plugin_id,
+    # Create job in tracker
+    job = workflow.job_tracker.create_job(
+        plugin_name=plugin_name,
         file_path=file_path,
         file_name=file_name
     )
 
+    # Define async execution function
+    async def execute_transcription():
+        workflow.job_tracker.mark_running(job.id)
+        try:
+            # Execute via PluginManager
+            result = await workflow.plugin_manager.execute_plugin_async(
+                plugin_name,
+                audio=file_path
+            )
+            # Convert result to dict if needed (e.g., if it's a dataclass)
+            if hasattr(result, '__dict__'):
+                result_dict = {
+                    "text": getattr(result, 'text', ''),
+                    "confidence": getattr(result, 'confidence', None),
+                    "segments": getattr(result, 'segments', []),
+                    "metadata": getattr(result, 'metadata', {})
+                }
+            elif isinstance(result, dict):
+                result_dict = result
+            else:
+                result_dict = {"text": str(result), "metadata": {}}
+                
+            workflow.job_tracker.mark_completed(job.id, result_dict)
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            workflow.job_tracker.mark_failed(job.id, str(e))
+
+    # Create and store the async task for cancellation support
+    task = asyncio.create_task(execute_transcription())
+    workflow.job_tracker.mark_running(job.id, task)
+
     # Get plugin info for display
-    plugin_info_obj = workflow.plugin_registry.get_plugin(plugin_id)
+    plugin_meta = workflow.plugin_manager.get_plugin_meta(plugin_name)
 
     file_info = {
         "name": file_name,
@@ -127,13 +162,10 @@ async def start_transcription_job(
     }
 
     plugin_info = {
-        "id": plugin_id,
-        "title": plugin_info_obj.title if plugin_info_obj else plugin_id,
-        "supports_streaming": plugin_info_obj.supports_streaming if plugin_info_obj else False
+        "id": plugin_name,
+        "title": plugin_meta.name if plugin_meta else plugin_name,
+        "supports_streaming": False
     }
-
-    # Note: Workflow state is cleared by the workflow's on_complete handler
-    # after this function returns, via state_store.clear_state()
 
     # Return in-progress view
     return transcription_in_progress(
@@ -159,27 +191,27 @@ def create_job_stream_handler(
     async def job_stream():
         try:
             # Check if job exists
-            job = workflow.transcription_manager.get_job(job_id)
+            job = workflow.job_tracker.get_job(job_id)
             if not job:
                 yield sse_message(Div("Job not found"))
                 return
 
             # Poll for completion
             while True:
-                job = workflow.transcription_manager.get_job(job_id)
+                job = workflow.job_tracker.get_job(job_id)
                 if not job:
                     break
 
                 # Check if job finished
                 if job.status in ['completed', 'failed', 'cancelled']:
-                    result = workflow.transcription_manager.get_job_result(job_id)
+                    result = workflow.job_tracker.get_job_result(job_id)
 
                     if job.status == 'completed' and result and result.get('status') == 'success':
                         data = result.get('data', {})
-                        file_info, plugin_info = get_job_session_info(job_id, job, workflow.plugin_registry)
+                        file_info, plugin_info = get_job_session_info(job_id, job, workflow.plugin_manager)
 
                         # Save result to disk (only once)
-                        _save_job_result_once(job_id, job, data, workflow.plugin_registry, workflow.result_storage)
+                        _save_job_result_once(job_id, job, data, workflow.plugin_manager, workflow.result_storage)
 
                         results = transcription_results(
                             job_id=job_id,
@@ -195,7 +227,7 @@ def create_job_stream_handler(
                         yield sse_message(_create_sse_swap_message(results, container_id))
 
                     elif job.status == 'failed':
-                        file_info, _ = get_job_session_info(job_id, job, workflow.plugin_registry)
+                        file_info, _ = get_job_session_info(job_id, job, workflow.plugin_manager)
                         error_msg = transcription_error(
                             f"Transcription failed: {job.error}",
                             file_info,
@@ -206,7 +238,6 @@ def create_job_stream_handler(
 
                     elif job.status == 'cancelled':
                         # Return a message that triggers reload of the start view
-                        # We can't call stepflow_router.start directly, so we use a redirect approach
                         redirect_div = Div(
                             Script(f"""
                                 htmx.ajax('GET', '{stepflow_start_url}', {{

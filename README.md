@@ -17,11 +17,11 @@ pip install cjm_fasthtml_workflow_transcription_single_file
     │   ├── results.ipynb    # UI components for displaying transcription results and errors
     │   └── steps.ipynb      # UI components for workflow step rendering (plugin selection, file selection, confirmation)
     ├── core/ (5)
-    │   ├── adapters.ipynb   # Adapter implementations for integrating with plugin registries
-    │   ├── config.ipynb     # Configuration dataclass for single-file transcription workflow
-    │   ├── html_ids.ipynb   # Centralized HTML ID constants for single-file transcription workflow components
-    │   ├── protocols.ipynb  # Protocol definitions for external dependencies and plugin integration
-    │   └── registry.ipynb   # Unified plugin registry for managing multiple domain-specific plugin systems with configuration persistence
+    │   ├── adapters.ipynb     # Adapter implementations for integrating with plugin registries
+    │   ├── config.ipynb       # Configuration dataclass for single-file transcription workflow
+    │   ├── html_ids.ipynb     # Centralized HTML ID constants for single-file transcription workflow components
+    │   ├── job_tracker.ipynb  # Lightweight job state tracking for transcription workflows
+    │   └── protocols.ipynb    # Protocol definitions for external dependencies and plugin integration
     ├── settings/ (2)
     │   ├── components.ipynb  # UI components for workflow settings modal and forms
     │   └── schemas.ipynb     # JSON schemas and utilities for workflow settings
@@ -46,8 +46,8 @@ graph LR
     core_adapters[core.adapters<br/>Adapters]
     core_config[core.config<br/>Configuration]
     core_html_ids[core.html_ids<br/>HTML IDs]
+    core_job_tracker[core.job_tracker<br/>Job Tracker]
     core_protocols[core.protocols<br/>Protocols]
-    core_registry[core.registry<br/>Registry]
     settings_components[settings.components<br/>Settings Components]
     settings_schemas[settings.schemas<br/>Settings Schemas]
     storage_config[storage.config<br/>Storage Configuration]
@@ -61,38 +61,39 @@ graph LR
     components_processor --> core_html_ids
     components_results --> core_config
     components_results --> core_html_ids
-    components_steps --> core_config
     components_steps --> core_protocols
+    components_steps --> core_config
     components_steps --> core_html_ids
     core_adapters --> core_protocols
-    core_adapters --> core_registry
-    core_config --> storage_config
+    core_adapters --> core_config
     core_config --> core_html_ids
-    settings_schemas --> storage_config
+    core_config --> storage_config
     settings_schemas --> core_config
+    settings_schemas --> storage_config
     storage_file_storage --> storage_config
-    workflow_job_handler --> core_config
-    workflow_job_handler --> workflow_workflow
     workflow_job_handler --> components_results
     workflow_job_handler --> components_processor
+    workflow_job_handler --> core_job_tracker
     workflow_job_handler --> core_protocols
-    workflow_job_handler --> core_html_ids
     workflow_job_handler --> storage_file_storage
-    workflow_routes --> workflow_workflow
+    workflow_job_handler --> core_config
+    workflow_job_handler --> core_html_ids
+    workflow_job_handler --> workflow_workflow
+    workflow_routes --> components_steps
     workflow_routes --> components_results
     workflow_routes --> components_processor
-    workflow_routes --> components_steps
+    workflow_routes --> workflow_workflow
     workflow_routes --> workflow_job_handler
     workflow_routes --> core_html_ids
     workflow_workflow --> storage_file_storage
-    workflow_workflow --> components_steps
+    workflow_workflow --> core_job_tracker
     workflow_workflow --> core_config
     workflow_workflow --> core_adapters
-    workflow_workflow --> core_registry
+    workflow_workflow --> components_steps
     workflow_workflow --> core_html_ids
 ```
 
-*33 cross-module dependencies detected*
+*34 cross-module dependencies detected*
 
 ## CLI Reference
 
@@ -110,8 +111,7 @@ Detailed documentation for each module in the project:
 
 ``` python
 from cjm_fasthtml_workflow_transcription_single_file.core.adapters import (
-    PluginRegistryAdapter,
-    DefaultConfigPluginRegistryAdapter
+    PluginRegistryAdapter
 )
 ```
 
@@ -120,86 +120,46 @@ from cjm_fasthtml_workflow_transcription_single_file.core.adapters import (
 ``` python
 class PluginRegistryAdapter:
     def __init__(self,
-    "Adapts app's UnifiedPluginRegistry to workflow's PluginRegistryProtocol."
+                 plugin_manager: PluginManager,  # The PluginManager instance to wrap
+                 config: SingleFileWorkflowConfig, # The workflow config instance
+                 category: str = "transcription"  # Plugin category to filter by
+                 )
+    "Adapts PluginManager to workflow's PluginRegistryProtocol."
     
     def __init__(self,
+                     plugin_manager: PluginManager,  # The PluginManager instance to wrap
+                     config: SingleFileWorkflowConfig, # The workflow config instance
+                     category: str = "transcription"  # Plugin category to filter by
+                     )
         "Initialize the adapter."
     
     def get_configured_plugins(self) -> List[PluginInfo]:  # List of PluginInfo for configured plugins
-            """Get all configured transcription plugins (those with saved config files)."""
-            plugins = self._registry.get_plugins_by_category(self._category)
-            return [
-                PluginInfo(
-                    id=p.get_unique_id(),
-                    name=p.name,
-                    title=p.title,
-                    is_configured=p.is_configured,
-                    supports_streaming=self._check_streaming_support(p)
-                )
-                for p in plugins if p.is_configured
-            ]
+            """Get all configured transcription plugins (all discovered are considered configured)."""
+            metas = self._manager.get_discovered_by_category(self._category)
+            return [self._meta_to_info(meta) for meta in metas]
     
         def get_all_plugins(self) -> List[PluginInfo]:  # List of PluginInfo for all discovered plugins
-        "Get all configured transcription plugins (those with saved config files)."
+        "Get all configured transcription plugins (all discovered are considered configured)."
     
     def get_all_plugins(self) -> List[PluginInfo]:  # List of PluginInfo for all discovered plugins
-            """Get all discovered transcription plugins (configured or not)."""
-            plugins = self._registry.get_plugins_by_category(self._category)
-            return [
-                PluginInfo(
-                    id=p.get_unique_id(),
-                    name=p.name,
-                    title=p.title,
-                    is_configured=p.is_configured,
-                    supports_streaming=self._check_streaming_support(p)
-                )
-                for p in plugins
-            ]
+            """Get all discovered transcription plugins."""
+            metas = self._manager.get_discovered_by_category(self._category)
+            return [self._meta_to_info(meta) for meta in metas]
     
         def get_plugin(self,
-                       plugin_id: str  # Unique plugin identifier
+                       plugin_id: str  # Unique plugin identifier (name)
                        ) -> Optional[PluginInfo]:  # PluginInfo if found, None otherwise
-        "Get all discovered transcription plugins (configured or not)."
+        "Get all discovered transcription plugins."
     
     def get_plugin(self,
-                       plugin_id: str  # Unique plugin identifier
+                       plugin_id: str  # Unique plugin identifier (name)
                        ) -> Optional[PluginInfo]:  # PluginInfo if found, None otherwise
         "Get a specific plugin by ID."
     
     def get_plugin_config(self,
                               plugin_id: str  # Unique plugin identifier
-                              ) -> Dict[str, Any]:  # Configuration dictionary, empty dict if not configured
+                              ) -> Dict[str, Any]:  # Configuration dictionary
         "Get the configuration for a plugin."
-```
-
-``` python
-class DefaultConfigPluginRegistryAdapter:
-    def __init__(self,
-                 registry: UnifiedPluginRegistry,  # The UnifiedPluginRegistry instance to wrap
-                 category: str = "transcription"  # Plugin category to filter by
-                 )
-    "Plugin registry adapter that provides default config values for unconfigured plugins."
-    
-    def __init__(self,
-                     registry: UnifiedPluginRegistry,  # The UnifiedPluginRegistry instance to wrap
-                     category: str = "transcription"  # Plugin category to filter by
-                     )
-        "Initialize adapter with registry instance."
-    
-    def get_plugins_by_category(self,
-                                    category: str  # Plugin category to filter by
-                                    ) -> list:  # List of plugins in the category
-        "Get all plugins in a specific category."
-    
-    def get_plugin(self,
-                       plugin_id: str  # Unique plugin identifier
-                       ):  # Plugin metadata or None
-        "Get a specific plugin by ID."
-    
-    def load_plugin_config(self,
-                               plugin_id: str  # Unique plugin identifier
-                               ) -> Dict[str, Any]:  # Configuration dictionary with defaults applied
-        "Load configuration for a plugin, using defaults if no saved config exists."
 ```
 
 ### Settings Components (`components.ipynb`)
@@ -517,25 +477,25 @@ from cjm_fasthtml_workflow_transcription_single_file.workflow.job_handler import
 ``` python
 def get_job_session_info(
     job_id: str,  # Unique job identifier
-    job,  # Job object from the manager
-    plugin_registry: PluginRegistryProtocol,  # Plugin registry for getting plugin info
+    job: TranscriptionJob,  # Job object from the tracker
+    plugin_manager: PluginManager,  # Plugin manager for getting plugin info
 ) -> tuple[Dict[str, Any], Dict[str, Any]]:  # Tuple of (file_info, plugin_info) dictionaries
-    "Get file and plugin info from job object and plugin registry."
+    "Get file and plugin info from job object and plugin manager."
 ```
 
 ``` python
 def _save_job_result_once(
     job_id: str,  # Job identifier
-    job,  # Job object
+    job: TranscriptionJob,  # Job object
     data: Dict[str, Any],  # Transcription data containing text and metadata
-    plugin_registry: PluginRegistryProtocol,  # Plugin registry for getting plugin info
+    plugin_manager: PluginManager,  # Plugin manager for getting plugin info
     result_storage: ResultStorage,  # Storage for saving transcription results
 ) -> None
     """
     Save transcription result to disk, ensuring it's only saved once per job.
     
     Called from the SSE stream handler as a fallback. The primary save mechanism
-    is the workflow's `_on_job_completed` callback called by TranscriptionJobManager.
+    is the workflow's `_on_job_completed` callback called by TranscriptionJobTracker.
     """
 ```
 
@@ -563,6 +523,119 @@ def create_job_stream_handler(
     workflow: SingleFileTranscriptionWorkflow,  # Workflow instance providing config and dependencies
 ):  # Async generator for SSE streaming
     "Create an SSE stream generator for monitoring job completion."
+```
+
+### Job Tracker (`job_tracker.ipynb`)
+
+> Lightweight job state tracking for transcription workflows
+
+#### Import
+
+``` python
+from cjm_fasthtml_workflow_transcription_single_file.core.job_tracker import (
+    TranscriptionJob,
+    TranscriptionJobTracker
+)
+```
+
+#### Classes
+
+``` python
+@dataclass
+class TranscriptionJob:
+    "Represents a transcription job's state."
+    
+    id: str  # Unique job identifier (UUID)
+    plugin_name: str  # Plugin name for execution
+    file_path: str  # Path to the audio/video file
+    file_name: str  # Display name of the file
+    status: str = 'pending'  # Job status: pending, running, completed, failed, cancelled
+    created_at: str = field(...)  # ISO timestamp
+    started_at: Optional[str]  # When execution began
+    completed_at: Optional[str]  # When job finished
+    result: Optional[Dict[str, Any]]  # Transcription result data
+    error: Optional[str]  # Error message if failed
+    metadata: Dict[str, Any] = field(...)  # Additional job metadata
+    task: Optional[asyncio.Task]  # Async task handle for cancellation
+```
+
+``` python
+class TranscriptionJobTracker:
+    def __init__(
+        self,
+        on_job_completed: Optional[Callable[[str, 'TranscriptionJobTracker'], None]] = None,  # Completion callback
+    )
+    "Lightweight job state tracker for transcription workflows."
+    
+    def __init__(
+            self,
+            on_job_completed: Optional[Callable[[str, 'TranscriptionJobTracker'], None]] = None,  # Completion callback
+        )
+        "Initialize the job tracker."
+    
+    def create_job(
+            self,
+            plugin_name: str,  # Name of the plugin to execute
+            file_path: str,  # Path to audio/video file
+            file_name: str,  # Display name of the file
+            **metadata  # Additional job metadata
+        ) -> TranscriptionJob:  # Created job instance
+        "Create a new transcription job."
+    
+    def mark_running(
+            self,
+            job_id: str,  # Job identifier
+            task: Optional[asyncio.Task] = None  # Async task handle
+        ) -> None
+        "Mark a job as running."
+    
+    def mark_completed(
+            self,
+            job_id: str,  # Job identifier
+            result: Dict[str, Any]  # Transcription result
+        ) -> None
+        "Mark a job as completed with result."
+    
+    def mark_failed(
+            self,
+            job_id: str,  # Job identifier
+            error: str  # Error message
+        ) -> None
+        "Mark a job as failed with error."
+    
+    async def cancel_job(
+            self,
+            job_id: str  # Job identifier
+        ) -> bool:  # True if cancellation was successful
+        "Cancel a running job."
+    
+    def get_job(
+            self,
+            job_id: str  # Job identifier
+        ) -> Optional[TranscriptionJob]:  # Job instance or None
+        "Get a job by ID."
+    
+    def get_job_result(
+            self,
+            job_id: str  # Job identifier
+        ) -> Optional[Dict[str, Any]]:  # Result dict or None
+        "Get a job's result."
+    
+    def get_running_jobs(self) -> List[TranscriptionJob]:  # List of running jobs
+            """Get all currently running jobs."""
+            return [job for job in self.jobs.values() if job.status == "running"]
+        
+        def clear_completed(
+            self,
+            keep_results: bool = False  # Whether to keep results in memory
+        ) -> int:  # Number of jobs cleared
+        "Get all currently running jobs."
+    
+    def clear_completed(
+            self,
+            keep_results: bool = False  # Whether to keep results in memory
+        ) -> int:  # Number of jobs cleared
+        "Clear completed, failed, and cancelled jobs."
 ```
 
 ### Processor Component (`processor.ipynb`)
@@ -715,143 +788,6 @@ class ResultStorageProtocol(Protocol):
             result_id: Any  # Implementation-specific identifier
         ) -> bool:  # True if deletion successful, False otherwise
         "Delete a transcription result."
-```
-
-### Registry (`registry.ipynb`)
-
-> Unified plugin registry for managing multiple domain-specific plugin
-> systems with configuration persistence
-
-#### Import
-
-``` python
-from cjm_fasthtml_workflow_transcription_single_file.core.registry import (
-    T,
-    PluginMetadata,
-    UnifiedPluginRegistry
-)
-```
-
-#### Classes
-
-``` python
-@dataclass
-class PluginMetadata:
-    "Metadata describing a plugin for display and configuration management."
-    
-    name: str  # Internal plugin identifier
-    category: str  # Plugin category string (application-defined)
-    title: str  # Display title for the plugin
-    config_schema: Dict[str, Any]  # JSON Schema for plugin configuration
-    config_dataclass: Optional[Type]  # Configuration dataclass type (if available)
-    description: Optional[str]  # Plugin description
-    version: Optional[str]  # Plugin version
-    is_configured: bool = False  # Whether the plugin has saved configuration
-    
-    def get_unique_id(self) -> str:  # String in format 'category_name'
-        "Generate unique ID for this plugin."
-```
-
-``` python
-class UnifiedPluginRegistry:
-    def __init__(self, 
-                 config_dir: Optional[Path] = None  # Directory for plugin configuration files (default: 'configs')
-                )
-    "Unified registry for multiple domain-specific plugin systems with configuration persistence."
-    
-    def __init__(self,
-                     config_dir: Optional[Path] = None  # Directory for plugin configuration files (default: 'configs')
-                    )
-        "Initialize the unified plugin registry."
-    
-    def register_plugin_manager(
-            self,
-            category: str,  # Category name (e.g., "transcription", "llm")
-            manager: Any,  # Domain-specific plugin manager
-            display_name: Optional[str] = None,  # Display name for UI
-            auto_discover: bool = True  # Automatically discover plugins?
-        ) -> List[PluginMetadata]:  # List of discovered plugin metadata
-        "Register a domain-specific plugin manager."
-    
-    def register_plugin_system(
-            self,
-            category: str,  # Category name (e.g., "transcription", "llm")
-            plugin_interface: Type,  # Plugin interface class (e.g., TranscriptionPlugin)
-            display_name: Optional[str] = None,  # Display name for UI
-            auto_discover: bool = True  # Automatically discover plugins?
-        ) -> List[PluginMetadata]:  # List of discovered plugin metadata
-        "Create and register a plugin system in one step. This is a convenience method that creates a PluginManager with the
-specified interface and registers it with the registry."
-    
-    def get_manager(
-            self,
-            category: str,  # Category name
-            manager_type: Optional[Type[T]] = None  # Optional type hint for IDE autocomplete
-        ) -> Optional[T]:  # Plugin manager instance
-        "Get plugin manager for a specific category."
-    
-    def get_categories(self) -> List[str]:  # Sorted list of category names
-            """Get all registered categories."""
-            return sorted(self._categories.keys())
-        
-        def get_category_display_name(self, 
-                                       category: str  # Category name
-                                      ) -> str:  # Display name or category name if not set
-        "Get all registered categories."
-    
-    def get_category_display_name(self,
-                                       category: str  # Category name
-                                      ) -> str:  # Display name or category name if not set
-        "Get display name for a category."
-    
-    def get_plugin(self,
-                       unique_id: str  # Plugin unique identifier (format: 'category_name')
-                      ) -> Optional[PluginMetadata]:  # Plugin metadata if found, None otherwise
-        "Get plugin metadata by unique ID."
-    
-    def get_plugins_by_category(self,
-                                    category: str  # Category name
-                                   ) -> List[PluginMetadata]:  # List of plugin metadata for the category
-        "Get all plugins in a category."
-    
-    def get_all_plugins(self) -> List[PluginMetadata]:  # List of all plugin metadata
-            """Get all plugins across all categories."""
-            return list(self._plugins.values())
-        
-        def get_categories_with_plugins(self) -> List[str]:  # Sorted list of categories with plugins
-        "Get all plugins across all categories."
-    
-    def get_categories_with_plugins(self) -> List[str]:  # Sorted list of categories with plugins
-            """Get categories that have registered plugins."""
-            categories = set(p.category for p in self._plugins.values())
-            return sorted(categories)
-        
-        def load_plugin_config(self, 
-                              unique_id: str  # Plugin unique identifier
-                             ) -> Dict[str, Any]:  # Configuration dictionary (empty if no config exists)
-        "Get categories that have registered plugins."
-    
-    def load_plugin_config(self,
-                              unique_id: str  # Plugin unique identifier
-                             ) -> Dict[str, Any]:  # Configuration dictionary (empty if no config exists)
-        "Load saved configuration for a plugin."
-    
-    def save_plugin_config(self,
-                              unique_id: str,  # Plugin unique identifier
-                              config: Dict[str, Any]  # Configuration dictionary to save
-                             ) -> bool:  # True if save succeeded, False otherwise
-        "Save configuration for a plugin."
-    
-    def delete_plugin_config(self,
-                                unique_id: str  # Plugin unique identifier
-                               ) -> bool:  # True if deletion succeeded, False otherwise
-        "Delete saved configuration for a plugin."
-```
-
-#### Variables
-
-``` python
-T
 ```
 
 ### Results Components (`results.ipynb`)
@@ -1152,7 +1088,7 @@ def _render_plugin_details_with_config(
     plugin_id: str, # ID of the plugin to display details for
     plugins: List[PluginInfo], # List of available plugins
     plugin_registry: PluginRegistryProtocol, # Plugin registry adapter for getting plugin config
-    raw_plugin_registry, # UnifiedPluginRegistry for config_schema access
+    plugin_manager: Optional[PluginManager], # PluginManager for config_schema access
     save_url: str, # URL for saving plugin configuration
     reset_url: str, # URL for resetting plugin configuration
 ) -> Optional[FT]: # Plugin details with config collapse, or None if not found
@@ -1162,7 +1098,8 @@ def _render_plugin_details_with_config(
 ``` python
 def render_plugin_config_form(
     plugin_id: str, # ID of the plugin to render config for
-    plugin_registry, # UnifiedPluginRegistry with config_class access
+    plugin_registry: PluginRegistryProtocol, # Plugin registry adapter for getting plugins and config
+    plugin_manager: PluginManager, # PluginManager for config_schema access
     save_url: str, # URL for saving the configuration
     reset_url: str, # URL for resetting to defaults
     alert_message: Optional[Any] = None, # Optional alert to display above the form
@@ -1173,7 +1110,8 @@ def render_plugin_config_form(
 ``` python
 def _render_plugin_config_collapse(
     plugin_id: str, # ID of the plugin to render config for
-    plugin_registry, # UnifiedPluginRegistry with config_schema access
+    plugin_registry: PluginRegistryProtocol, # Plugin registry adapter for getting plugins and config
+    plugin_manager: PluginManager, # PluginManager for config_schema access
     save_url: str, # URL for saving the configuration
     reset_url: str, # URL for resetting to defaults
 ) -> FT: # Collapse component with plugin configuration form
@@ -1184,7 +1122,7 @@ def _render_plugin_config_collapse(
 def render_plugin_details_route(
     plugin_id: str, # ID of the plugin to display details for
     plugin_registry: PluginRegistryProtocol, # Plugin registry adapter for getting plugins and config
-    raw_plugin_registry, # UnifiedPluginRegistry for config_schema access
+    plugin_manager: PluginManager, # PluginManager for config_schema access
     save_url: str, # URL for saving plugin configuration
     reset_url: str, # URL for resetting plugin configuration to defaults
 ) -> FT: # Plugin details with info card and config collapse
@@ -1198,7 +1136,7 @@ def render_plugin_selection(
     plugin_registry: PluginRegistryProtocol, # Plugin registry adapter for getting plugin config
     settings_modal_url: str, # URL for the settings modal route
     plugin_details_url: str, # URL for the plugin details route
-    raw_plugin_registry=None, # UnifiedPluginRegistry for config_schema access (optional)
+    plugin_manager: Optional[PluginManager] = None, # PluginManager for config_schema access
     save_plugin_config_url: str = "", # URL for saving plugin configuration
     reset_plugin_config_url: str = "", # URL for resetting plugin configuration
 ) -> FT: # Plugin selection step UI component
@@ -1252,20 +1190,6 @@ def cleanup(
     self: SingleFileTranscriptionWorkflow,
 ) -> None
     "Clean up workflow resources. Mirrors PluginInterface.cleanup() for future plugin system compatibility."
-```
-
-``` python
-@patch
-def _ensure_plugin_configs_exist(
-    self: SingleFileTranscriptionWorkflow,
-) -> None
-    """
-    Ensure all discovered plugins have config files.
-    
-    For plugins without saved config files, creates a config file with
-    default values from the plugin's schema. Required because workers
-    only load plugins that have config files.
-    """
 ```
 
 ``` python
@@ -1336,39 +1260,50 @@ def _create_router(
 class SingleFileTranscriptionWorkflow:
     def __init__(
         self,
+        plugin_manager: PluginManager,  # PluginManager from host application
         config: Optional[SingleFileWorkflowConfig] = None,  # Explicit config (bypasses auto-loading)
         **config_overrides  # Override specific config values
     )
     """
     Self-contained single-file transcription workflow.
     
-    Creates and manages internal UnifiedPluginRegistry, ResourceManager,
-    TranscriptionJobManager, SSEBroadcastManager, FileBrowser, ResultStorage,
+    Receives a PluginManager from the host application and creates internal
+    TranscriptionJobTracker, SSEBroadcastManager, FileBrowser, ResultStorage,
     StepFlow (plugin → file → confirm wizard), and APIRouter.
     """
     
     def __init__(
             self,
+            plugin_manager: PluginManager,  # PluginManager from host application
             config: Optional[SingleFileWorkflowConfig] = None,  # Explicit config (bypasses auto-loading)
             **config_overrides  # Override specific config values
         )
-        "Initialize the workflow with auto-loaded or explicit configuration."
+        "Initialize the workflow with injected PluginManager."
     
     def create_and_setup(
             cls,
             app,  # FastHTML application instance
+            plugin_manager: PluginManager,  # PluginManager from host application
             config: Optional[SingleFileWorkflowConfig] = None,  # Explicit config (bypasses auto-loading)
             **config_overrides  # Override specific config values
         ) -> "SingleFileTranscriptionWorkflow":  # Configured and setup workflow instance
         "Create, configure, and setup a workflow in one call."
     
-    def transcription_manager(self) -> TranscriptionJobManager:
-            """Access to internal transcription manager."""
-            return self._transcription_manager
+    def job_tracker(self) -> TranscriptionJobTracker:
+            """Access to internal job tracker."""
+            return self._job_tracker
+        
+        @property
+        def plugin_manager(self) -> PluginManager
+        "Access to internal job tracker."
+    
+    def plugin_manager(self) -> PluginManager:
+            """Access to plugin manager."""
+            return self._plugin_manager
         
         @property
         def plugin_registry(self) -> PluginRegistryAdapter
-        "Access to internal transcription manager."
+        "Access to plugin manager."
     
     def plugin_registry(self) -> PluginRegistryAdapter:
             """Access to plugin registry adapter."""

@@ -6,6 +6,7 @@
 __all__ = ['init_router']
 
 # %% ../../nbs/workflow/routes.ipynb 3
+import json
 from pathlib import Path
 from typing import Optional
 from fasthtml.common import *
@@ -17,7 +18,7 @@ from cjm_fasthtml_file_browser.components.preview import file_preview_modal
 from ..core.html_ids import SingleFileHtmlIds
 from ..components.processor import transcription_in_progress
 from ..components.results import transcription_results, transcription_error
-from ..components.steps import render_plugin_details_route
+from ..components.steps import render_plugin_details_route, render_plugin_config_form
 from cjm_fasthtml_workflow_transcription_single_file.workflow.job_handler import (
     get_job_session_info,
     create_job_stream_handler,
@@ -32,8 +33,8 @@ def _handle_current_status(
     sess,  # FastHTML session object
 ):  # Appropriate UI component based on current state
     """Return current transcription status - determines what to show."""
-    manager = workflow._transcription_manager
-    all_jobs = manager.get_all_jobs()
+    tracker = workflow._job_tracker
+    all_jobs = list(tracker.jobs.values())
 
     # Priority 1: Check for running jobs
     if all_jobs:
@@ -42,7 +43,7 @@ def _handle_current_status(
 
         if recent_job.status == 'running':
             file_info, plugin_info = get_job_session_info(
-                recent_job.id, recent_job, workflow._plugin_adapter
+                recent_job.id, recent_job, workflow._plugin_manager
             )
             return transcription_in_progress(
                 job_id=recent_job.id,
@@ -67,11 +68,11 @@ def _handle_current_status(
         recent_job = sorted(all_jobs, key=lambda j: j.created_at, reverse=True)[0]
 
         if recent_job.status == 'completed':
-            result = manager.get_job_result(recent_job.id)
+            result = tracker.get_job_result(recent_job.id)
             if result and result.get('status') == 'success':
                 data = result.get('data', {})
                 file_info, plugin_info = get_job_session_info(
-                    recent_job.id, recent_job, workflow._plugin_adapter
+                    recent_job.id, recent_job, workflow._plugin_manager
                 )
 
                 return transcription_results(
@@ -96,8 +97,8 @@ async def _handle_cancel_job(
     job_id: str,  # ID of the job to cancel
 ):  # StepFlow start view or error component
     """Cancel a running transcription job."""
-    manager = workflow._transcription_manager
-    success = await manager.cancel_job(job_id)
+    tracker = workflow._job_tracker
+    success = await tracker.cancel_job(job_id)
 
     if success:
         # Reset workflow state and return to plugin selection
@@ -140,9 +141,9 @@ def _handle_export(
     format: str = "txt",  # Export format (txt, srt, vtt)
 ):  # Response with file download
     """Export transcription in specified format."""
-    manager = workflow._transcription_manager
-    job = manager.get_job(job_id)
-    result = manager.get_job_result(job_id)
+    tracker = workflow._job_tracker
+    job = tracker.get_job(job_id)
+    result = tracker.get_job_result(job_id)
 
     if not job or not result:
         return Response("Job not found", status_code=404)
@@ -178,7 +179,7 @@ def _handle_plugin_details(
         return render_plugin_details_route(
             plugin_id,
             workflow._plugin_adapter,
-            workflow._plugin_registry,
+            workflow._plugin_manager,
             save_url,
             reset_url
         )
@@ -196,31 +197,44 @@ async def _handle_save_plugin_config(
     """Save plugin configuration from the collapse form."""
     from cjm_fasthtml_app_core.components.alerts import create_success_alert, create_error_alert
     from cjm_fasthtml_settings.core.utils import convert_form_data_to_config
-    from cjm_fasthtml_workflow_transcription_single_file.components.steps import render_plugin_config_form
 
     if not plugin_id:
         return create_error_alert("No plugin selected")
 
     try:
         # Get plugin metadata to access schema
-        plugin_meta = workflow._plugin_registry.get_plugin(plugin_id)
+        plugin_meta = workflow._plugin_manager.get_plugin_meta(plugin_id)
         if not plugin_meta or not plugin_meta.config_schema:
             return create_error_alert("Plugin schema not found")
 
         form_data = await request.form()
         config = convert_form_data_to_config(form_data, plugin_meta.config_schema)
 
-        # Save configuration via the registry
-        if workflow._plugin_registry.save_plugin_config(plugin_id, config):
-            return render_plugin_config_form(
-                plugin_id=plugin_id,
-                plugin_registry=workflow._plugin_registry,
-                save_url=save_url,
-                reset_url=reset_url,
-                alert_message=create_success_alert("Plugin configuration saved!")
-            )
-        else:
-            return create_error_alert("Failed to save plugin configuration")
+        # Save configuration via the plugin manager
+        workflow._plugin_manager.update_plugin_config(plugin_id, config)
+
+        try:
+            config_file = workflow.config.plugin_config_dir / f"{plugin_id}.json"
+            with open(config_file, 'w') as f:
+                json.dump(config, f, indent=2)
+            
+            # # Update plugin's configured status
+            # if unique_id in self._plugins:
+            #     self._plugins[unique_id].is_configured = True
+            
+            # return True
+        except Exception as e:
+            print(f"Error saving config for {plugin_id}: {e}")
+            # return False
+        
+        return render_plugin_config_form(
+            plugin_id=plugin_id,
+            plugin_registry=workflow._plugin_adapter,
+            plugin_manager=workflow._plugin_manager,
+            save_url=save_url,
+            reset_url=reset_url,
+            alert_message=create_success_alert("Plugin configuration saved!")
+        )
 
     except Exception as e:
         import traceback
@@ -237,24 +251,29 @@ def _handle_reset_plugin_config(
 ):  # Updated config form with defaults or empty Div
     """Reset plugin configuration to defaults."""
     from cjm_fasthtml_app_core.components.alerts import create_success_alert
-    from cjm_fasthtml_settings.core.utils import get_default_values_from_schema
-    from cjm_fasthtml_workflow_transcription_single_file.components.steps import render_plugin_config_form
 
     if not plugin_id:
         return Div()
 
     # Get plugin metadata to access schema
-    plugin_meta = workflow._plugin_registry.get_plugin(plugin_id)
+    plugin_meta = workflow._plugin_manager.get_plugin_meta(plugin_id)
     if not plugin_meta or not plugin_meta.config_schema:
         return Div()
 
-    # Get default values and save them
-    default_values = get_default_values_from_schema(plugin_meta.config_schema)
-    workflow._plugin_registry.save_plugin_config(plugin_id, default_values)
+    # Get default values from schema and save them
+    default_values = {}
+    schema = plugin_meta.config_schema
+    if schema.get("properties"):
+        for prop_name, prop_def in schema["properties"].items():
+            if "default" in prop_def:
+                default_values[prop_name] = prop_def["default"]
+    
+    workflow._plugin_manager.update_plugin_config(plugin_id, default_values)
 
     return render_plugin_config_form(
         plugin_id=plugin_id,
-        plugin_registry=workflow._plugin_registry,
+        plugin_registry=workflow._plugin_adapter,
+        plugin_manager=workflow._plugin_manager,
         save_url=save_url,
         reset_url=reset_url,
         alert_message=create_success_alert("Configuration reset to defaults")
@@ -350,8 +369,8 @@ async def _handle_settings_save(
             workflow.config
         )
 
-        # Update ResourceManager threshold separately (not part of config objects)
-        workflow._resource_manager.gpu_memory_threshold_percent = settings.gpu_memory_threshold_percent
+        # Note: Resource management is now handled by PluginManager's scheduler
+        # The gpu_memory_threshold_percent setting is no longer used here
 
         # Save to workflow-internal config directory for persistence across restarts
         save_config("settings", settings.to_dict(), workflow.config.config_dir)
