@@ -61,9 +61,9 @@ graph LR
     components_processor --> core_html_ids
     components_results --> core_config
     components_results --> core_html_ids
-    components_steps --> core_protocols
     components_steps --> core_config
     components_steps --> core_html_ids
+    components_steps --> core_protocols
     core_adapters --> core_protocols
     core_adapters --> core_config
     core_config --> core_html_ids
@@ -71,26 +71,26 @@ graph LR
     settings_schemas --> core_config
     settings_schemas --> storage_config
     storage_file_storage --> storage_config
-    workflow_job_handler --> components_results
-    workflow_job_handler --> components_processor
     workflow_job_handler --> core_job_tracker
+    workflow_job_handler --> components_processor
+    workflow_job_handler --> workflow_workflow
     workflow_job_handler --> core_protocols
-    workflow_job_handler --> storage_file_storage
+    workflow_job_handler --> components_results
     workflow_job_handler --> core_config
     workflow_job_handler --> core_html_ids
-    workflow_job_handler --> workflow_workflow
-    workflow_routes --> components_steps
-    workflow_routes --> components_results
+    workflow_job_handler --> storage_file_storage
     workflow_routes --> components_processor
-    workflow_routes --> workflow_workflow
     workflow_routes --> workflow_job_handler
+    workflow_routes --> workflow_workflow
+    workflow_routes --> components_results
+    workflow_routes --> components_steps
     workflow_routes --> core_html_ids
-    workflow_workflow --> storage_file_storage
     workflow_workflow --> core_job_tracker
-    workflow_workflow --> core_config
-    workflow_workflow --> core_adapters
+    workflow_workflow --> storage_file_storage
     workflow_workflow --> components_steps
+    workflow_workflow --> core_config
     workflow_workflow --> core_html_ids
+    workflow_workflow --> core_adapters
 ```
 
 *34 cross-module dependencies detected*

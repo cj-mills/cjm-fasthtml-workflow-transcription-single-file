@@ -158,3 +158,9 @@ checklink/cookies.txt
 /test_files/
 /configs/
 /demo_transcription_results/
+/claude-docs/
+/.cjm/
+/runtime/
+/models/
+plugins_test.yaml
+cjm.yaml
