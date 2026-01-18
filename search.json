@@ -1,0 +1,568 @@
+[
+  {
+    "objectID": "settings/components.html",
+    "href": "settings/components.html",
+    "title": "Settings Components",
+    "section": "",
+    "text": "Button that triggers the settings modal.\n\nsource\n\n\n\ndef settings_trigger_button(\n    modal_id:str, # ID of the modal to trigger\n    label:str='Settings', # Button label text\n    button_cls:Optional=None, # Optional additional button classes\n)-&gt;FT: # Button element that triggers the modal\n\nCreate a button that opens the settings modal.",
+    "crumbs": [
+      "settings",
+      "Settings Components"
+    ]
+  },
+  {
+    "objectID": "settings/components.html#settings_trigger_button",
+    "href": "settings/components.html#settings_trigger_button",
+    "title": "Settings Components",
+    "section": "",
+    "text": "Button that triggers the settings modal.\n\nsource\n\n\n\ndef settings_trigger_button(\n    modal_id:str, # ID of the modal to trigger\n    label:str='Settings', # Button label text\n    button_cls:Optional=None, # Optional additional button classes\n)-&gt;FT: # Button element that triggers the modal\n\nCreate a button that opens the settings modal.",
+    "crumbs": [
+      "settings",
+      "Settings Components"
+    ]
+  },
+  {
+    "objectID": "settings/components.html#simple_settings_form",
+    "href": "settings/components.html#simple_settings_form",
+    "title": "Settings Components",
+    "section": "simple_settings_form",
+    "text": "simple_settings_form\nGenerate a simple settings form from a JSON schema.\n\nsource\n\nsimple_settings_form\n\ndef simple_settings_form(\n    directories:list, # List of media directories\n    auto_save:bool, # Current auto-save setting\n    results_directory:str, # Current results directory\n    save_url:str, # URL to POST settings to\n    target_id:str, # Target element ID for HTMX response\n    modal_id:str, # Modal ID for close button\n)-&gt;FT: # Simple form element\n\nCreate a simple settings form without full schema generation.",
+    "crumbs": [
+      "settings",
+      "Settings Components"
+    ]
+  },
+  {
+    "objectID": "settings/components.html#settings_modal",
+    "href": "settings/components.html#settings_modal",
+    "title": "Settings Components",
+    "section": "settings_modal",
+    "text": "settings_modal\nSettings modal dialog with tabbed sections for different setting categories.\n\nsource\n\nsettings_modal\n\ndef settings_modal(\n    modal_id:str, # ID for the modal element\n    schema:Dict, # JSON schema for settings\n    current_values:Dict, # Current settings values\n    save_url:str, # URL to POST settings to\n    target_id:str, # Target element ID for HTMX response\n)-&gt;FT: # Modal dialog with settings form\n\nCreate the settings modal with form.",
+    "crumbs": [
+      "settings",
+      "Settings Components"
+    ]
+  },
+  {
+    "objectID": "core/job_tracker.html",
+    "href": "core/job_tracker.html",
+    "title": "Job Tracker",
+    "section": "",
+    "text": "Dataclass representing a transcription job’s state. This is a lightweight structure for tracking job progress without the process management complexity of the old TranscriptionJobManager.\n\nsource\n\n\n\ndef TranscriptionJob(\n    id:str, plugin_name:str, file_path:str, file_name:str, status:str='pending', created_at:str=&lt;factory&gt;,\n    started_at:Optional=None, completed_at:Optional=None, result:Optional=None, error:Optional=None,\n    metadata:Dict=&lt;factory&gt;, task:Optional=None\n)-&gt;None:\n\nRepresents a transcription job’s state.",
+    "crumbs": [
+      "core",
+      "Job Tracker"
+    ]
+  },
+  {
+    "objectID": "core/job_tracker.html#transcriptionjob",
+    "href": "core/job_tracker.html#transcriptionjob",
+    "title": "Job Tracker",
+    "section": "",
+    "text": "Dataclass representing a transcription job’s state. This is a lightweight structure for tracking job progress without the process management complexity of the old TranscriptionJobManager.\n\nsource\n\n\n\ndef TranscriptionJob(\n    id:str, plugin_name:str, file_path:str, file_name:str, status:str='pending', created_at:str=&lt;factory&gt;,\n    started_at:Optional=None, completed_at:Optional=None, result:Optional=None, error:Optional=None,\n    metadata:Dict=&lt;factory&gt;, task:Optional=None\n)-&gt;None:\n\nRepresents a transcription job’s state.",
+    "crumbs": [
+      "core",
+      "Job Tracker"
+    ]
+  },
+  {
+    "objectID": "core/job_tracker.html#transcriptionjobtracker",
+    "href": "core/job_tracker.html#transcriptionjobtracker",
+    "title": "Job Tracker",
+    "section": "TranscriptionJobTracker",
+    "text": "TranscriptionJobTracker\nLightweight job state tracker that works with the new PluginManager architecture. Unlike the old TranscriptionJobManager, this class:\n\nDoes not manage worker processes (handled by PluginManager)\nDoes not handle resource scheduling (handled by PluginManager’s scheduler)\nDoes not manage plugin loading (handled by PluginManager)\n\nIt simply tracks job state and coordinates with an externally-provided PluginManager for execution.\n\nsource\n\nTranscriptionJobTracker\n\ndef TranscriptionJobTracker(\n    on_job_completed:Optional=None, # Completion callback\n):\n\nLightweight job state tracker for transcription workflows.",
+    "crumbs": [
+      "core",
+      "Job Tracker"
+    ]
+  },
+  {
+    "objectID": "core/job_tracker.html#usage-example",
+    "href": "core/job_tracker.html#usage-example",
+    "title": "Job Tracker",
+    "section": "Usage Example",
+    "text": "Usage Example\nThe TranscriptionJobTracker is used in conjunction with a PluginManager (provided by the host application):\nfrom cjm_plugin_system.core.manager import PluginManager\nfrom cjm_fasthtml_workflow_transcription_single_file.core.job_tracker import (\n    TranscriptionJobTracker\n)\n\n# Host application provides the PluginManager\nplugin_manager = PluginManager()\nplugin_manager.load_all()\n\n# Workflow creates its own job tracker\ndef on_complete(job_id, tracker):\n    job = tracker.get_job(job_id)\n    print(f\"Job {job_id} completed: {job.file_name}\")\n\njob_tracker = TranscriptionJobTracker(on_job_completed=on_complete)\n\n# Start a job\njob = job_tracker.create_job(\n    plugin_name=\"cjm-transcription-plugin-whisper\",\n    file_path=\"/path/to/audio.mp3\",\n    file_name=\"audio.mp3\"\n)\n\n# Execute via PluginManager (in an async context)\nasync def run_transcription():\n    job_tracker.mark_running(job.id)\n    try:\n        result = await plugin_manager.execute_plugin_async(\n            job.plugin_name,\n            audio=job.file_path\n        )\n        job_tracker.mark_completed(job.id, result)\n    except Exception as e:\n        job_tracker.mark_failed(job.id, str(e))\n\n# Test: Create job tracker\ntracker = TranscriptionJobTracker()\n\n# Test: Create job\njob = tracker.create_job(\n    plugin_name=\"test-plugin\",\n    file_path=\"/test/audio.mp3\",\n    file_name=\"audio.mp3\"\n)\n\nassert job.status == \"pending\"\nassert job.plugin_name == \"test-plugin\"\nassert job.file_name == \"audio.mp3\"\nprint(f\"Created job: {job.id}\")\n\n# Test: Mark running\ntracker.mark_running(job.id)\nassert tracker.get_job(job.id).status == \"running\"\nprint(f\"Job status: {tracker.get_job(job.id).status}\")\n\n# Test: Mark completed\ntracker.mark_completed(job.id, {\"text\": \"Hello world\", \"metadata\": {}})\nassert tracker.get_job(job.id).status == \"completed\"\nresult = tracker.get_job_result(job.id)\nassert result[\"status\"] == \"success\"\nassert result[\"data\"][\"text\"] == \"Hello world\"\nprint(f\"Job result: {result}\")\n\nprint(\"All tests passed!\")\n\nCreated job: 60f8e8ee-80e5-4a01-af8e-bd3a22bbdc31\nJob status: running\nJob result: {'status': 'success', 'data': {'text': 'Hello world', 'metadata': {}}}\nAll tests passed!",
+    "crumbs": [
+      "core",
+      "Job Tracker"
+    ]
+  },
+  {
+    "objectID": "core/adapters.html",
+    "href": "core/adapters.html",
+    "title": "Adapters",
+    "section": "",
+    "text": "Adapter that wraps a PluginManager (from cjm-plugin-system) to implement PluginRegistryProtocol. This allows the workflow to work with the new plugin manager architecture while maintaining compatibility with workflow components that expect the registry protocol.\n\nsource\n\n\n\ndef PluginRegistryAdapter(\n    plugin_manager:PluginManager, # The PluginManager instance to wrap\n    config:SingleFileWorkflowConfig, # The workflow config instance\n    category:str='transcription', # Plugin category to filter by\n):\n\nAdapts PluginManager to workflow’s PluginRegistryProtocol.",
+    "crumbs": [
+      "core",
+      "Adapters"
+    ]
+  },
+  {
+    "objectID": "core/adapters.html#pluginregistryadapter-class",
+    "href": "core/adapters.html#pluginregistryadapter-class",
+    "title": "Adapters",
+    "section": "",
+    "text": "Adapter that wraps a PluginManager (from cjm-plugin-system) to implement PluginRegistryProtocol. This allows the workflow to work with the new plugin manager architecture while maintaining compatibility with workflow components that expect the registry protocol.\n\nsource\n\n\n\ndef PluginRegistryAdapter(\n    plugin_manager:PluginManager, # The PluginManager instance to wrap\n    config:SingleFileWorkflowConfig, # The workflow config instance\n    category:str='transcription', # Plugin category to filter by\n):\n\nAdapts PluginManager to workflow’s PluginRegistryProtocol.",
+    "crumbs": [
+      "core",
+      "Adapters"
+    ]
+  },
+  {
+    "objectID": "core/adapters.html#removed-defaultconfigpluginregistryadapter",
+    "href": "core/adapters.html#removed-defaultconfigpluginregistryadapter",
+    "title": "Adapters",
+    "section": "Removed: DefaultConfigPluginRegistryAdapter",
+    "text": "Removed: DefaultConfigPluginRegistryAdapter\nThe DefaultConfigPluginRegistryAdapter class is no longer needed because: - Plugin configuration is now embedded in manifest files during cjm-ctl install-all - Default values are extracted from the JSON schema in the manifest - The PluginManager handles configuration management directly\n\n# DefaultConfigPluginRegistryAdapter has been removed.\n# Configuration is now handled via manifest files and PluginManager.",
+    "crumbs": [
+      "core",
+      "Adapters"
+    ]
+  },
+  {
+    "objectID": "core/protocols.html",
+    "href": "core/protocols.html",
+    "title": "Protocols",
+    "section": "",
+    "text": "Simple dataclass representing plugin information for display in the workflow UI.\n\nsource\n\n\n\ndef PluginInfo(\n    id:str, name:str, title:str, is_configured:bool, supports_streaming:bool=False\n)-&gt;None:\n\nInformation about a transcription plugin.",
+    "crumbs": [
+      "core",
+      "Protocols"
+    ]
+  },
+  {
+    "objectID": "core/protocols.html#plugininfo-dataclass",
+    "href": "core/protocols.html#plugininfo-dataclass",
+    "title": "Protocols",
+    "section": "",
+    "text": "Simple dataclass representing plugin information for display in the workflow UI.\n\nsource\n\n\n\ndef PluginInfo(\n    id:str, name:str, title:str, is_configured:bool, supports_streaming:bool=False\n)-&gt;None:\n\nInformation about a transcription plugin.",
+    "crumbs": [
+      "core",
+      "Protocols"
+    ]
+  },
+  {
+    "objectID": "core/protocols.html#pluginregistryprotocol",
+    "href": "core/protocols.html#pluginregistryprotocol",
+    "title": "Protocols",
+    "section": "PluginRegistryProtocol",
+    "text": "PluginRegistryProtocol\nProtocol defining the interface for plugin registries that the workflow can use to discover and manage transcription plugins.\n\nsource\n\nPluginRegistryProtocol\n\ndef PluginRegistryProtocol(\n    args:VAR_POSITIONAL, kwargs:VAR_KEYWORD\n):\n\nProtocol for plugin registry access.",
+    "crumbs": [
+      "core",
+      "Protocols"
+    ]
+  },
+  {
+    "objectID": "components/processor.html",
+    "href": "components/processor.html",
+    "title": "Processor Component",
+    "section": "",
+    "text": "Displays the transcription in-progress view with loading indicator, streaming text output, and cancel button.\n\nsource\n\n\n\ndef transcription_in_progress(\n    job_id:str, # Unique identifier for the transcription job\n    plugin_info:Dict, # Dictionary with plugin details (id, title, supports_streaming)\n    file_info:Dict, # Dictionary with file details (name, path, type, size_str)\n    config:SingleFileWorkflowConfig, # Workflow configuration\n    router:APIRouter, # Workflow router for generating route URLs\n)-&gt;FT: # FastHTML component showing progress and SSE connection\n\nRender transcription in-progress view with SSE updates.",
+    "crumbs": [
+      "components",
+      "Processor Component"
+    ]
+  },
+  {
+    "objectID": "components/processor.html#transcription_in_progress",
+    "href": "components/processor.html#transcription_in_progress",
+    "title": "Processor Component",
+    "section": "",
+    "text": "Displays the transcription in-progress view with loading indicator, streaming text output, and cancel button.\n\nsource\n\n\n\ndef transcription_in_progress(\n    job_id:str, # Unique identifier for the transcription job\n    plugin_info:Dict, # Dictionary with plugin details (id, title, supports_streaming)\n    file_info:Dict, # Dictionary with file details (name, path, type, size_str)\n    config:SingleFileWorkflowConfig, # Workflow configuration\n    router:APIRouter, # Workflow router for generating route URLs\n)-&gt;FT: # FastHTML component showing progress and SSE connection\n\nRender transcription in-progress view with SSE updates.",
+    "crumbs": [
+      "components",
+      "Processor Component"
+    ]
+  },
+  {
+    "objectID": "components/steps.html",
+    "href": "components/steps.html",
+    "title": "Step Components",
+    "section": "",
+    "text": "source",
+    "crumbs": [
+      "components",
+      "Step Components"
+    ]
+  },
+  {
+    "objectID": "components/steps.html#render_plugin_selection",
+    "href": "components/steps.html#render_plugin_selection",
+    "title": "Step Components",
+    "section": "render_plugin_selection",
+    "text": "render_plugin_selection\nRenders the plugin selection step with dropdown and optional configuration collapse.\n\nsource\n\nrender_plugin_selection\n\ndef render_plugin_selection(\n    ctx:InteractionContext, # Interaction context with state and data\n    config:SingleFileWorkflowConfig, # Workflow configuration\n    plugin_registry:PluginRegistryProtocol, # Plugin registry adapter for getting plugin config\n    settings_modal_url:str, # URL for the settings modal route\n    plugin_details_url:str, # URL for the plugin details route\n    plugin_manager:Optional=None, # PluginManager for config_schema access\n    save_plugin_config_url:str='', # URL for saving plugin configuration\n    reset_plugin_config_url:str='', # URL for resetting plugin configuration\n)-&gt;FT: # Plugin selection step UI component\n\nRender plugin selection step showing all discovered plugins.",
+    "crumbs": [
+      "components",
+      "Step Components"
+    ]
+  },
+  {
+    "objectID": "components/steps.html#render_file_selection",
+    "href": "components/steps.html#render_file_selection",
+    "title": "Step Components",
+    "section": "render_file_selection",
+    "text": "render_file_selection\nRenders the file selection step with paginated file table.\n\nsource\n\nrender_file_selection\n\ndef render_file_selection(\n    ctx:InteractionContext, # Interaction context with state and data\n    config:SingleFileWorkflowConfig, # Workflow configuration\n    file_selection_router:APIRouter, # Router for file selection pagination (or None)\n)-&gt;FT: # File selection step UI component with paginated table\n\nRender file selection step with paginated table view and preview capability.",
+    "crumbs": [
+      "components",
+      "Step Components"
+    ]
+  },
+  {
+    "objectID": "components/steps.html#render_confirmation",
+    "href": "components/steps.html#render_confirmation",
+    "title": "Step Components",
+    "section": "render_confirmation",
+    "text": "render_confirmation\nRenders the confirmation step with summary of selections before starting transcription.\n\nsource\n\nrender_confirmation\n\ndef render_confirmation(\n    ctx:InteractionContext, # Interaction context with state and data\n    plugin_registry:PluginRegistryProtocol, # Plugin registry adapter for getting plugin info\n)-&gt;FT: # Confirmation step UI component showing selected plugin and file\n\nRender confirmation step showing selected plugin and file.",
+    "crumbs": [
+      "components",
+      "Step Components"
+    ]
+  },
+  {
+    "objectID": "storage/config.html",
+    "href": "storage/config.html",
+    "title": "Storage Configuration",
+    "section": "",
+    "text": "Configuration dataclass for transcription result storage settings. Field metadata is used to auto-generate JSON schemas for settings UI forms.\n\nsource\n\n\n\ndef StorageConfig(\n    auto_save:bool=True, results_directory:str='transcription_results'\n)-&gt;None:\n\nResult storage configuration.",
+    "crumbs": [
+      "storage",
+      "Storage Configuration"
+    ]
+  },
+  {
+    "objectID": "storage/config.html#storageconfig-class",
+    "href": "storage/config.html#storageconfig-class",
+    "title": "Storage Configuration",
+    "section": "",
+    "text": "Configuration dataclass for transcription result storage settings. Field metadata is used to auto-generate JSON schemas for settings UI forms.\n\nsource\n\n\n\ndef StorageConfig(\n    auto_save:bool=True, results_directory:str='transcription_results'\n)-&gt;None:\n\nResult storage configuration.",
+    "crumbs": [
+      "storage",
+      "Storage Configuration"
+    ]
+  },
+  {
+    "objectID": "storage/config.html#storage_config_schema",
+    "href": "storage/config.html#storage_config_schema",
+    "title": "Storage Configuration",
+    "section": "STORAGE_CONFIG_SCHEMA",
+    "text": "STORAGE_CONFIG_SCHEMA\nAuto-generated JSON schema for settings UI generation.\n\n# Verify schema generation\nassert STORAGE_CONFIG_SCHEMA[\"name\"] == \"storage\"\nassert STORAGE_CONFIG_SCHEMA[\"title\"] == \"Storage Settings\"\nassert \"auto_save\" in STORAGE_CONFIG_SCHEMA[\"properties\"]\nassert \"results_directory\" in STORAGE_CONFIG_SCHEMA[\"properties\"]\nassert STORAGE_CONFIG_SCHEMA[\"properties\"][\"auto_save\"][\"type\"] == \"boolean\"\nassert STORAGE_CONFIG_SCHEMA[\"properties\"][\"results_directory\"][\"type\"] == \"string\"\nprint(\"Schema properties:\", list(STORAGE_CONFIG_SCHEMA[\"properties\"].keys()))\n\nSchema properties: ['auto_save', 'results_directory']",
+    "crumbs": [
+      "storage",
+      "Storage Configuration"
+    ]
+  },
+  {
+    "objectID": "workflow/workflow.html",
+    "href": "workflow/workflow.html",
+    "title": "Single File Transcription Workflow",
+    "section": "",
+    "text": "The main workflow class that orchestrates all subsystems for single-file transcription: - Plugin registry for transcription plugins - Resource manager for GPU/CPU availability - Job manager for background transcription execution - Media library for file discovery and serving - Result storage for saving transcripts - Step flow for the 3-step wizard UI\n\nsource\n\n\n\ndef SingleFileTranscriptionWorkflow(\n    plugin_manager:PluginManager, # PluginManager from host application\n    config:Optional=None, # Explicit config (bypasses auto-loading)\n    config_overrides:VAR_KEYWORD\n):\n\nSelf-contained single-file transcription workflow.\nReceives a PluginManager from the host application and creates internal TranscriptionJobTracker, SSEBroadcastManager, FileBrowser, ResultStorage, StepFlow (plugin → file → confirm wizard), and APIRouter.\n\nsource\n\n\n\n\ndef setup(\n    app, # FastHTML application instance\n)-&gt;None:\n\nInitialize workflow with FastHTML app. Must be called after app creation.\nThe cleanup method is called when the workflow is being removed or the application is shutting down. It currently clears the media library cache and app reference. Future database-per-service pattern updates will add closing database connections, flushing pending writes, and releasing other resources.\n\nsource\n\n\n\n\ndef cleanup(\n    \n)-&gt;None:\n\nClean up workflow resources. Mirrors PluginInterface.cleanup() for future plugin system compatibility.\n\n# This method is no longer needed - config is now embedded in plugin manifests\n# and managed by the PluginManager. Plugins are always \"configured\" via their manifest.\n\n\nsource\n\n\n\n\ndef get_routers(\n    \n)-&gt;List: # List containing main router, stepflow router, media router, and file selection router\n\nReturn all routers for registration with the app.\n\nsource\n\n\n\n\ndef render_entry_point(\n    request, # FastHTML request object\n    sess, # FastHTML session object\n)-&gt;FT: # AsyncLoadingContainer component\n\nRender the workflow entry point for embedding in tabs, etc.\nReturns an AsyncLoadingContainer that loads the current_status endpoint, which determines what to show (running job, workflow in progress, completed job, or fresh start).",
+    "crumbs": [
+      "workflow",
+      "Single File Transcription Workflow"
+    ]
+  },
+  {
+    "objectID": "workflow/workflow.html#singlefiletranscriptionworkflow-class",
+    "href": "workflow/workflow.html#singlefiletranscriptionworkflow-class",
+    "title": "Single File Transcription Workflow",
+    "section": "",
+    "text": "The main workflow class that orchestrates all subsystems for single-file transcription: - Plugin registry for transcription plugins - Resource manager for GPU/CPU availability - Job manager for background transcription execution - Media library for file discovery and serving - Result storage for saving transcripts - Step flow for the 3-step wizard UI\n\nsource\n\n\n\ndef SingleFileTranscriptionWorkflow(\n    plugin_manager:PluginManager, # PluginManager from host application\n    config:Optional=None, # Explicit config (bypasses auto-loading)\n    config_overrides:VAR_KEYWORD\n):\n\nSelf-contained single-file transcription workflow.\nReceives a PluginManager from the host application and creates internal TranscriptionJobTracker, SSEBroadcastManager, FileBrowser, ResultStorage, StepFlow (plugin → file → confirm wizard), and APIRouter.\n\nsource\n\n\n\n\ndef setup(\n    app, # FastHTML application instance\n)-&gt;None:\n\nInitialize workflow with FastHTML app. Must be called after app creation.\nThe cleanup method is called when the workflow is being removed or the application is shutting down. It currently clears the media library cache and app reference. Future database-per-service pattern updates will add closing database connections, flushing pending writes, and releasing other resources.\n\nsource\n\n\n\n\ndef cleanup(\n    \n)-&gt;None:\n\nClean up workflow resources. Mirrors PluginInterface.cleanup() for future plugin system compatibility.\n\n# This method is no longer needed - config is now embedded in plugin manifests\n# and managed by the PluginManager. Plugins are always \"configured\" via their manifest.\n\n\nsource\n\n\n\n\ndef get_routers(\n    \n)-&gt;List: # List containing main router, stepflow router, media router, and file selection router\n\nReturn all routers for registration with the app.\n\nsource\n\n\n\n\ndef render_entry_point(\n    request, # FastHTML request object\n    sess, # FastHTML session object\n)-&gt;FT: # AsyncLoadingContainer component\n\nRender the workflow entry point for embedding in tabs, etc.\nReturns an AsyncLoadingContainer that loads the current_status endpoint, which determines what to show (running job, workflow in progress, completed job, or fresh start).",
+    "crumbs": [
+      "workflow",
+      "Single File Transcription Workflow"
+    ]
+  },
+  {
+    "objectID": "workflow/routes.html",
+    "href": "workflow/routes.html",
+    "title": "Workflow Routes",
+    "section": "",
+    "text": "source\n\ninit_router\n\ndef init_router(\n    workflow:SingleFileTranscriptionWorkflow, # The workflow instance providing access to config and dependencies\n)-&gt;APIRouter: # Configured APIRouter with all workflow routes\n\nInitialize and return the workflow’s API router with all routes.",
+    "crumbs": [
+      "workflow",
+      "Workflow Routes"
+    ]
+  },
+  {
+    "objectID": "workflow/job_handler.html",
+    "href": "workflow/job_handler.html",
+    "title": "Job Handler",
+    "section": "",
+    "text": "source",
+    "crumbs": [
+      "workflow",
+      "Job Handler"
+    ]
+  },
+  {
+    "objectID": "workflow/job_handler.html#start_transcription_job",
+    "href": "workflow/job_handler.html#start_transcription_job",
+    "title": "Job Handler",
+    "section": "start_transcription_job",
+    "text": "start_transcription_job\nStarts a transcription job using the job manager and returns the in-progress UI.\n\nsource\n\nstart_transcription_job\n\ndef start_transcription_job(\n    state:Dict, # Workflow state containing plugin_id, file_path, file_name, etc.\n    request, # FastHTML request object\n    workflow:SingleFileTranscriptionWorkflow, # Workflow instance providing config and dependencies\n):\n\nStart a transcription job and return the in-progress UI component.",
+    "crumbs": [
+      "workflow",
+      "Job Handler"
+    ]
+  },
+  {
+    "objectID": "workflow/job_handler.html#create_job_stream_handler",
+    "href": "workflow/job_handler.html#create_job_stream_handler",
+    "title": "Job Handler",
+    "section": "create_job_stream_handler",
+    "text": "create_job_stream_handler\nCreates an async generator for SSE streaming of transcription progress.\n\nsource\n\ncreate_job_stream_handler\n\ndef create_job_stream_handler(\n    job_id:str, # Unique job identifier\n    request, # FastHTML request object\n    workflow:SingleFileTranscriptionWorkflow, # Workflow instance providing config and dependencies\n):\n\nCreate an SSE stream generator for monitoring job completion.",
+    "crumbs": [
+      "workflow",
+      "Job Handler"
+    ]
+  },
+  {
+    "objectID": "storage/protocols.html",
+    "href": "storage/protocols.html",
+    "title": "Storage Protocols",
+    "section": "",
+    "text": "Protocol defining the interface for result storage backends. This abstraction allows the workflow to work with different storage implementations (file-based, database-based, etc.) without coupling to a specific implementation.\nThe current ResultStorage class implements this protocol using file-based JSON storage. Future implementations may use databases following the database-per-service pattern.\n\nsource\n\n\n\ndef ResultStorageProtocol(\n    args:VAR_POSITIONAL, kwargs:VAR_KEYWORD\n):\n\nProtocol for transcription result storage backends.",
+    "crumbs": [
+      "storage",
+      "Storage Protocols"
+    ]
+  },
+  {
+    "objectID": "storage/protocols.html#resultstorageprotocol",
+    "href": "storage/protocols.html#resultstorageprotocol",
+    "title": "Storage Protocols",
+    "section": "",
+    "text": "Protocol defining the interface for result storage backends. This abstraction allows the workflow to work with different storage implementations (file-based, database-based, etc.) without coupling to a specific implementation.\nThe current ResultStorage class implements this protocol using file-based JSON storage. Future implementations may use databases following the database-per-service pattern.\n\nsource\n\n\n\ndef ResultStorageProtocol(\n    args:VAR_POSITIONAL, kwargs:VAR_KEYWORD\n):\n\nProtocol for transcription result storage backends.",
+    "crumbs": [
+      "storage",
+      "Storage Protocols"
+    ]
+  },
+  {
+    "objectID": "storage/file_storage.html",
+    "href": "storage/file_storage.html",
+    "title": "Result Storage",
+    "section": "",
+    "text": "Handles saving and loading transcription results to/from JSON files. Organizes results by date with metadata for easy retrieval.\n\nsource\n\n\n\ndef ResultStorage(\n    config:StorageConfig, # Storage configuration\n):\n\nFile-based storage for transcription results.\n\nsource\n\n\n\n\ndef should_auto_save(\n    \n)-&gt;bool: # True if results should be automatically saved\n\nCheck if auto-save is enabled.\n\nsource\n\n\n\n\ndef save(\n    job_id:str, # Unique job identifier\n    file_path:str, # Path to the transcribed media file\n    file_name:str, # Name of the media file\n    plugin_id:str, # Plugin unique identifier\n    plugin_name:str, # Plugin display name\n    text:str, # The transcription text\n    metadata:Optional=None, # Optional metadata from the transcription plugin\n    additional_info:Optional=None, # Optional additional information to store\n)-&gt;Path: # Path to the saved JSON file\n\nSave a transcription result to JSON file.\n\nsource\n\n\n\n\ndef load(\n    result_file:Path, # Path to the JSON result file\n)-&gt;Optional: # Dictionary containing the result data, or None if error\n\nLoad a transcription result from JSON file.\n\nsource\n\n\n\n\ndef list_results(\n    sort_by:str='timestamp', # Field to sort by (\"timestamp\", \"file_name\", \"word_count\")\n    reverse:bool=True, # Sort in reverse order (newest first by default)\n)-&gt;List: # List of result dictionaries\n\nList all saved transcription results.\n\nsource\n\n\n\n\ndef get_by_job_id(\n    job_id:str, # The job identifier to search for\n)-&gt;Optional: # Result dictionary if found, None otherwise\n\nFind and load a transcription result by job ID.\n\nsource\n\n\n\n\ndef delete(\n    result_file:str, # Path to the result file (can be full path or filename)\n)-&gt;bool: # True if deletion successful, False otherwise\n\nDelete a transcription result file.\n\nsource\n\n\n\n\ndef update_text(\n    result_file:str, # Path to the result file\n    new_text:str, # New transcription text\n)-&gt;bool: # True if update successful, False otherwise\n\nUpdate the transcription text in a saved result.",
+    "crumbs": [
+      "storage",
+      "Result Storage"
+    ]
+  },
+  {
+    "objectID": "storage/file_storage.html#resultstorage-class",
+    "href": "storage/file_storage.html#resultstorage-class",
+    "title": "Result Storage",
+    "section": "",
+    "text": "Handles saving and loading transcription results to/from JSON files. Organizes results by date with metadata for easy retrieval.\n\nsource\n\n\n\ndef ResultStorage(\n    config:StorageConfig, # Storage configuration\n):\n\nFile-based storage for transcription results.\n\nsource\n\n\n\n\ndef should_auto_save(\n    \n)-&gt;bool: # True if results should be automatically saved\n\nCheck if auto-save is enabled.\n\nsource\n\n\n\n\ndef save(\n    job_id:str, # Unique job identifier\n    file_path:str, # Path to the transcribed media file\n    file_name:str, # Name of the media file\n    plugin_id:str, # Plugin unique identifier\n    plugin_name:str, # Plugin display name\n    text:str, # The transcription text\n    metadata:Optional=None, # Optional metadata from the transcription plugin\n    additional_info:Optional=None, # Optional additional information to store\n)-&gt;Path: # Path to the saved JSON file\n\nSave a transcription result to JSON file.\n\nsource\n\n\n\n\ndef load(\n    result_file:Path, # Path to the JSON result file\n)-&gt;Optional: # Dictionary containing the result data, or None if error\n\nLoad a transcription result from JSON file.\n\nsource\n\n\n\n\ndef list_results(\n    sort_by:str='timestamp', # Field to sort by (\"timestamp\", \"file_name\", \"word_count\")\n    reverse:bool=True, # Sort in reverse order (newest first by default)\n)-&gt;List: # List of result dictionaries\n\nList all saved transcription results.\n\nsource\n\n\n\n\ndef get_by_job_id(\n    job_id:str, # The job identifier to search for\n)-&gt;Optional: # Result dictionary if found, None otherwise\n\nFind and load a transcription result by job ID.\n\nsource\n\n\n\n\ndef delete(\n    result_file:str, # Path to the result file (can be full path or filename)\n)-&gt;bool: # True if deletion successful, False otherwise\n\nDelete a transcription result file.\n\nsource\n\n\n\n\ndef update_text(\n    result_file:str, # Path to the result file\n    new_text:str, # New transcription text\n)-&gt;bool: # True if update successful, False otherwise\n\nUpdate the transcription text in a saved result.",
+    "crumbs": [
+      "storage",
+      "Result Storage"
+    ]
+  },
+  {
+    "objectID": "components/results.html",
+    "href": "components/results.html",
+    "title": "Results Components",
+    "section": "",
+    "text": "Displays completed transcription results with transcript text, metadata, and action buttons.\n\nsource\n\n\n\ndef transcription_results(\n    job_id:str, # Unique identifier for the transcription job\n    transcription_text:str, # The transcribed text\n    metadata:Dict, # Transcription metadata from the plugin\n    file_info:Dict, # Dictionary with file details (name, path, type, size_str)\n    plugin_info:Dict, # Dictionary with plugin details (id, title, supports_streaming)\n    config:SingleFileWorkflowConfig, # Workflow configuration\n    router:APIRouter, # Workflow router for generating route URLs\n    stepflow_router:APIRouter, # StepFlow router for generating stepflow URLs\n)-&gt;FT: # FastHTML component showing results with export options\n\nRender transcription results with export options.",
+    "crumbs": [
+      "components",
+      "Results Components"
+    ]
+  },
+  {
+    "objectID": "components/results.html#transcription_results",
+    "href": "components/results.html#transcription_results",
+    "title": "Results Components",
+    "section": "",
+    "text": "Displays completed transcription results with transcript text, metadata, and action buttons.\n\nsource\n\n\n\ndef transcription_results(\n    job_id:str, # Unique identifier for the transcription job\n    transcription_text:str, # The transcribed text\n    metadata:Dict, # Transcription metadata from the plugin\n    file_info:Dict, # Dictionary with file details (name, path, type, size_str)\n    plugin_info:Dict, # Dictionary with plugin details (id, title, supports_streaming)\n    config:SingleFileWorkflowConfig, # Workflow configuration\n    router:APIRouter, # Workflow router for generating route URLs\n    stepflow_router:APIRouter, # StepFlow router for generating stepflow URLs\n)-&gt;FT: # FastHTML component showing results with export options\n\nRender transcription results with export options.",
+    "crumbs": [
+      "components",
+      "Results Components"
+    ]
+  },
+  {
+    "objectID": "components/results.html#transcription_error",
+    "href": "components/results.html#transcription_error",
+    "title": "Results Components",
+    "section": "transcription_error",
+    "text": "transcription_error\nDisplays transcription error state with error message and retry option.\n\nsource\n\ntranscription_error\n\ndef transcription_error(\n    error_message:str, # Description of the error that occurred\n    file_info:Optional, # Optional dictionary with file details\n    config:SingleFileWorkflowConfig, # Workflow configuration\n    stepflow_router:APIRouter, # StepFlow router for generating stepflow URLs\n)-&gt;FT: # FastHTML component showing error with retry option\n\nRender transcription error message.",
+    "crumbs": [
+      "components",
+      "Results Components"
+    ]
+  },
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "cjm-fasthtml-workflow-transcription-single-file",
+    "section": "",
+    "text": "pip install cjm_fasthtml_workflow_transcription_single_file",
+    "crumbs": [
+      "cjm-fasthtml-workflow-transcription-single-file"
+    ]
+  },
+  {
+    "objectID": "index.html#install",
+    "href": "index.html#install",
+    "title": "cjm-fasthtml-workflow-transcription-single-file",
+    "section": "",
+    "text": "pip install cjm_fasthtml_workflow_transcription_single_file",
+    "crumbs": [
+      "cjm-fasthtml-workflow-transcription-single-file"
+    ]
+  },
+  {
+    "objectID": "index.html#project-structure",
+    "href": "index.html#project-structure",
+    "title": "cjm-fasthtml-workflow-transcription-single-file",
+    "section": "Project Structure",
+    "text": "Project Structure\nnbs/\n├── components/ (3)\n│   ├── processor.ipynb  # UI component for displaying transcription in-progress state\n│   ├── results.ipynb    # UI components for displaying transcription results and errors\n│   └── steps.ipynb      # UI components for workflow step rendering (plugin selection, file selection, confirmation)\n├── core/ (5)\n│   ├── adapters.ipynb     # Adapter implementations for integrating with plugin registries\n│   ├── config.ipynb       # Configuration dataclass for single-file transcription workflow\n│   ├── html_ids.ipynb     # Centralized HTML ID constants for single-file transcription workflow components\n│   ├── job_tracker.ipynb  # Lightweight job state tracking for transcription workflows\n│   └── protocols.ipynb    # Protocol definitions for external dependencies and plugin integration\n├── settings/ (2)\n│   ├── components.ipynb  # UI components for workflow settings modal and forms\n│   └── schemas.ipynb     # JSON schemas and utilities for workflow settings\n├── storage/ (3)\n│   ├── config.ipynb        # Configuration for transcription result storage\n│   ├── file_storage.ipynb  # File-based storage for transcription results\n│   └── protocols.ipynb     # Protocol definitions for result storage backends\n└── workflow/ (3)\n    ├── job_handler.ipynb  # Functions for starting transcription jobs and handling SSE streaming\n    ├── routes.ipynb       # Route initialization and handlers for the single-file transcription workflow\n    └── workflow.ipynb     # Main workflow class orchestrating all subsystems for single-file transcription\nTotal: 16 notebooks across 5 directories",
+    "crumbs": [
+      "cjm-fasthtml-workflow-transcription-single-file"
+    ]
+  },
+  {
+    "objectID": "index.html#module-dependencies",
+    "href": "index.html#module-dependencies",
+    "title": "cjm-fasthtml-workflow-transcription-single-file",
+    "section": "Module Dependencies",
+    "text": "Module Dependencies\ngraph LR\n    components_processor[components.processor&lt;br/&gt;Processor Component]\n    components_results[components.results&lt;br/&gt;Results Components]\n    components_steps[components.steps&lt;br/&gt;Step Components]\n    core_adapters[core.adapters&lt;br/&gt;Adapters]\n    core_config[core.config&lt;br/&gt;Configuration]\n    core_html_ids[core.html_ids&lt;br/&gt;HTML IDs]\n    core_job_tracker[core.job_tracker&lt;br/&gt;Job Tracker]\n    core_protocols[core.protocols&lt;br/&gt;Protocols]\n    settings_components[settings.components&lt;br/&gt;Settings Components]\n    settings_schemas[settings.schemas&lt;br/&gt;Settings Schemas]\n    storage_config[storage.config&lt;br/&gt;Storage Configuration]\n    storage_file_storage[storage.file_storage&lt;br/&gt;Result Storage]\n    storage_protocols[storage.protocols&lt;br/&gt;Storage Protocols]\n    workflow_job_handler[workflow.job_handler&lt;br/&gt;Job Handler]\n    workflow_routes[workflow.routes&lt;br/&gt;Workflow Routes]\n    workflow_workflow[workflow.workflow&lt;br/&gt;Single File Transcription Workflow]\n\n    components_processor --&gt; core_config\n    components_processor --&gt; core_html_ids\n    components_results --&gt; core_config\n    components_results --&gt; core_html_ids\n    components_steps --&gt; core_config\n    components_steps --&gt; core_html_ids\n    components_steps --&gt; core_protocols\n    core_adapters --&gt; core_protocols\n    core_adapters --&gt; core_config\n    core_config --&gt; core_html_ids\n    core_config --&gt; storage_config\n    settings_schemas --&gt; core_config\n    settings_schemas --&gt; storage_config\n    storage_file_storage --&gt; storage_config\n    workflow_job_handler --&gt; core_job_tracker\n    workflow_job_handler --&gt; components_processor\n    workflow_job_handler --&gt; workflow_workflow\n    workflow_job_handler --&gt; core_protocols\n    workflow_job_handler --&gt; components_results\n    workflow_job_handler --&gt; core_config\n    workflow_job_handler --&gt; core_html_ids\n    workflow_job_handler --&gt; storage_file_storage\n    workflow_routes --&gt; components_processor\n    workflow_routes --&gt; workflow_job_handler\n    workflow_routes --&gt; workflow_workflow\n    workflow_routes --&gt; components_results\n    workflow_routes --&gt; components_steps\n    workflow_routes --&gt; core_html_ids\n    workflow_workflow --&gt; core_job_tracker\n    workflow_workflow --&gt; storage_file_storage\n    workflow_workflow --&gt; components_steps\n    workflow_workflow --&gt; core_config\n    workflow_workflow --&gt; core_html_ids\n    workflow_workflow --&gt; core_adapters\n34 cross-module dependencies detected",
+    "crumbs": [
+      "cjm-fasthtml-workflow-transcription-single-file"
+    ]
+  },
+  {
+    "objectID": "index.html#cli-reference",
+    "href": "index.html#cli-reference",
+    "title": "cjm-fasthtml-workflow-transcription-single-file",
+    "section": "CLI Reference",
+    "text": "CLI Reference\nNo CLI commands found in this project.",
+    "crumbs": [
+      "cjm-fasthtml-workflow-transcription-single-file"
+    ]
+  },
+  {
+    "objectID": "index.html#module-overview",
+    "href": "index.html#module-overview",
+    "title": "cjm-fasthtml-workflow-transcription-single-file",
+    "section": "Module Overview",
+    "text": "Module Overview\nDetailed documentation for each module in the project:\n\nAdapters (adapters.ipynb)\n\nAdapter implementations for integrating with plugin registries\n\n\nImport\nfrom cjm_fasthtml_workflow_transcription_single_file.core.adapters import (\n    PluginRegistryAdapter\n)\n\n\nClasses\nclass PluginRegistryAdapter:\n    def __init__(self,\n                 plugin_manager: PluginManager,  # The PluginManager instance to wrap\n                 config: SingleFileWorkflowConfig, # The workflow config instance\n                 category: str = \"transcription\"  # Plugin category to filter by\n                 )\n    \"Adapts PluginManager to workflow's PluginRegistryProtocol.\"\n    \n    def __init__(self,\n                     plugin_manager: PluginManager,  # The PluginManager instance to wrap\n                     config: SingleFileWorkflowConfig, # The workflow config instance\n                     category: str = \"transcription\"  # Plugin category to filter by\n                     )\n        \"Initialize the adapter.\"\n    \n    def get_configured_plugins(self) -&gt; List[PluginInfo]:  # List of PluginInfo for configured plugins\n            \"\"\"Get all configured transcription plugins (all discovered are considered configured).\"\"\"\n            metas = self._manager.get_discovered_by_category(self._category)\n            return [self._meta_to_info(meta) for meta in metas]\n    \n        def get_all_plugins(self) -&gt; List[PluginInfo]:  # List of PluginInfo for all discovered plugins\n        \"Get all configured transcription plugins (all discovered are considered configured).\"\n    \n    def get_all_plugins(self) -&gt; List[PluginInfo]:  # List of PluginInfo for all discovered plugins\n            \"\"\"Get all discovered transcription plugins.\"\"\"\n            metas = self._manager.get_discovered_by_category(self._category)\n            return [self._meta_to_info(meta) for meta in metas]\n    \n        def get_plugin(self,\n                       plugin_id: str  # Unique plugin identifier (name)\n                       ) -&gt; Optional[PluginInfo]:  # PluginInfo if found, None otherwise\n        \"Get all discovered transcription plugins.\"\n    \n    def get_plugin(self,\n                       plugin_id: str  # Unique plugin identifier (name)\n                       ) -&gt; Optional[PluginInfo]:  # PluginInfo if found, None otherwise\n        \"Get a specific plugin by ID.\"\n    \n    def get_plugin_config(self,\n                              plugin_id: str  # Unique plugin identifier\n                              ) -&gt; Dict[str, Any]:  # Configuration dictionary\n        \"Get the configuration for a plugin.\"\n\n\n\nSettings Components (components.ipynb)\n\nUI components for workflow settings modal and forms\n\n\nImport\nfrom cjm_fasthtml_workflow_transcription_single_file.settings.components import (\n    settings_trigger_button,\n    simple_settings_form,\n    settings_modal\n)\n\n\nFunctions\ndef settings_trigger_button(\n    modal_id:str,                  # ID of the modal to trigger\n    label:str=\"Settings\",          # Button label text\n    button_cls:Optional[str]=None  # Optional additional button classes\n) -&gt; FT:                           # Button element that triggers the modal\n    \"Create a button that opens the settings modal.\"\ndef simple_settings_form(\n    directories:list,        # List of media directories\n    auto_save:bool,          # Current auto-save setting\n    results_directory:str,   # Current results directory\n    save_url:str,            # URL to POST settings to\n    target_id:str,           # Target element ID for HTMX response\n    modal_id:str             # Modal ID for close button\n) -&gt; FT:                     # Simple form element\n    \"Create a simple settings form without full schema generation.\"\ndef settings_modal(\n    modal_id:str,                    # ID for the modal element\n    schema:Dict[str, Any],           # JSON schema for settings\n    current_values:Dict[str, Any],   # Current settings values\n    save_url:str,                    # URL to POST settings to\n    target_id:str                    # Target element ID for HTMX response\n) -&gt; FT:                             # Modal dialog with settings form\n    \"Create the settings modal with form.\"\n\n\n\nConfiguration (config.ipynb)\n\nConfiguration dataclass for single-file transcription workflow\n\n\nImport\nfrom cjm_fasthtml_workflow_transcription_single_file.core.config import (\n    DEFAULT_WORKFLOW_CONFIG_DIR,\n    SingleFileWorkflowConfig\n)\n\n\nClasses\n@dataclass\nclass SingleFileWorkflowConfig:\n    \"Configuration for single-file transcription workflow.\"\n    \n    workflow_id: str = 'single_file_transcription'  # Unique identifier for this workflow\n    worker_type: str = 'transcription:single_file'  # Worker process type identifier\n    route_prefix: str = '/single_file'  # Base URL prefix for workflow routes\n    stepflow_prefix: str = '/flow'  # Sub-prefix for StepFlow routes\n    media_prefix: str = '/media'  # Sub-prefix for media browser routes\n    container_id: str = SingleFileHtmlIds.WORKFLOW_CONTAINER  # HTML ID for main workflow container\n    show_progress: bool = True  # Show step progress indicator\n    max_files_displayed: int = 50  # Maximum files to show in simple file selector\n    export_formats: List[str] = field(...)  # Available export formats\n    no_plugins_redirect: Optional[str]  # URL to redirect when no plugins configured\n    no_files_redirect: Optional[str]  # URL to redirect when no media files found\n    sse_poll_interval: float = 2.0  # Seconds between SSE status checks\n    gpu_memory_threshold_percent: float = 45.0  # Max GPU memory % before blocking new jobs\n    config_dir: Path = field(...)  # Directory for workflow settings\n    plugin_config_dir: Path = field(...)  # Directory for plugin configs\n    plugin_category: str = 'transcription'  # Plugin category for this workflow\n    media: BrowserConfig = field(...)  # File browser settings for media files\n    storage: StorageConfig = field(...)  # Result storage settings\n    \n    def get_full_stepflow_prefix(self) -&gt; str:  # Combined route_prefix + stepflow_prefix\n            \"\"\"Get the full prefix for the StepFlow router.\"\"\"\n            return f\"{self.route_prefix}{self.stepflow_prefix}\"\n    \n        def get_full_media_prefix(self) -&gt; str:  # Combined route_prefix + media_prefix\n        \"Get the full prefix for the StepFlow router.\"\n    \n    def get_full_media_prefix(self) -&gt; str:  # Combined route_prefix + media_prefix\n            \"\"\"Get the full prefix for the media router.\"\"\"\n            return f\"{self.route_prefix}{self.media_prefix}\"\n    \n        @classmethod\n        def from_saved_config(\n            cls,\n            config_dir: Optional[Path] = None,  # Directory to load config from\n            **overrides  # Override specific config values\n        ) -&gt; \"SingleFileWorkflowConfig\":  # Configured instance with saved values merged with defaults\n        \"Get the full prefix for the media router.\"\n    \n    def from_saved_config(\n            cls,\n            config_dir: Optional[Path] = None,  # Directory to load config from\n            **overrides  # Override specific config values\n        ) -&gt; \"SingleFileWorkflowConfig\":  # Configured instance with saved values merged with defaults\n        \"Create config by loading saved settings and merging with defaults.\"\n\n\nVariables\nDEFAULT_WORKFLOW_CONFIG_DIR\n\n\n\nStorage Configuration (config.ipynb)\n\nConfiguration for transcription result storage\n\n\nImport\nfrom cjm_fasthtml_workflow_transcription_single_file.storage.config import (\n    STORAGE_CONFIG_SCHEMA,\n    StorageConfig\n)\n\n\nClasses\n@dataclass\nclass StorageConfig:\n    \"Result storage configuration.\"\n    \n    __schema_name__: ClassVar[str] = 'storage'\n    __schema_title__: ClassVar[str] = 'Storage Settings'\n    __schema_description__: ClassVar[str] = 'Configure transcription result storage'\n    auto_save: bool = field(...)\n    results_directory: str = field(...)\n\n\nVariables\nSTORAGE_CONFIG_SCHEMA\n\n\n\nResult Storage (file_storage.ipynb)\n\nFile-based storage for transcription results\n\n\nImport\nfrom cjm_fasthtml_workflow_transcription_single_file.storage.file_storage import (\n    ResultStorage\n)\n\n\nFunctions\n@patch\ndef should_auto_save(\n    self: ResultStorage\n) -&gt; bool:  # True if results should be automatically saved\n    \"Check if auto-save is enabled.\"\n@patch\ndef save(\n    self: ResultStorage,\n    job_id: str,  # Unique job identifier\n    file_path: str,  # Path to the transcribed media file\n    file_name: str,  # Name of the media file\n    plugin_id: str,  # Plugin unique identifier\n    plugin_name: str,  # Plugin display name\n    text: str,  # The transcription text\n    metadata: Optional[Dict[str, Any]] = None,  # Optional metadata from the transcription plugin\n    additional_info: Optional[Dict[str, Any]] = None  # Optional additional information to store\n) -&gt; Path:  # Path to the saved JSON file\n    \"Save a transcription result to JSON file.\"\n@patch\ndef load(\n    self: ResultStorage,\n    result_file: Path  # Path to the JSON result file\n) -&gt; Optional[Dict[str, Any]]:  # Dictionary containing the result data, or None if error\n    \"Load a transcription result from JSON file.\"\n@patch\ndef list_results(\n    self: ResultStorage,\n    sort_by: str = \"timestamp\",  # Field to sort by (\"timestamp\", \"file_name\", \"word_count\")\n    reverse: bool = True  # Sort in reverse order (newest first by default)\n) -&gt; List[Dict[str, Any]]:  # List of result dictionaries\n    \"List all saved transcription results.\"\n@patch\ndef get_by_job_id(\n    self: ResultStorage,\n    job_id: str  # The job identifier to search for\n) -&gt; Optional[Dict[str, Any]]:  # Result dictionary if found, None otherwise\n    \"Find and load a transcription result by job ID.\"\n@patch\ndef delete(\n    self: ResultStorage,\n    result_file: str  # Path to the result file (can be full path or filename)\n) -&gt; bool:  # True if deletion successful, False otherwise\n    \"Delete a transcription result file.\"\n@patch\ndef update_text(\n    self: ResultStorage,\n    result_file: str,  # Path to the result file\n    new_text: str  # New transcription text\n) -&gt; bool:  # True if update successful, False otherwise\n    \"Update the transcription text in a saved result.\"\n@patch\ndef _generate_filename(\n    self: ResultStorage,\n    job_id: str,  # Unique job identifier\n    file_name: str  # Original media file name\n) -&gt; str:  # Generated filename for the JSON result file\n    \"Generate a filename for storing transcription results.\"\n\n\nClasses\nclass ResultStorage:\n    def __init__(self,\n                 config: StorageConfig  # Storage configuration\n                 )\n    \"File-based storage for transcription results.\"\n    \n    def __init__(self,\n                     config: StorageConfig  # Storage configuration\n                     )\n        \"Initialize the storage.\"\n    \n    def results_directory(self) -&gt; Path:  # Path to the results directory\n            \"\"\"Get the results directory, creating it if needed.\"\"\"\n            if self._results_dir is None\n        \"Get the results directory, creating it if needed.\"\n\n\n\nHTML IDs (html_ids.ipynb)\n\nCentralized HTML ID constants for single-file transcription workflow components\n\n\nImport\nfrom cjm_fasthtml_workflow_transcription_single_file.core.html_ids import (\n    SingleFileHtmlIds\n)\n\n\nClasses\nclass SingleFileHtmlIds(InteractionHtmlIds):\n    \"HTML ID constants for single-file transcription workflow.\"\n    \n    def plugin_radio(plugin_id: str  # Unique plugin identifier to generate ID for\n                         ) -&gt; str:  # HTML ID for the plugin radio button\n        \"Generate HTML ID for a plugin radio button.\"\n    \n    def file_radio(index: int  # File index in the selection list\n                       ) -&gt; str:  # HTML ID for the file radio button\n        \"Generate HTML ID for a file radio button.\"\n\n\n\nJob Handler (job_handler.ipynb)\n\nFunctions for starting transcription jobs and handling SSE streaming\n\n\nImport\nfrom cjm_fasthtml_workflow_transcription_single_file.workflow.job_handler import (\n    get_job_session_info,\n    start_transcription_job,\n    create_job_stream_handler\n)\n\n\nFunctions\ndef get_job_session_info(\n    job_id: str,  # Unique job identifier\n    job: TranscriptionJob,  # Job object from the tracker\n    plugin_manager: PluginManager,  # Plugin manager for getting plugin info\n) -&gt; tuple[Dict[str, Any], Dict[str, Any]]:  # Tuple of (file_info, plugin_info) dictionaries\n    \"Get file and plugin info from job object and plugin manager.\"\ndef _save_job_result_once(\n    job_id: str,  # Job identifier\n    job: TranscriptionJob,  # Job object\n    data: Dict[str, Any],  # Transcription data containing text and metadata\n    plugin_manager: PluginManager,  # Plugin manager for getting plugin info\n    result_storage: ResultStorage,  # Storage for saving transcription results\n) -&gt; None\n    \"\"\"\n    Save transcription result to disk, ensuring it's only saved once per job.\n    \n    Called from the SSE stream handler as a fallback. The primary save mechanism\n    is the workflow's `_on_job_completed` callback called by TranscriptionJobTracker.\n    \"\"\"\ndef _create_sse_swap_message(\n    content,  # HTML content to wrap\n    container_id: str,  # Target container ID for the swap\n):  # Div with OOB swap attributes\n    \"Wrap content in a Div with HTMX OOB swap for SSE messages.\"\nasync def start_transcription_job(\n    state: Dict[str, Any],  # Workflow state containing plugin_id, file_path, file_name, etc.\n    request,  # FastHTML request object\n    workflow: SingleFileTranscriptionWorkflow,  # Workflow instance providing config and dependencies\n):  # transcription_in_progress component showing job status\n    \"Start a transcription job and return the in-progress UI component.\"\ndef create_job_stream_handler(\n    job_id: str,  # Unique job identifier\n    request,  # FastHTML request object\n    workflow: SingleFileTranscriptionWorkflow,  # Workflow instance providing config and dependencies\n):  # Async generator for SSE streaming\n    \"Create an SSE stream generator for monitoring job completion.\"\n\n\n\nJob Tracker (job_tracker.ipynb)\n\nLightweight job state tracking for transcription workflows\n\n\nImport\nfrom cjm_fasthtml_workflow_transcription_single_file.core.job_tracker import (\n    TranscriptionJob,\n    TranscriptionJobTracker\n)\n\n\nClasses\n@dataclass\nclass TranscriptionJob:\n    \"Represents a transcription job's state.\"\n    \n    id: str  # Unique job identifier (UUID)\n    plugin_name: str  # Plugin name for execution\n    file_path: str  # Path to the audio/video file\n    file_name: str  # Display name of the file\n    status: str = 'pending'  # Job status: pending, running, completed, failed, cancelled\n    created_at: str = field(...)  # ISO timestamp\n    started_at: Optional[str]  # When execution began\n    completed_at: Optional[str]  # When job finished\n    result: Optional[Dict[str, Any]]  # Transcription result data\n    error: Optional[str]  # Error message if failed\n    metadata: Dict[str, Any] = field(...)  # Additional job metadata\n    task: Optional[asyncio.Task]  # Async task handle for cancellation\nclass TranscriptionJobTracker:\n    def __init__(\n        self,\n        on_job_completed: Optional[Callable[[str, 'TranscriptionJobTracker'], None]] = None,  # Completion callback\n    )\n    \"Lightweight job state tracker for transcription workflows.\"\n    \n    def __init__(\n            self,\n            on_job_completed: Optional[Callable[[str, 'TranscriptionJobTracker'], None]] = None,  # Completion callback\n        )\n        \"Initialize the job tracker.\"\n    \n    def create_job(\n            self,\n            plugin_name: str,  # Name of the plugin to execute\n            file_path: str,  # Path to audio/video file\n            file_name: str,  # Display name of the file\n            **metadata  # Additional job metadata\n        ) -&gt; TranscriptionJob:  # Created job instance\n        \"Create a new transcription job.\"\n    \n    def mark_running(\n            self,\n            job_id: str,  # Job identifier\n            task: Optional[asyncio.Task] = None  # Async task handle\n        ) -&gt; None\n        \"Mark a job as running.\"\n    \n    def mark_completed(\n            self,\n            job_id: str,  # Job identifier\n            result: Dict[str, Any]  # Transcription result\n        ) -&gt; None\n        \"Mark a job as completed with result.\"\n    \n    def mark_failed(\n            self,\n            job_id: str,  # Job identifier\n            error: str  # Error message\n        ) -&gt; None\n        \"Mark a job as failed with error.\"\n    \n    async def cancel_job(\n            self,\n            job_id: str  # Job identifier\n        ) -&gt; bool:  # True if cancellation was successful\n        \"Cancel a running job.\"\n    \n    def get_job(\n            self,\n            job_id: str  # Job identifier\n        ) -&gt; Optional[TranscriptionJob]:  # Job instance or None\n        \"Get a job by ID.\"\n    \n    def get_job_result(\n            self,\n            job_id: str  # Job identifier\n        ) -&gt; Optional[Dict[str, Any]]:  # Result dict or None\n        \"Get a job's result.\"\n    \n    def get_running_jobs(self) -&gt; List[TranscriptionJob]:  # List of running jobs\n            \"\"\"Get all currently running jobs.\"\"\"\n            return [job for job in self.jobs.values() if job.status == \"running\"]\n        \n        def clear_completed(\n            self,\n            keep_results: bool = False  # Whether to keep results in memory\n        ) -&gt; int:  # Number of jobs cleared\n        \"Get all currently running jobs.\"\n    \n    def clear_completed(\n            self,\n            keep_results: bool = False  # Whether to keep results in memory\n        ) -&gt; int:  # Number of jobs cleared\n        \"Clear completed, failed, and cancelled jobs.\"\n\n\n\nProcessor Component (processor.ipynb)\n\nUI component for displaying transcription in-progress state\n\n\nImport\nfrom cjm_fasthtml_workflow_transcription_single_file.components.processor import (\n    transcription_in_progress\n)\n\n\nFunctions\ndef transcription_in_progress(\n    job_id: str, # Unique identifier for the transcription job\n    plugin_info: Dict[str, Any], # Dictionary with plugin details (id, title, supports_streaming)\n    file_info: Dict[str, Any], # Dictionary with file details (name, path, type, size_str)\n    config: SingleFileWorkflowConfig, # Workflow configuration\n    router: APIRouter, # Workflow router for generating route URLs\n) -&gt; FT: # FastHTML component showing progress and SSE connection\n    \"Render transcription in-progress view with SSE updates.\"\n\n\n\nProtocols (protocols.ipynb)\n\nProtocol definitions for external dependencies and plugin integration\n\n\nImport\nfrom cjm_fasthtml_workflow_transcription_single_file.core.protocols import (\n    PluginInfo,\n    PluginRegistryProtocol\n)\n\n\nClasses\n@dataclass\nclass PluginInfo:\n    \"Information about a transcription plugin.\"\n    \n    id: str  # Unique plugin identifier (e.g., \"transcription:voxtral_hf\")\n    name: str  # Plugin name (e.g., \"voxtral_hf\")\n    title: str  # Display title (e.g., \"Voxtral HF\")\n    is_configured: bool  # Whether the plugin has a valid configuration\n    supports_streaming: bool = False  # Whether the plugin supports streaming output\n@runtime_checkable\nclass PluginRegistryProtocol(Protocol):\n    \"Protocol for plugin registry access.\"\n    \n    def get_configured_plugins(self) -&gt; List[PluginInfo]:  # List of PluginInfo for configured plugins\n            \"\"\"Get all configured transcription plugins.\"\"\"\n            ...\n    \n        def get_plugin(self,\n                       plugin_id: str  # Unique plugin identifier\n                       ) -&gt; Optional[PluginInfo]:  # PluginInfo if found, None otherwise\n        \"Get all configured transcription plugins.\"\n    \n    def get_plugin(self,\n                       plugin_id: str  # Unique plugin identifier\n                       ) -&gt; Optional[PluginInfo]:  # PluginInfo if found, None otherwise\n        \"Get a specific plugin by ID.\"\n    \n    def get_plugin_config(self,\n                              plugin_id: str  # Unique plugin identifier\n                              ) -&gt; Dict[str, Any]:  # Configuration dictionary, empty dict if not configured\n        \"Get the configuration for a plugin.\"\n\n\n\nStorage Protocols (protocols.ipynb)\n\nProtocol definitions for result storage backends\n\n\nImport\nfrom cjm_fasthtml_workflow_transcription_single_file.storage.protocols import (\n    ResultStorageProtocol\n)\n\n\nClasses\n@runtime_checkable\nclass ResultStorageProtocol(Protocol):\n    \"Protocol for transcription result storage backends.\"\n    \n    def should_auto_save(self) -&gt; bool:  # True if results should be automatically saved\n            \"\"\"Check if auto-save is enabled.\"\"\"\n            ...\n    \n        def save(\n            self,\n            job_id: str,  # Unique job identifier\n            file_path: str,  # Path to the transcribed media file\n            file_name: str,  # Name of the media file\n            plugin_id: str,  # Plugin unique identifier\n            plugin_name: str,  # Plugin display name\n            text: str,  # The transcription text\n            metadata: Optional[Dict[str, Any]] = None,  # Optional metadata from the transcription plugin\n            additional_info: Optional[Dict[str, Any]] = None  # Optional additional information to store\n        ) -&gt; Any:  # Implementation-specific return value (e.g., Path for file storage, ID for database)\n        \"Check if auto-save is enabled.\"\n    \n    def save(\n            self,\n            job_id: str,  # Unique job identifier\n            file_path: str,  # Path to the transcribed media file\n            file_name: str,  # Name of the media file\n            plugin_id: str,  # Plugin unique identifier\n            plugin_name: str,  # Plugin display name\n            text: str,  # The transcription text\n            metadata: Optional[Dict[str, Any]] = None,  # Optional metadata from the transcription plugin\n            additional_info: Optional[Dict[str, Any]] = None  # Optional additional information to store\n        ) -&gt; Any:  # Implementation-specific return value (e.g., Path for file storage, ID for database)\n        \"Save a transcription result.\"\n    \n    def load(\n            self,\n            result_id: Any  # Implementation-specific identifier (e.g., Path for file storage, ID for database)\n        ) -&gt; Optional[Dict[str, Any]]:  # Result dictionary or None if not found\n        \"Load a transcription result by its identifier.\"\n    \n    def list_results(\n            self,\n            sort_by: str = \"timestamp\",  # Field to sort by\n            reverse: bool = True  # Sort in reverse order\n        ) -&gt; List[Dict[str, Any]]:  # List of result dictionaries\n        \"List all saved transcription results.\"\n    \n    def get_by_job_id(\n            self,\n            job_id: str  # The job identifier to search for\n        ) -&gt; Optional[Dict[str, Any]]:  # Result dictionary if found, None otherwise\n        \"Find and load a transcription result by job ID.\"\n    \n    def delete(\n            self,\n            result_id: Any  # Implementation-specific identifier\n        ) -&gt; bool:  # True if deletion successful, False otherwise\n        \"Delete a transcription result.\"\n\n\n\nResults Components (results.ipynb)\n\nUI components for displaying transcription results and errors\n\n\nImport\nfrom cjm_fasthtml_workflow_transcription_single_file.components.results import (\n    transcription_results,\n    transcription_error\n)\n\n\nFunctions\ndef transcription_results(\n    job_id: str, # Unique identifier for the transcription job\n    transcription_text: str, # The transcribed text\n    metadata: Dict[str, Any], # Transcription metadata from the plugin\n    file_info: Dict[str, Any], # Dictionary with file details (name, path, type, size_str)\n    plugin_info: Dict[str, Any], # Dictionary with plugin details (id, title, supports_streaming)\n    config: SingleFileWorkflowConfig, # Workflow configuration\n    router: APIRouter, # Workflow router for generating route URLs\n    stepflow_router: APIRouter, # StepFlow router for generating stepflow URLs\n) -&gt; FT: # FastHTML component showing results with export options\n    \"Render transcription results with export options.\"\ndef transcription_error(\n    error_message: str, # Description of the error that occurred\n    file_info: Optional[Dict[str, Any]], # Optional dictionary with file details\n    config: SingleFileWorkflowConfig, # Workflow configuration\n    stepflow_router: APIRouter, # StepFlow router for generating stepflow URLs\n) -&gt; FT: # FastHTML component showing error with retry option\n    \"Render transcription error message.\"\n\n\n\nWorkflow Routes (routes.ipynb)\n\nRoute initialization and handlers for the single-file transcription workflow\n\n\nImport\nfrom cjm_fasthtml_workflow_transcription_single_file.workflow.routes import (\n    init_router\n)\n\n\nFunctions\ndef _handle_current_status(\n    workflow: \"SingleFileTranscriptionWorkflow\",  # The workflow instance\n    request,  # FastHTML request object\n    sess,  # FastHTML session object\n):  # Appropriate UI component based on current state\n    \"Return current transcription status - determines what to show.\"\nasync def _handle_cancel_job(\n    workflow: \"SingleFileTranscriptionWorkflow\",  # The workflow instance\n    request,  # FastHTML request object\n    sess,  # FastHTML session object\n    job_id: str,  # ID of the job to cancel\n):  # StepFlow start view or error component\n    \"Cancel a running transcription job.\"\ndef _handle_reset(\n    workflow: \"SingleFileTranscriptionWorkflow\",  # The workflow instance\n    request,  # FastHTML request object\n    sess,  # FastHTML session object\n):  # StepFlow start view\n    \"Reset transcription workflow and return to start.\"\ndef _handle_stream_job(\n    workflow: \"SingleFileTranscriptionWorkflow\",  # The workflow instance\n    request,  # FastHTML request object\n    sess,  # FastHTML session object\n    job_id: str,  # ID of the job to monitor\n):  # EventStream for SSE updates\n    \"SSE endpoint for monitoring job completion.\"\ndef _handle_export(\n    workflow: \"SingleFileTranscriptionWorkflow\",  # The workflow instance\n    request,  # FastHTML request object\n    job_id: str,  # ID of the job to export\n    format: str = \"txt\",  # Export format (txt, srt, vtt)\n):  # Response with file download\n    \"Export transcription in specified format.\"\ndef _handle_plugin_details(\n    workflow: \"SingleFileTranscriptionWorkflow\",  # The workflow instance\n    request,  # FastHTML request object\n    plugin_id: str,  # ID of the plugin to show details for\n    save_url: str,  # URL for saving plugin configuration\n    reset_url: str,  # URL for resetting plugin configuration\n):  # Plugin details component or empty Div\n    \"Get plugin details for display in workflow.\"\nasync def _handle_save_plugin_config(\n    workflow: \"SingleFileTranscriptionWorkflow\",  # The workflow instance\n    request,  # FastHTML request object\n    plugin_id: str,  # ID of the plugin to save config for\n    save_url: str,  # URL for saving plugin configuration\n    reset_url: str,  # URL for resetting plugin configuration\n):  # Updated config form or error alert\n    \"Save plugin configuration from the collapse form.\"\ndef _handle_reset_plugin_config(\n    workflow: \"SingleFileTranscriptionWorkflow\",  # The workflow instance\n    request,  # FastHTML request object\n    plugin_id: str,  # ID of the plugin to reset config for\n    save_url: str,  # URL for saving plugin configuration\n    reset_url: str,  # URL for resetting plugin configuration\n):  # Updated config form with defaults or empty Div\n    \"Reset plugin configuration to defaults.\"\ndef _handle_media_preview(\n    workflow: \"SingleFileTranscriptionWorkflow\",  # The workflow instance\n    request,  # FastHTML request object\n    idx: int = 0,  # Index of the file to preview\n    file_type: str = None,  # Optional filter by file type\n):  # File preview modal or error Div\n    \"Render file preview modal for a specific file.\"\ndef _handle_refresh_media(\n    workflow: \"SingleFileTranscriptionWorkflow\",  # The workflow instance\n    request,  # FastHTML request object\n):  # JSON status response\n    \"Refresh file browser cache.\"\ndef _handle_settings_modal(\n    workflow: \"SingleFileTranscriptionWorkflow\",  # The workflow instance\n    request,  # FastHTML request object\n    save_url: str,  # URL for saving settings\n):  # Settings modal component\n    \"Render the settings modal for the workflow.\"\nasync def _handle_settings_save(\n    workflow: \"SingleFileTranscriptionWorkflow\",  # The workflow instance\n    request,  # FastHTML request object\n):  # Success alert with modal close script or error alert\n    \"Save workflow settings.\"\ndef init_router(\n    workflow: SingleFileTranscriptionWorkflow,  # The workflow instance providing access to config and dependencies\n) -&gt; APIRouter:  # Configured APIRouter with all workflow routes\n    \"Initialize and return the workflow's API router with all routes.\"\ndef _export_transcription(\n    text: str,  # Transcription text\n    format: str,  # Export format (txt, srt, vtt)\n    filename: str,  # Original filename for metadata\n) -&gt; str:  # Formatted transcription string\n    \"Format transcription for export.\"\n\n\n\nSettings Schemas (schemas.ipynb)\n\nJSON schemas and utilities for workflow settings\n\n\nImport\nfrom cjm_fasthtml_workflow_transcription_single_file.settings.schemas import (\n    WORKFLOW_SETTINGS_SCHEMA,\n    WorkflowSettings\n)\n\n\nFunctions\ndef from_configs(\n    cls: WorkflowSettings,\n    browser_config: BrowserConfig,  # BrowserConfig instance with file browser settings\n    storage_config: StorageConfig,  # StorageConfig instance with result storage settings\n    workflow_config: Optional[SingleFileWorkflowConfig] = None  # Optional workflow config for additional settings\n) -&gt; \"WorkflowSettings\":  # WorkflowSettings instance with values from configs\n    \"Create WorkflowSettings from runtime config objects.\"\n@patch\ndef apply_to_configs(\n    self: WorkflowSettings,\n    browser_config: BrowserConfig,  # BrowserConfig instance to update\n    storage_config: StorageConfig,  # StorageConfig instance to update\n    workflow_config: Optional[SingleFileWorkflowConfig] = None  # Optional workflow config to update\n) -&gt; None\n    \"Apply settings to runtime config objects.\"\n@patch\ndef to_dict(\n    self: WorkflowSettings\n) -&gt; Dict[str, Any]:  # Dictionary of settings values\n    \"Convert settings to a dictionary for serialization.\"\n\n\nClasses\n@dataclass\nclass WorkflowSettings:\n    \"User-configurable settings for single-file transcription workflow.\"\n    \n    __schema_name__: ClassVar[str] = 'single_file_workflow'\n    __schema_title__: ClassVar[str] = 'Single File Transcription Settings'\n    __schema_description__: ClassVar[str] = 'Configure file scanning, storage, and workflow behavior'\n    directories: List[str] = field(...)\n    enabled_types: List[str] = field(...)\n    recursive_scan: bool = field(...)\n    items_per_page: int = field(...)\n    default_view: str = field(...)\n    auto_save: bool = field(...)\n    results_directory: str = field(...)\n    gpu_memory_threshold_percent: float = field(...)\n\n\nVariables\nWORKFLOW_SETTINGS_SCHEMA  # Auto-generate schema from WorkflowSettings dataclass\n\n\n\nStep Components (steps.ipynb)\n\nUI components for workflow step rendering (plugin selection, file selection, confirmation)\n\n\nImport\nfrom cjm_fasthtml_workflow_transcription_single_file.components.steps import (\n    render_plugin_config_form,\n    render_plugin_details_route,\n    render_plugin_selection,\n    render_file_selection,\n    render_confirmation\n)\n\n\nFunctions\ndef _get_file_attr(\n    file_path: str,  # Path to the file to look up\n    files: list,  # List of file info objects to search\n    attr: str,  # Attribute name to retrieve from the file\n) -&gt; str:  # Attribute value or empty string if not found\n    \"Get an attribute from a file by path.\"\ndef _render_plugin_details_content(\n    plugin_id: str, # ID of the plugin to display details for\n    plugins: List[PluginInfo], # List of available plugins\n    plugin_registry: PluginRegistryProtocol, # Plugin registry adapter for getting plugin config\n) -&gt; Optional[FT]: # Plugin info card or None if plugin not found\n    \"Render details for selected plugin (info card only, no config collapse).\"\ndef _render_plugin_details_with_config(\n    plugin_id: str, # ID of the plugin to display details for\n    plugins: List[PluginInfo], # List of available plugins\n    plugin_registry: PluginRegistryProtocol, # Plugin registry adapter for getting plugin config\n    plugin_manager: Optional[PluginManager], # PluginManager for config_schema access\n    save_url: str, # URL for saving plugin configuration\n    reset_url: str, # URL for resetting plugin configuration\n) -&gt; Optional[FT]: # Plugin details with config collapse, or None if not found\n    \"Render plugin details with configuration collapse for initial render.\"\ndef render_plugin_config_form(\n    plugin_id: str, # ID of the plugin to render config for\n    plugin_registry: PluginRegistryProtocol, # Plugin registry adapter for getting plugins and config\n    plugin_manager: PluginManager, # PluginManager for config_schema access\n    save_url: str, # URL for saving the configuration\n    reset_url: str, # URL for resetting to defaults\n    alert_message: Optional[Any] = None, # Optional alert to display above the form\n) -&gt; FT: # Div containing the settings form with alert container\n    \"Render the plugin configuration form for the collapse content.\"\ndef _render_plugin_config_collapse(\n    plugin_id: str, # ID of the plugin to render config for\n    plugin_registry: PluginRegistryProtocol, # Plugin registry adapter for getting plugins and config\n    plugin_manager: PluginManager, # PluginManager for config_schema access\n    save_url: str, # URL for saving the configuration\n    reset_url: str, # URL for resetting to defaults\n) -&gt; FT: # Collapse component with plugin configuration form\n    \"Render a collapse component containing the plugin configuration form.\"\ndef render_plugin_details_route(\n    plugin_id: str, # ID of the plugin to display details for\n    plugin_registry: PluginRegistryProtocol, # Plugin registry adapter for getting plugins and config\n    plugin_manager: PluginManager, # PluginManager for config_schema access\n    save_url: str, # URL for saving plugin configuration\n    reset_url: str, # URL for resetting plugin configuration to defaults\n) -&gt; FT: # Plugin details with info card and config collapse\n    \"Render plugin details for HTMX route when plugin dropdown changes.\"\ndef render_plugin_selection(\n    ctx: InteractionContext, # Interaction context with state and data\n    config: SingleFileWorkflowConfig, # Workflow configuration\n    plugin_registry: PluginRegistryProtocol, # Plugin registry adapter for getting plugin config\n    settings_modal_url: str, # URL for the settings modal route\n    plugin_details_url: str, # URL for the plugin details route\n    plugin_manager: Optional[PluginManager] = None, # PluginManager for config_schema access\n    save_plugin_config_url: str = \"\", # URL for saving plugin configuration\n    reset_plugin_config_url: str = \"\", # URL for resetting plugin configuration\n) -&gt; FT: # Plugin selection step UI component\n    \"Render plugin selection step showing all discovered plugins.\"\ndef render_file_selection(\n    ctx: InteractionContext,  # Interaction context with state and data\n    config: SingleFileWorkflowConfig,  # Workflow configuration\n    file_selection_router: APIRouter,  # Router for file selection pagination (or None)\n) -&gt; FT:  # File selection step UI component with paginated table\n    \"Render file selection step with paginated table view and preview capability.\"\ndef render_confirmation(\n    ctx: InteractionContext, # Interaction context with state and data\n    plugin_registry: PluginRegistryProtocol, # Plugin registry adapter for getting plugin info\n) -&gt; FT: # Confirmation step UI component showing selected plugin and file\n    \"Render confirmation step showing selected plugin and file.\"\n\n\n\nSingle File Transcription Workflow (workflow.ipynb)\n\nMain workflow class orchestrating all subsystems for single-file transcription\n\n\nImport\nfrom cjm_fasthtml_workflow_transcription_single_file.workflow.workflow import (\n    SingleFileTranscriptionWorkflow\n)\n\n\nFunctions\n@patch\ndef setup(\n    self: SingleFileTranscriptionWorkflow,\n    app,  # FastHTML application instance\n) -&gt; None\n    \"Initialize workflow with FastHTML app. Must be called after app creation.\"\n@patch\ndef cleanup(\n    self: SingleFileTranscriptionWorkflow,\n) -&gt; None\n    \"Clean up workflow resources. Mirrors PluginInterface.cleanup() for future plugin system compatibility.\"\n@patch\ndef get_routers(\n    self: SingleFileTranscriptionWorkflow,\n) -&gt; List[APIRouter]:  # List containing main router, stepflow router, media router, and file selection router\n    \"Return all routers for registration with the app.\"\n@patch\ndef render_entry_point(\n    self: SingleFileTranscriptionWorkflow,\n    request,  # FastHTML request object\n    sess,  # FastHTML session object\n) -&gt; FT:  # AsyncLoadingContainer component\n    \"\"\"\n    Render the workflow entry point for embedding in tabs, etc.\n    \n    Returns an AsyncLoadingContainer that loads the current_status endpoint,\n    which determines what to show (running job, workflow in progress,\n    completed job, or fresh start).\n    \"\"\"\n@patch\ndef _on_job_completed(\n    \"Workflow-specific completion handling. Auto-saves results if enabled.\"\n@patch\ndef _create_preview_route_func(\n    self: SingleFileTranscriptionWorkflow,\n):  # Function that generates preview route URLs\n    \"Create a function that generates preview route URLs (with optional file_type).\"\n@patch\ndef _create_preview_url_func(\n    self: SingleFileTranscriptionWorkflow,\n):  # Function that generates preview URLs for file selection\n    \"Create a function that generates preview URLs for file selection (index only).\"\n@patch\ndef _create_step_flow(\n    self: SingleFileTranscriptionWorkflow,\n) -&gt; StepFlow:  # Configured StepFlow instance\n    \"Create and configure the StepFlow instance.\"\n@patch\ndef _create_router(\n    self: SingleFileTranscriptionWorkflow,\n) -&gt; APIRouter:  # Configured APIRouter with all workflow routes\n    \"Create the workflow's API router with all routes.\"\n\n\nClasses\nclass SingleFileTranscriptionWorkflow:\n    def __init__(\n        self,\n        plugin_manager: PluginManager,  # PluginManager from host application\n        config: Optional[SingleFileWorkflowConfig] = None,  # Explicit config (bypasses auto-loading)\n        **config_overrides  # Override specific config values\n    )\n    \"\"\"\n    Self-contained single-file transcription workflow.\n    \n    Receives a PluginManager from the host application and creates internal\n    TranscriptionJobTracker, SSEBroadcastManager, FileBrowser, ResultStorage,\n    StepFlow (plugin → file → confirm wizard), and APIRouter.\n    \"\"\"\n    \n    def __init__(\n            self,\n            plugin_manager: PluginManager,  # PluginManager from host application\n            config: Optional[SingleFileWorkflowConfig] = None,  # Explicit config (bypasses auto-loading)\n            **config_overrides  # Override specific config values\n        )\n        \"Initialize the workflow with injected PluginManager.\"\n    \n    def create_and_setup(\n            cls,\n            app,  # FastHTML application instance\n            plugin_manager: PluginManager,  # PluginManager from host application\n            config: Optional[SingleFileWorkflowConfig] = None,  # Explicit config (bypasses auto-loading)\n            **config_overrides  # Override specific config values\n        ) -&gt; \"SingleFileTranscriptionWorkflow\":  # Configured and setup workflow instance\n        \"Create, configure, and setup a workflow in one call.\"\n    \n    def job_tracker(self) -&gt; TranscriptionJobTracker:\n            \"\"\"Access to internal job tracker.\"\"\"\n            return self._job_tracker\n        \n        @property\n        def plugin_manager(self) -&gt; PluginManager\n        \"Access to internal job tracker.\"\n    \n    def plugin_manager(self) -&gt; PluginManager:\n            \"\"\"Access to plugin manager.\"\"\"\n            return self._plugin_manager\n        \n        @property\n        def plugin_registry(self) -&gt; PluginRegistryAdapter\n        \"Access to plugin manager.\"\n    \n    def plugin_registry(self) -&gt; PluginRegistryAdapter:\n            \"\"\"Access to plugin registry adapter.\"\"\"\n            return self._plugin_adapter\n        \n        @property\n        def file_browser(self) -&gt; FileBrowser\n        \"Access to plugin registry adapter.\"\n    \n    def file_browser(self) -&gt; FileBrowser:\n            \"\"\"Access to internal file browser.\"\"\"\n            return self._file_browser\n        \n        @property\n        def result_storage(self) -&gt; ResultStorage\n        \"Access to internal file browser.\"\n    \n    def result_storage(self) -&gt; ResultStorage:\n            \"\"\"Access to internal result storage.\"\"\"\n            return self._result_storage\n        \n        @property\n        def router(self) -&gt; APIRouter\n        \"Access to internal result storage.\"\n    \n    def router(self) -&gt; APIRouter:\n            \"\"\"Main workflow router.\"\"\"\n            return self._router\n        \n        @property\n        def stepflow_router(self) -&gt; APIRouter\n        \"Main workflow router.\"\n    \n    def stepflow_router(self) -&gt; APIRouter\n        \"StepFlow-generated router.\"",
+    "crumbs": [
+      "cjm-fasthtml-workflow-transcription-single-file"
+    ]
+  },
+  {
+    "objectID": "core/config.html",
+    "href": "core/config.html",
+    "title": "Configuration",
+    "section": "",
+    "text": "The SingleFileWorkflowConfig class provides configuration for the single-file transcription workflow. It includes settings for: - Workflow identification and routing - Worker process configuration - UI customization options - Media browser configuration - Result storage configuration\n\nsource\n\n\n\ndef SingleFileWorkflowConfig(\n    workflow_id:str='single_file_transcription', worker_type:str='transcription:single_file',\n    route_prefix:str='/single_file', stepflow_prefix:str='/flow', media_prefix:str='/media',\n    container_id:str='sf-workflow-container', show_progress:bool=True, max_files_displayed:int=50,\n    export_formats:List=&lt;factory&gt;, no_plugins_redirect:Optional=None, no_files_redirect:Optional=None,\n    sse_poll_interval:float=2.0, gpu_memory_threshold_percent:float=45.0, config_dir:Path=&lt;factory&gt;,\n    plugin_config_dir:Path=&lt;factory&gt;, plugin_category:str='transcription', media:BrowserConfig=&lt;factory&gt;,\n    storage:StorageConfig=&lt;factory&gt;\n)-&gt;None:\n\nConfiguration for single-file transcription workflow.",
+    "crumbs": [
+      "core",
+      "Configuration"
+    ]
+  },
+  {
+    "objectID": "core/config.html#singlefileworkflowconfig-class",
+    "href": "core/config.html#singlefileworkflowconfig-class",
+    "title": "Configuration",
+    "section": "",
+    "text": "The SingleFileWorkflowConfig class provides configuration for the single-file transcription workflow. It includes settings for: - Workflow identification and routing - Worker process configuration - UI customization options - Media browser configuration - Result storage configuration\n\nsource\n\n\n\ndef SingleFileWorkflowConfig(\n    workflow_id:str='single_file_transcription', worker_type:str='transcription:single_file',\n    route_prefix:str='/single_file', stepflow_prefix:str='/flow', media_prefix:str='/media',\n    container_id:str='sf-workflow-container', show_progress:bool=True, max_files_displayed:int=50,\n    export_formats:List=&lt;factory&gt;, no_plugins_redirect:Optional=None, no_files_redirect:Optional=None,\n    sse_poll_interval:float=2.0, gpu_memory_threshold_percent:float=45.0, config_dir:Path=&lt;factory&gt;,\n    plugin_config_dir:Path=&lt;factory&gt;, plugin_category:str='transcription', media:BrowserConfig=&lt;factory&gt;,\n    storage:StorageConfig=&lt;factory&gt;\n)-&gt;None:\n\nConfiguration for single-file transcription workflow.",
+    "crumbs": [
+      "core",
+      "Configuration"
+    ]
+  },
+  {
+    "objectID": "core/config.html#usage-examples",
+    "href": "core/config.html#usage-examples",
+    "title": "Configuration",
+    "section": "Usage Examples",
+    "text": "Usage Examples\n\n# Create default configuration\nconfig = SingleFileWorkflowConfig()\nprint(f\"Workflow ID: {config.workflow_id}\")\nprint(f\"Route prefix: {config.route_prefix}\")\nprint(f\"Full stepflow prefix: {config.get_full_stepflow_prefix()}\")\nprint(f\"Full media prefix: {config.get_full_media_prefix()}\")\n\nWorkflow ID: single_file_transcription\nRoute prefix: /single_file\nFull stepflow prefix: /single_file/flow\nFull media prefix: /single_file/media",
+    "crumbs": [
+      "core",
+      "Configuration"
+    ]
+  },
+  {
+    "objectID": "core/html_ids.html",
+    "href": "core/html_ids.html",
+    "title": "HTML IDs",
+    "section": "",
+    "text": "This class provides centralized HTML ID constants for the single-file transcription workflow. It extends InteractionHtmlIds from cjm-fasthtml-interactions to inherit base interaction pattern IDs.\n\nsource\n\n\n\ndef SingleFileHtmlIds(\n    args:VAR_POSITIONAL, kwargs:VAR_KEYWORD\n):\n\nHTML ID constants for single-file transcription workflow.",
+    "crumbs": [
+      "core",
+      "HTML IDs"
+    ]
+  },
+  {
+    "objectID": "core/html_ids.html#singlefilehtmlids-class",
+    "href": "core/html_ids.html#singlefilehtmlids-class",
+    "title": "HTML IDs",
+    "section": "",
+    "text": "This class provides centralized HTML ID constants for the single-file transcription workflow. It extends InteractionHtmlIds from cjm-fasthtml-interactions to inherit base interaction pattern IDs.\n\nsource\n\n\n\ndef SingleFileHtmlIds(\n    args:VAR_POSITIONAL, kwargs:VAR_KEYWORD\n):\n\nHTML ID constants for single-file transcription workflow.",
+    "crumbs": [
+      "core",
+      "HTML IDs"
+    ]
+  },
+  {
+    "objectID": "core/html_ids.html#usage-examples",
+    "href": "core/html_ids.html#usage-examples",
+    "title": "HTML IDs",
+    "section": "Usage Examples",
+    "text": "Usage Examples\n\n# Access workflow-specific IDs\ncontainer_id = SingleFileHtmlIds.WORKFLOW_CONTAINER\nprint(f\"Workflow container ID: {container_id}\")\nprint(f\"Workflow container selector: {SingleFileHtmlIds.as_selector(container_id)}\")\n\nWorkflow container ID: sf-workflow-container\nWorkflow container selector: #sf-workflow-container",
+    "crumbs": [
+      "core",
+      "HTML IDs"
+    ]
+  },
+  {
+    "objectID": "settings/schemas.html",
+    "href": "settings/schemas.html",
+    "title": "Settings Schemas",
+    "section": "",
+    "text": "User-configurable settings for the single-file transcription workflow. This dataclass serves as the single source of truth for settings that:\n\nAre exposed in the settings UI\nGet persisted to storage (currently JSON files, future: database)\nCan be modified by users at runtime\n\nThe field metadata is used to auto-generate JSON schemas for form UI generation.\n\nsource\n\n\n\ndef WorkflowSettings(\n    directories:List=&lt;factory&gt;, enabled_types:List=&lt;factory&gt;, recursive_scan:bool=True, items_per_page:int=30,\n    default_view:str='list', auto_save:bool=True, results_directory:str='transcription_results',\n    gpu_memory_threshold_percent:float=45.0\n)-&gt;None:\n\nUser-configurable settings for single-file transcription workflow.",
+    "crumbs": [
+      "settings",
+      "Settings Schemas"
+    ]
+  },
+  {
+    "objectID": "settings/schemas.html#workflowsettings",
+    "href": "settings/schemas.html#workflowsettings",
+    "title": "Settings Schemas",
+    "section": "",
+    "text": "User-configurable settings for the single-file transcription workflow. This dataclass serves as the single source of truth for settings that:\n\nAre exposed in the settings UI\nGet persisted to storage (currently JSON files, future: database)\nCan be modified by users at runtime\n\nThe field metadata is used to auto-generate JSON schemas for form UI generation.\n\nsource\n\n\n\ndef WorkflowSettings(\n    directories:List=&lt;factory&gt;, enabled_types:List=&lt;factory&gt;, recursive_scan:bool=True, items_per_page:int=30,\n    default_view:str='list', auto_save:bool=True, results_directory:str='transcription_results',\n    gpu_memory_threshold_percent:float=45.0\n)-&gt;None:\n\nUser-configurable settings for single-file transcription workflow.",
+    "crumbs": [
+      "settings",
+      "Settings Schemas"
+    ]
+  },
+  {
+    "objectID": "settings/schemas.html#workflow_settings_schema",
+    "href": "settings/schemas.html#workflow_settings_schema",
+    "title": "Settings Schemas",
+    "section": "WORKFLOW_SETTINGS_SCHEMA",
+    "text": "WORKFLOW_SETTINGS_SCHEMA\nAuto-generated JSON schema for workflow settings. Used by the settings modal to generate forms for configuring the workflow.\n\n# Test dataclass_to_jsonschema conversion\nschema = dataclass_to_jsonschema(WorkflowSettings)\nassert schema[\"name\"] == \"single_file_workflow\"\nassert schema[\"title\"] == \"Single File Transcription Settings\"\nassert \"directories\" in schema[\"properties\"]\nassert schema[\"properties\"][\"directories\"][\"type\"] == \"array\"\nassert schema[\"properties\"][\"directories\"][\"title\"] == \"Media Directories\"  # UI still shows \"Media Directories\"\nassert \"enabled_types\" in schema[\"properties\"]\nassert schema[\"properties\"][\"enabled_types\"][\"type\"] == \"array\"\nassert schema[\"properties\"][\"items_per_page\"][\"minimum\"] == 10\nassert schema[\"properties\"][\"items_per_page\"][\"maximum\"] == 100\nprint(\"Schema name:\", schema[\"name\"])\nprint(\"Properties:\", list(schema[\"properties\"].keys()))\n\nSchema name: single_file_workflow\nProperties: ['directories', 'enabled_types', 'recursive_scan', 'items_per_page', 'default_view', 'auto_save', 'results_directory', 'gpu_memory_threshold_percent']",
+    "crumbs": [
+      "settings",
+      "Settings Schemas"
+    ]
+  },
+  {
+    "objectID": "settings/schemas.html#workflowsettings-methods",
+    "href": "settings/schemas.html#workflowsettings-methods",
+    "title": "Settings Schemas",
+    "section": "WorkflowSettings Methods",
+    "text": "WorkflowSettings Methods\nMethods for converting between WorkflowSettings and the runtime config objects.\n\nsource\n\nWorkflowSettings.from_configs\n\ndef from_configs(\n    browser_config:BrowserConfig, # BrowserConfig instance with file browser settings\n    storage_config:StorageConfig, # StorageConfig instance with result storage settings\n    workflow_config:Optional=None, # Optional workflow config for additional settings\n)-&gt;WorkflowSettings: # WorkflowSettings instance with values from configs\n\nCreate WorkflowSettings from runtime config objects.\n\nsource\n\n\nWorkflowSettings.apply_to_configs\n\ndef apply_to_configs(\n    browser_config:BrowserConfig, # BrowserConfig instance to update\n    storage_config:StorageConfig, # StorageConfig instance to update\n    workflow_config:Optional=None, # Optional workflow config to update\n)-&gt;None:\n\nApply settings to runtime config objects.\n\nsource\n\n\nWorkflowSettings.to_dict\n\ndef to_dict(\n    \n)-&gt;Dict: # Dictionary of settings values\n\nConvert settings to a dictionary for serialization.\n\n# Test from_configs and apply_to_configs\nbrowser = BrowserConfig(directories=[\"/test/path\"], enabled_types=[\"audio\"])\nstorage = StorageConfig(auto_save=False, results_directory=\"custom_results\")\n\nsettings = WorkflowSettings.from_configs(browser, storage)\nassert settings.directories == [\"/test/path\"]\nassert settings.enabled_types == [\"audio\"]\nassert settings.auto_save == False\nassert settings.results_directory == \"custom_results\"\n\n# Test apply_to_configs\nnew_browser = BrowserConfig()\nnew_storage = StorageConfig()\nsettings.apply_to_configs(new_browser, new_storage)\nassert new_browser.directories == [\"/test/path\"]\nassert new_browser.enabled_types == [\"audio\"]\nassert new_storage.auto_save == False\n\n# Test to_dict uses correct field names for config loading\nd = settings.to_dict()\nassert \"directories\" in d  # Must match BrowserConfig field name\nassert \"enabled_types\" in d\nassert d[\"directories\"] == [\"/test/path\"]\nassert d[\"enabled_types\"] == [\"audio\"]\n\nprint(\"from_configs, apply_to_configs, and to_dict work correctly\")\n\nfrom_configs, apply_to_configs, and to_dict work correctly",
+    "crumbs": [
+      "settings",
+      "Settings Schemas"
+    ]
+  }
+]
